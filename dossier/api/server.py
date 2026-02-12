@@ -14,18 +14,21 @@ Endpoints:
   POST /api/ingest-directory
 """
 
+import logging
 import os
-import tempfile
+import re
 from pathlib import Path
 from typing import Optional
+from uuid import uuid4
 
-from fastapi import FastAPI, UploadFile, File, Query, HTTPException
-from fastapi.staticfiles import StaticFiles
+from fastapi import FastAPI, Request, UploadFile, File, Query, HTTPException
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 
 from dossier.db.database import get_db, init_db
 from dossier.ingestion.pipeline import ingest_file, ingest_directory
+
+logger = logging.getLogger(__name__)
 
 app = FastAPI(title="DOSSIER", version="1.0.0")
 
@@ -36,7 +39,75 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception):
+    """Catch-all handler to prevent stack traces from leaking to clients."""
+    logger.exception("Unhandled error on %s %s", request.method, request.url.path)
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal server error"},
+    )
+
+
 UPLOAD_DIR = Path(__file__).parent.parent / "data" / "inbox"
+MAX_UPLOAD_SIZE = int(os.environ.get("DOSSIER_MAX_UPLOAD_MB", "100")) * 1024 * 1024  # bytes
+ALLOWED_BASE_DIRS: list[Path] = [
+    Path(p) for p in os.environ.get("DOSSIER_ALLOWED_DIRS", str(Path.home())).split(os.pathsep) if p
+]
+
+
+def _validate_path(dirpath: str) -> Path:
+    """Validate a directory path against traversal and symlink attacks.
+
+    Raises HTTPException 403 if the path resolves outside ALLOWED_BASE_DIRS.
+    """
+    resolved = Path(dirpath).resolve()
+    for allowed in ALLOWED_BASE_DIRS:
+        if resolved == allowed.resolve() or allowed.resolve() in resolved.parents:
+            return resolved
+    raise HTTPException(403, "Access denied: path is outside allowed directories")
+
+
+def _sanitize_filename(name: str) -> str:
+    """Sanitize an uploaded filename to prevent path injection.
+
+    Returns a safe filename (basename only, no leading dots, no special chars).
+    Falls back to a uuid-based name if sanitized result is empty.
+    """
+    # Take only the final path component
+    basename = Path(name).name if name else ""
+    # Split into stem and suffix
+    p = Path(basename)
+    stem = p.stem.lstrip(".")
+    suffix = p.suffix  # e.g. ".txt"
+    # Replace disallowed characters
+    stem = re.sub(r"[^a-zA-Z0-9_\-.]", "_", stem)
+    # Strip leading/trailing underscores
+    stem = stem.strip("_")
+    if not stem:
+        stem = f"upload_{uuid4().hex[:8]}"
+    return stem + suffix
+
+
+async def _read_upload(file: UploadFile) -> bytes:
+    """Read an uploaded file with size limit enforcement.
+
+    Raises HTTPException 413 if the file exceeds MAX_UPLOAD_SIZE.
+    """
+    chunks = []
+    total = 0
+    while True:
+        chunk = await file.read(1024 * 1024)  # 1MB chunks
+        if not chunk:
+            break
+        total += len(chunk)
+        if total > MAX_UPLOAD_SIZE:
+            raise HTTPException(
+                413, f"File exceeds maximum upload size of {MAX_UPLOAD_SIZE // (1024 * 1024)}MB"
+            )
+        chunks.append(chunk)
+    return b"".join(chunks)
 
 
 @app.on_event("startup")
@@ -48,6 +119,7 @@ def startup():
 # ═══════════════════════════════════════════
 # SEARCH
 # ═══════════════════════════════════════════
+
 
 @app.get("/api/search")
 def search_documents(
@@ -61,9 +133,9 @@ def search_documents(
     with get_db() as conn:
         if q.strip():
             # FTS5 search with snippet generation
-            fts_query = q.strip()
-            # Escape special FTS characters
-            fts_query = fts_query.replace('"', '""')
+            # Strip all FTS5 metacharacters to prevent query injection
+            fts_query = re.sub(r'["\*\(\)\{\}\[\]:^~]', " ", q.strip())
+            fts_query = fts_query.strip()
 
             sql = """
                 SELECT
@@ -130,6 +202,7 @@ def search_documents(
 # DOCUMENTS
 # ═══════════════════════════════════════════
 
+
 @app.get("/api/documents")
 def list_documents(
     category: Optional[str] = None,
@@ -164,9 +237,7 @@ def list_documents(
 @app.get("/api/documents/{doc_id}")
 def get_document(doc_id: int):
     with get_db() as conn:
-        row = conn.execute(
-            "SELECT * FROM documents WHERE id = ?", (doc_id,)
-        ).fetchone()
+        row = conn.execute("SELECT * FROM documents WHERE id = ?", (doc_id,)).fetchone()
         if not row:
             raise HTTPException(404, "Document not found")
 
@@ -174,14 +245,17 @@ def get_document(doc_id: int):
         doc["entities"] = _get_doc_entities(conn, doc_id)
 
         # Get keywords for this document
-        kw_rows = conn.execute("""
+        kw_rows = conn.execute(
+            """
             SELECT k.word, dk.count
             FROM document_keywords dk
             JOIN keywords k ON k.id = dk.keyword_id
             WHERE dk.document_id = ?
             ORDER BY dk.count DESC
             LIMIT 30
-        """, (doc_id,)).fetchall()
+        """,
+            (doc_id,),
+        ).fetchall()
         doc["keywords"] = [{"word": r["word"], "count": r["count"]} for r in kw_rows]
 
     return doc
@@ -201,6 +275,7 @@ def toggle_flag(doc_id: int):
 # ═══════════════════════════════════════════
 # ENTITIES
 # ═══════════════════════════════════════════
+
 
 @app.get("/api/entities")
 def list_entities(
@@ -232,14 +307,17 @@ def list_entities(
 def entity_documents(entity_id: int, limit: int = 20):
     """Get all documents containing a specific entity."""
     with get_db() as conn:
-        rows = conn.execute("""
+        rows = conn.execute(
+            """
             SELECT d.id, d.title, d.category, d.date, de.count as mentions
             FROM document_entities de
             JOIN documents d ON d.id = de.document_id
             WHERE de.entity_id = ?
             ORDER BY de.count DESC
             LIMIT ?
-        """, (entity_id, limit)).fetchall()
+        """,
+            (entity_id, limit),
+        ).fetchall()
 
     return {"documents": [dict(r) for r in rows]}
 
@@ -248,16 +326,20 @@ def entity_documents(entity_id: int, limit: int = 20):
 # KEYWORDS
 # ═══════════════════════════════════════════
 
+
 @app.get("/api/keywords")
 def list_keywords(limit: int = Query(30, ge=1, le=200)):
     """Top keywords by total occurrence across all documents."""
     with get_db() as conn:
-        rows = conn.execute("""
+        rows = conn.execute(
+            """
             SELECT word, total_count, doc_count
             FROM keywords
             ORDER BY total_count DESC
             LIMIT ?
-        """, (limit,)).fetchall()
+        """,
+            (limit,),
+        ).fetchall()
 
     return {"keywords": [dict(r) for r in rows]}
 
@@ -266,12 +348,14 @@ def list_keywords(limit: int = Query(30, ge=1, le=200)):
 # CONNECTIONS (Entity co-occurrence network)
 # ═══════════════════════════════════════════
 
+
 @app.get("/api/connections")
 def get_connections(entity_id: Optional[int] = None, min_weight: int = 1, limit: int = 50):
     """Get entity co-occurrence network. Optionally centered on a specific entity."""
     with get_db() as conn:
         if entity_id:
-            rows = conn.execute("""
+            rows = conn.execute(
+                """
                 SELECT
                     ea.name as source_name, ea.type as source_type,
                     eb.name as target_name, eb.type as target_type,
@@ -283,9 +367,12 @@ def get_connections(entity_id: Optional[int] = None, min_weight: int = 1, limit:
                   AND ec.weight >= ?
                 ORDER BY ec.weight DESC
                 LIMIT ?
-            """, (entity_id, entity_id, min_weight, limit)).fetchall()
+            """,
+                (entity_id, entity_id, min_weight, limit),
+            ).fetchall()
         else:
-            rows = conn.execute("""
+            rows = conn.execute(
+                """
                 SELECT
                     ea.name as source_name, ea.type as source_type,
                     eb.name as target_name, eb.type as target_type,
@@ -296,7 +383,9 @@ def get_connections(entity_id: Optional[int] = None, min_weight: int = 1, limit:
                 WHERE ec.weight >= ?
                 ORDER BY ec.weight DESC
                 LIMIT ?
-            """, (min_weight, limit)).fetchall()
+            """,
+                (min_weight, limit),
+            ).fetchall()
 
     return {"connections": [dict(r) for r in rows]}
 
@@ -305,14 +394,19 @@ def get_connections(entity_id: Optional[int] = None, min_weight: int = 1, limit:
 # STATS
 # ═══════════════════════════════════════════
 
+
 @app.get("/api/stats")
 def get_stats():
     """Dashboard statistics."""
     with get_db() as conn:
         doc_count = conn.execute("SELECT COUNT(*) as cnt FROM documents").fetchone()["cnt"]
         entity_count = conn.execute("SELECT COUNT(*) as cnt FROM entities").fetchone()["cnt"]
-        page_count = conn.execute("SELECT COALESCE(SUM(pages), 0) as cnt FROM documents").fetchone()["cnt"]
-        flagged_count = conn.execute("SELECT COUNT(*) as cnt FROM documents WHERE flagged = 1").fetchone()["cnt"]
+        page_count = conn.execute(
+            "SELECT COALESCE(SUM(pages), 0) as cnt FROM documents"
+        ).fetchone()["cnt"]
+        flagged_count = conn.execute(
+            "SELECT COUNT(*) as cnt FROM documents WHERE flagged = 1"
+        ).fetchone()["cnt"]
 
         # Category breakdown
         categories = conn.execute("""
@@ -344,6 +438,7 @@ def get_stats():
 # FILE UPLOAD / INGESTION
 # ═══════════════════════════════════════════
 
+
 @app.post("/api/upload")
 async def upload_file(
     file: UploadFile = File(...),
@@ -353,10 +448,11 @@ async def upload_file(
     """Upload and ingest a single file."""
     UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
-    # Save uploaded file
-    dest = UPLOAD_DIR / file.filename
+    # Sanitize filename and enforce upload size limit
+    safe_name = _sanitize_filename(file.filename or "")
+    content = await _read_upload(file)
+    dest = UPLOAD_DIR / safe_name
     with open(dest, "wb") as f:
-        content = await file.read()
         f.write(content)
 
     # Ingest
@@ -371,7 +467,7 @@ async def upload_file(
 @app.post("/api/ingest-directory")
 def ingest_dir(dirpath: str = Query(...)):
     """Ingest all supported files from a directory path on disk."""
-    path = Path(dirpath)
+    path = _validate_path(dirpath)
     if not path.exists() or not path.is_dir():
         raise HTTPException(400, f"Directory not found: {dirpath}")
 
@@ -392,9 +488,10 @@ async def upload_email(
     from dossier.ingestion.email_pipeline import ingest_email_file
 
     UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
-    dest = UPLOAD_DIR / file.filename
+    safe_name = _sanitize_filename(file.filename or "")
+    content = await _read_upload(file)
+    dest = UPLOAD_DIR / safe_name
     with open(dest, "wb") as f:
-        content = await file.read()
         f.write(content)
 
     results = ingest_email_file(str(dest), source=source, corpus=corpus)
@@ -402,9 +499,9 @@ async def upload_email(
     failed = len(results) - success
 
     status = 201 if success > 0 else 422
-    return JSONResponse({
-        "ingested": success, "failed": failed, "details": results
-    }, status_code=status)
+    return JSONResponse(
+        {"ingested": success, "failed": failed, "details": results}, status_code=status
+    )
 
 
 @app.post("/api/ingest-emails-directory")
@@ -416,7 +513,7 @@ def ingest_emails_dir(
     """Ingest all email files from a directory on disk."""
     from dossier.ingestion.email_pipeline import ingest_email_directory
 
-    path = Path(dirpath)
+    path = _validate_path(dirpath)
     if not path.exists() or not path.is_dir():
         raise HTTPException(400, f"Directory not found: {dirpath}")
 
@@ -428,8 +525,11 @@ def ingest_emails_dir(
 def generate_lobbying():
     """Generate and ingest Podesta Group lobbying records."""
     from dossier.ingestion.scrapers.fara_lobbying import (
-        create_lobbying_index, generate_ingestable_documents, ingest_lobbying_docs
+        create_lobbying_index,
+        generate_ingestable_documents,
+        ingest_lobbying_docs,
     )
+
     create_lobbying_index()
     count = generate_ingestable_documents()
     ingest_lobbying_docs()
@@ -440,15 +540,19 @@ def generate_lobbying():
 # HELPERS
 # ═══════════════════════════════════════════
 
+
 def _get_doc_entities(conn, doc_id: int) -> dict:
     """Get entities grouped by type for a document."""
-    rows = conn.execute("""
+    rows = conn.execute(
+        """
         SELECT e.name, e.type, de.count
         FROM document_entities de
         JOIN entities e ON e.id = de.entity_id
         WHERE de.document_id = ?
         ORDER BY de.count DESC
-    """, (doc_id,)).fetchall()
+    """,
+        (doc_id,),
+    ).fetchall()
 
     grouped = {"people": [], "places": [], "orgs": [], "dates": []}
     type_map = {"person": "people", "place": "places", "org": "orgs", "date": "dates"}
