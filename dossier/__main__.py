@@ -1,0 +1,296 @@
+#!/usr/bin/env python3
+"""
+DOSSIER — CLI Entry Point
+
+Usage:
+    python -m dossier serve              # Start web server
+    python -m dossier ingest <file>      # Ingest a single file
+    python -m dossier ingest-dir <dir>   # Ingest all files in directory
+    python -m dossier ingest-emails <dir># Ingest email files (eml, mbox, json, csv)
+    python -m dossier search <query>     # Search from CLI
+    python -m dossier stats              # Show collection stats
+    python -m dossier entities [type]    # List top entities
+    python -m dossier init               # Initialize database
+
+    # Podesta Email Scrapers
+    python -m dossier podesta-download --range 1 100    # Download WikiLeaks emails
+    python -m dossier podesta-ingest                    # Ingest downloaded emails
+    python -m dossier lobbying --all                    # Download + ingest lobbying records
+"""
+
+import sys
+import json
+from pathlib import Path
+
+
+def main():
+    if len(sys.argv) < 2:
+        print(__doc__)
+        sys.exit(1)
+
+    cmd = sys.argv[1]
+
+    if cmd == "serve":
+        serve()
+    elif cmd == "init":
+        from dossier.db.database import init_db
+        init_db()
+    elif cmd == "ingest":
+        if len(sys.argv) < 3:
+            print("Usage: python -m dossier ingest <filepath> [--source NAME] [--date YYYY-MM-DD]")
+            sys.exit(1)
+        ingest_cmd()
+    elif cmd == "ingest-dir":
+        if len(sys.argv) < 3:
+            print("Usage: python -m dossier ingest-dir <directory> [--source NAME]")
+            sys.exit(1)
+        ingest_dir_cmd()
+    elif cmd == "ingest-emails":
+        if len(sys.argv) < 3:
+            print("Usage: python -m dossier ingest-emails <directory> [--source NAME] [--corpus NAME]")
+            sys.exit(1)
+        ingest_emails_cmd()
+    elif cmd == "search":
+        if len(sys.argv) < 3:
+            print("Usage: python -m dossier search <query>")
+            sys.exit(1)
+        search_cmd()
+    elif cmd == "stats":
+        stats_cmd()
+    elif cmd == "entities":
+        entities_cmd()
+    elif cmd == "podesta-download":
+        podesta_download_cmd()
+    elif cmd == "podesta-ingest":
+        podesta_ingest_cmd()
+    elif cmd == "lobbying":
+        lobbying_cmd()
+    else:
+        print(f"Unknown command: {cmd}")
+        print(__doc__)
+        sys.exit(1)
+
+
+def serve():
+    import uvicorn
+    port = int(sys.argv[2]) if len(sys.argv) > 2 else 8000
+    print(f"\n  ╔══════════════════════════════════════╗")
+    print(f"  ║  DOSSIER — Document Intelligence     ║")
+    print(f"  ║  http://localhost:{port}               ║")
+    print(f"  ║  API: http://localhost:{port}/docs      ║")
+    print(f"  ╚══════════════════════════════════════╝\n")
+    uvicorn.run("dossier.api.server:app", host="0.0.0.0", port=port, reload=True)
+
+
+def ingest_cmd():
+    from dossier.db.database import init_db
+    from dossier.ingestion.pipeline import ingest_file
+
+    init_db()
+    filepath = sys.argv[2]
+
+    source = ""
+    date = ""
+    args = sys.argv[3:]
+    for i, arg in enumerate(args):
+        if arg == "--source" and i + 1 < len(args):
+            source = args[i + 1]
+        elif arg == "--date" and i + 1 < len(args):
+            date = args[i + 1]
+
+    result = ingest_file(filepath, source=source, date=date)
+    if result["success"]:
+        print(f"\n✓ Ingested: {filepath}")
+        print(f"  Document ID: {result['document_id']}")
+        print(f"  Stats: {json.dumps(result['stats'], indent=2)}")
+    else:
+        print(f"\n✗ Failed: {result['message']}")
+
+
+def ingest_dir_cmd():
+    from dossier.db.database import init_db
+    from dossier.ingestion.pipeline import ingest_directory
+
+    init_db()
+    dirpath = sys.argv[2]
+
+    source = ""
+    args = sys.argv[3:]
+    for i, arg in enumerate(args):
+        if arg == "--source" and i + 1 < len(args):
+            source = args[i + 1]
+
+    results = ingest_directory(dirpath, source=source)
+    success = sum(1 for r in results if r["success"])
+    failed = len(results) - success
+
+    print(f"\n{'='*40}")
+    print(f"  Ingested: {success} | Failed: {failed}")
+    print(f"{'='*40}")
+
+
+def search_cmd():
+    from dossier.db.database import init_db, get_db
+
+    init_db()
+    query = " ".join(sys.argv[2:])
+
+    with get_db() as conn:
+        rows = conn.execute("""
+            SELECT d.id, d.title, d.category, d.date,
+                   snippet(documents_fts, 1, '>>>', '<<<', '...', 30) as excerpt
+            FROM documents_fts
+            JOIN documents d ON d.id = documents_fts.rowid
+            WHERE documents_fts MATCH ?
+            ORDER BY rank
+            LIMIT 20
+        """, (f'"{query}"',)).fetchall()
+
+    if not rows:
+        print(f"No results for: {query}")
+        return
+
+    print(f"\n─── Results for: {query} ───\n")
+    for row in rows:
+        print(f"  [{row['id']:3d}] [{row['category']:15s}] {row['title']}")
+        print(f"        {row['date']} | {row['excerpt'][:120]}")
+        print()
+
+
+def stats_cmd():
+    from dossier.db.database import init_db, get_db
+
+    init_db()
+    with get_db() as conn:
+        docs = conn.execute("SELECT COUNT(*) as c FROM documents").fetchone()["c"]
+        entities = conn.execute("SELECT COUNT(*) as c FROM entities").fetchone()["c"]
+        pages = conn.execute("SELECT COALESCE(SUM(pages), 0) as c FROM documents").fetchone()["c"]
+        keywords = conn.execute("SELECT COUNT(*) as c FROM keywords").fetchone()["c"]
+
+        cats = conn.execute(
+            "SELECT category, COUNT(*) as c FROM documents GROUP BY category ORDER BY c DESC"
+        ).fetchall()
+
+    print(f"\n  DOSSIER — Collection Stats")
+    print(f"  {'─'*30}")
+    print(f"  Documents:  {docs}")
+    print(f"  Entities:   {entities}")
+    print(f"  Pages:      {pages}")
+    print(f"  Keywords:   {keywords}")
+    print(f"\n  Categories:")
+    for row in cats:
+        print(f"    {row['category']:20s} {row['c']}")
+    print()
+
+
+def entities_cmd():
+    from dossier.db.database import init_db, get_db
+
+    init_db()
+    etype = sys.argv[2] if len(sys.argv) > 2 else None
+
+    with get_db() as conn:
+        sql = """
+            SELECT e.name, e.type, SUM(de.count) as total
+            FROM entities e
+            JOIN document_entities de ON de.entity_id = e.id
+        """
+        params = []
+        if etype:
+            sql += " WHERE e.type = ?"
+            params.append(etype)
+        sql += " GROUP BY e.id ORDER BY total DESC LIMIT 30"
+
+        rows = conn.execute(sql, params).fetchall()
+
+    if not rows:
+        print("No entities found.")
+        return
+
+    print(f"\n  Top Entities{' (' + etype + ')' if etype else ''}:")
+    print(f"  {'─'*40}")
+    for row in rows:
+        print(f"  {row['total']:6d}  [{row['type']:6s}]  {row['name']}")
+    print()
+
+
+def ingest_emails_cmd():
+    from dossier.db.database import init_db
+    from dossier.ingestion.email_pipeline import ingest_email_directory
+
+    init_db()
+    dirpath = sys.argv[2]
+    source = ""
+    corpus = ""
+    args = sys.argv[3:]
+    for i, arg in enumerate(args):
+        if arg == "--source" and i + 1 < len(args):
+            source = args[i + 1]
+        elif arg == "--corpus" and i + 1 < len(args):
+            corpus = args[i + 1]
+
+    result = ingest_email_directory(dirpath, source=source, corpus=corpus)
+    print(f"\n{'='*40}")
+    print(f"  Ingested: {result['ingested']} | Failed: {result['failed']}")
+    print(f"{'='*40}")
+
+
+def podesta_download_cmd():
+    """Handle podesta-download command."""
+    args = sys.argv[2:]
+
+    start = 1
+    end = 100
+    delay = 1.5
+
+    for i, arg in enumerate(args):
+        if arg == "--range" and i + 2 < len(args):
+            start = int(args[i + 1])
+            end = int(args[i + 2])
+        elif arg == "--delay" and i + 1 < len(args):
+            delay = float(args[i + 1])
+
+    from dossier.ingestion.scrapers.wikileaks_podesta import download_range
+    download_range(start, end, delay=delay)
+
+
+def podesta_ingest_cmd():
+    """Ingest downloaded Podesta emails."""
+    limit = 0
+    args = sys.argv[2:]
+    for i, arg in enumerate(args):
+        if arg == "--limit" and i + 1 < len(args):
+            limit = int(args[i + 1])
+
+    from dossier.ingestion.scrapers.wikileaks_podesta import ingest_downloaded
+    from dossier.db.database import init_db
+    init_db()
+    ingest_downloaded(limit=limit)
+
+
+def lobbying_cmd():
+    """Handle lobbying command."""
+    args = sys.argv[2:]
+
+    if "--all" in args:
+        from dossier.ingestion.scrapers.fara_lobbying import (
+            create_lobbying_index, generate_ingestable_documents, ingest_lobbying_docs
+        )
+        create_lobbying_index()
+        generate_ingestable_documents()
+        ingest_lobbying_docs()
+    elif "--create-index" in args:
+        from dossier.ingestion.scrapers.fara_lobbying import create_lobbying_index
+        create_lobbying_index()
+    elif "--generate-docs" in args:
+        from dossier.ingestion.scrapers.fara_lobbying import generate_ingestable_documents
+        generate_ingestable_documents()
+    elif "--ingest" in args:
+        from dossier.ingestion.scrapers.fara_lobbying import ingest_lobbying_docs
+        ingest_lobbying_docs()
+    else:
+        print("Usage: python -m dossier lobbying [--all|--create-index|--generate-docs|--ingest]")
+
+
+if __name__ == "__main__":
+    main()

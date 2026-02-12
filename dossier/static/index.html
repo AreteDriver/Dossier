@@ -1,0 +1,1325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DOSSIER — Document Intelligence System</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg-primary: #0a0b0d;
+  --bg-secondary: #111318;
+  --bg-tertiary: #181b22;
+  --bg-card: #1a1d25;
+  --bg-hover: #22262f;
+  --border: #2a2e38;
+  --border-active: #3d4350;
+  --text-primary: #e8eaed;
+  --text-secondary: #9aa0ad;
+  --text-muted: #5f6572;
+  --accent: #c4473a;
+  --accent-dim: #8b3229;
+  --accent-glow: rgba(196, 71, 58, 0.15);
+  --entity-person: #e07c4a;
+  --entity-place: #4a9de0;
+  --entity-org: #9b6de0;
+  --entity-date: #4ae0a8;
+  --entity-thing: #e0c94a;
+  --category-deposition: #e07c4a;
+  --category-flight: #4a9de0;
+  --category-correspondence: #9b6de0;
+  --category-report: #4ae0a8;
+  --category-legal: #e0c94a;
+  --category-other: #5f6572;
+  --radius: 6px;
+  --radius-lg: 10px;
+  --font-mono: 'JetBrains Mono', monospace;
+  --font-sans: 'DM Sans', sans-serif;
+  --transition: 180ms ease;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ─── GRAIN OVERLAY ─── */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* ─── SCROLLBAR ─── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--bg-primary); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--border-active); }
+
+/* ─── LAYOUT ─── */
+.app {
+  display: grid;
+  grid-template-columns: 260px 1fr 320px;
+  grid-template-rows: auto 1fr;
+  height: 100vh;
+}
+
+/* ─── HEADER ─── */
+.header {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-secondary);
+}
+
+.header-brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.header-logo {
+  width: 32px;
+  height: 32px;
+  background: var(--accent);
+  border-radius: var(--radius);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 14px;
+  color: #fff;
+  letter-spacing: -1px;
+}
+
+.header-title {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 15px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--text-primary);
+}
+
+.header-subtitle {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  letter-spacing: 1px;
+}
+
+.header-stats {
+  display: flex;
+  gap: 24px;
+  align-items: center;
+}
+
+.stat {
+  text-align: right;
+}
+
+.stat-value {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 18px;
+  color: var(--text-primary);
+}
+
+.stat-label {
+  font-size: 10px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  font-family: var(--font-mono);
+}
+
+/* ─── SIDEBAR ─── */
+.sidebar {
+  background: var(--bg-secondary);
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+  padding: 16px 0;
+}
+
+.sidebar-section {
+  margin-bottom: 8px;
+}
+
+.sidebar-heading {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: var(--text-muted);
+  padding: 12px 20px 8px;
+}
+
+.sidebar-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 20px;
+  cursor: pointer;
+  transition: background var(--transition);
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.sidebar-item:hover { background: var(--bg-hover); }
+.sidebar-item.active { background: var(--accent-glow); color: var(--text-primary); }
+.sidebar-item.active .sidebar-dot { background: var(--accent); }
+
+.sidebar-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--border-active);
+  flex-shrink: 0;
+}
+
+.sidebar-count {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.category-dot { border-radius: 2px; }
+.category-dot.deposition { background: var(--category-deposition); }
+.category-dot.flight { background: var(--category-flight); }
+.category-dot.correspondence { background: var(--category-correspondence); }
+.category-dot.report { background: var(--category-report); }
+.category-dot.legal { background: var(--category-legal); }
+.category-dot.other { background: var(--category-other); }
+
+/* ─── MAIN CONTENT ─── */
+.main {
+  overflow-y: auto;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* ─── SEARCH BAR ─── */
+.search-container {
+  position: relative;
+}
+
+.search-input {
+  width: 100%;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 14px 20px 14px 48px;
+  font-family: var(--font-mono);
+  font-size: 14px;
+  color: var(--text-primary);
+  outline: none;
+  transition: border-color var(--transition), box-shadow var(--transition);
+}
+
+.search-input::placeholder { color: var(--text-muted); }
+.search-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-glow);
+}
+
+.search-icon {
+  position: absolute;
+  left: 18px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  font-size: 16px;
+}
+
+.search-filters {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+
+.filter-chip {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 5px 14px;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.filter-chip:hover { border-color: var(--border-active); color: var(--text-primary); }
+.filter-chip.active {
+  background: var(--accent-glow);
+  border-color: var(--accent-dim);
+  color: var(--accent);
+}
+
+/* ─── RESULTS ─── */
+.results-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.results-title {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+}
+
+.results-sort {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.document-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.document-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 18px 20px;
+  cursor: pointer;
+  transition: all var(--transition);
+  position: relative;
+  overflow: hidden;
+}
+
+.document-card::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  border-radius: 3px 0 0 3px;
+}
+
+.document-card.cat-deposition::before { background: var(--category-deposition); }
+.document-card.cat-flight::before { background: var(--category-flight); }
+.document-card.cat-correspondence::before { background: var(--category-correspondence); }
+.document-card.cat-report::before { background: var(--category-report); }
+.document-card.cat-legal::before { background: var(--category-legal); }
+.document-card.cat-other::before { background: var(--category-other); }
+
+.document-card:hover {
+  border-color: var(--border-active);
+  background: var(--bg-hover);
+  transform: translateY(-1px);
+}
+
+.document-card.selected {
+  border-color: var(--accent-dim);
+  background: var(--accent-glow);
+}
+
+.doc-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 8px;
+}
+
+.doc-title {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--text-primary);
+  line-height: 1.4;
+}
+
+.doc-badge {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  padding: 3px 8px;
+  border-radius: 3px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  margin-left: 12px;
+}
+
+.doc-badge.deposition { background: rgba(224,124,74,0.15); color: var(--category-deposition); }
+.doc-badge.flight { background: rgba(74,157,224,0.15); color: var(--category-flight); }
+.doc-badge.correspondence { background: rgba(155,109,224,0.15); color: var(--category-correspondence); }
+.doc-badge.report { background: rgba(74,224,168,0.15); color: var(--category-report); }
+.doc-badge.legal { background: rgba(224,201,74,0.15); color: var(--category-legal); }
+
+.doc-excerpt {
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin-bottom: 10px;
+}
+
+.doc-excerpt mark {
+  background: rgba(196, 71, 58, 0.25);
+  color: var(--accent);
+  padding: 1px 3px;
+  border-radius: 2px;
+}
+
+.doc-meta {
+  display: flex;
+  gap: 16px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.doc-entities {
+  display: flex;
+  gap: 6px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+
+.entity-tag {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 3px;
+  letter-spacing: 0.3px;
+}
+
+.entity-tag.person { background: rgba(224,124,74,0.12); color: var(--entity-person); }
+.entity-tag.place { background: rgba(74,157,224,0.12); color: var(--entity-place); }
+.entity-tag.org { background: rgba(155,109,224,0.12); color: var(--entity-org); }
+.entity-tag.date { background: rgba(74,224,168,0.12); color: var(--entity-date); }
+
+/* ─── RIGHT PANEL ─── */
+.panel {
+  background: var(--bg-secondary);
+  border-left: 1px solid var(--border);
+  overflow-y: auto;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.panel-section {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+}
+
+.panel-heading {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: var(--text-muted);
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.panel-heading .toggle {
+  font-size: 10px;
+  color: var(--accent);
+  cursor: pointer;
+  letter-spacing: 0;
+  text-transform: none;
+  font-weight: 400;
+}
+
+/* ─── FREQUENCY BARS ─── */
+.freq-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.freq-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  transition: opacity var(--transition);
+}
+
+.freq-item:hover { opacity: 0.8; }
+
+.freq-rank {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-muted);
+  width: 18px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.freq-bar-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.freq-label {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.freq-bar-track {
+  height: 4px;
+  background: var(--bg-primary);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.freq-bar {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 600ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.freq-bar.person { background: var(--entity-person); }
+.freq-bar.place { background: var(--entity-place); }
+.freq-bar.org { background: var(--entity-org); }
+.freq-bar.keyword { background: var(--accent); }
+
+.freq-count {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+  width: 32px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+/* ─── ENTITY NETWORK MINI ─── */
+.network-placeholder {
+  height: 180px;
+  background: var(--bg-primary);
+  border-radius: var(--radius);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.network-placeholder canvas {
+  position: absolute;
+  inset: 0;
+}
+
+.network-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-muted);
+  z-index: 1;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* ─── UPLOAD ZONE ─── */
+.upload-zone {
+  border: 2px dashed var(--border);
+  border-radius: var(--radius-lg);
+  padding: 32px;
+  text-align: center;
+  cursor: pointer;
+  transition: all var(--transition);
+  background: var(--bg-tertiary);
+}
+
+.upload-zone:hover {
+  border-color: var(--accent-dim);
+  background: var(--accent-glow);
+}
+
+.upload-zone.dragover {
+  border-color: var(--accent);
+  background: var(--accent-glow);
+  transform: scale(1.01);
+}
+
+.upload-icon {
+  font-size: 28px;
+  margin-bottom: 10px;
+  color: var(--text-muted);
+}
+
+.upload-text {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+
+.upload-hint {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-muted);
+  letter-spacing: 0.5px;
+}
+
+/* ─── PROCESSING INDICATOR ─── */
+.processing-bar {
+  display: none;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 16px;
+  gap: 12px;
+  align-items: center;
+}
+
+.processing-bar.active { display: flex; }
+
+.processing-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.processing-text {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.processing-progress {
+  flex: 1;
+  height: 3px;
+  background: var(--bg-primary);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.processing-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 2px;
+  transition: width 300ms ease;
+  width: 0%;
+}
+
+/* ─── ANIMATIONS ─── */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.document-card { animation: fadeInUp 300ms ease both; }
+.document-card:nth-child(1) { animation-delay: 0ms; }
+.document-card:nth-child(2) { animation-delay: 50ms; }
+.document-card:nth-child(3) { animation-delay: 100ms; }
+.document-card:nth-child(4) { animation-delay: 150ms; }
+.document-card:nth-child(5) { animation-delay: 200ms; }
+
+/* ─── RESPONSIVE ─── */
+@media (max-width: 1100px) {
+  .app { grid-template-columns: 1fr; }
+  .sidebar, .panel { display: none; }
+}
+
+/* ─── EMPTY STATE ─── */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  text-align: center;
+}
+
+.empty-state-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+  opacity: 0.3;
+}
+
+.empty-state-title {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+  letter-spacing: 1px;
+}
+
+.empty-state-desc {
+  font-size: 12px;
+  color: var(--text-muted);
+  max-width: 320px;
+  line-height: 1.6;
+}
+
+/* ─── TABS ─── */
+.panel-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 14px;
+}
+
+.panel-tab {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  padding: 8px 12px;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all var(--transition);
+}
+
+.panel-tab:hover { color: var(--text-secondary); }
+.panel-tab.active { color: var(--text-primary); border-bottom-color: var(--accent); }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <!-- HEADER -->
+  <header class="header">
+    <div class="header-brand">
+      <div class="header-logo">D</div>
+      <div>
+        <div class="header-title">Dossier</div>
+        <div class="header-subtitle">Document Intelligence System</div>
+      </div>
+    </div>
+    <div class="header-stats">
+      <div class="stat">
+        <div class="stat-value" id="totalDocs">47</div>
+        <div class="stat-label">Documents</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value" id="totalEntities">1,284</div>
+        <div class="stat-label">Entities</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value" id="totalPages">3,891</div>
+        <div class="stat-label">Pages</div>
+      </div>
+    </div>
+  </header>
+
+  <!-- SIDEBAR -->
+  <nav class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-heading">Collections</div>
+      <div class="sidebar-item active" data-filter="all">
+        <div class="sidebar-dot"></div>
+        All Documents
+        <span class="sidebar-count">47</span>
+      </div>
+      <div class="sidebar-item" data-filter="recent">
+        <div class="sidebar-dot"></div>
+        Recently Added
+        <span class="sidebar-count">8</span>
+      </div>
+      <div class="sidebar-item" data-filter="flagged">
+        <div class="sidebar-dot"></div>
+        Flagged
+        <span class="sidebar-count">12</span>
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-heading">Categories</div>
+      <div class="sidebar-item" data-filter="deposition">
+        <div class="sidebar-dot category-dot deposition"></div>
+        Depositions
+        <span class="sidebar-count">14</span>
+      </div>
+      <div class="sidebar-item" data-filter="flight">
+        <div class="sidebar-dot category-dot flight"></div>
+        Flight Logs
+        <span class="sidebar-count">6</span>
+      </div>
+      <div class="sidebar-item" data-filter="correspondence">
+        <div class="sidebar-dot category-dot correspondence"></div>
+        Correspondence
+        <span class="sidebar-count">9</span>
+      </div>
+      <div class="sidebar-item" data-filter="report">
+        <div class="sidebar-dot category-dot report"></div>
+        Police / FBI Reports
+        <span class="sidebar-count">8</span>
+      </div>
+      <div class="sidebar-item" data-filter="legal">
+        <div class="sidebar-dot category-dot legal"></div>
+        Legal Filings
+        <span class="sidebar-count">10</span>
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-heading">Entity Types</div>
+      <div class="sidebar-item" data-entity="person">
+        <div class="sidebar-dot" style="background:var(--entity-person)"></div>
+        People
+        <span class="sidebar-count">342</span>
+      </div>
+      <div class="sidebar-item" data-entity="place">
+        <div class="sidebar-dot" style="background:var(--entity-place)"></div>
+        Places
+        <span class="sidebar-count">187</span>
+      </div>
+      <div class="sidebar-item" data-entity="org">
+        <div class="sidebar-dot" style="background:var(--entity-org)"></div>
+        Organizations
+        <span class="sidebar-count">98</span>
+      </div>
+      <div class="sidebar-item" data-entity="date">
+        <div class="sidebar-dot" style="background:var(--entity-date)"></div>
+        Dates
+        <span class="sidebar-count">657</span>
+      </div>
+    </div>
+
+    <div class="sidebar-section" style="padding: 16px 20px;">
+      <div class="upload-zone" id="uploadZone">
+        <div class="upload-icon">⬆</div>
+        <div class="upload-text">Drop files to ingest</div>
+        <div class="upload-hint">PDF, TXT, HTML, DOCX, images</div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- MAIN CONTENT -->
+  <main class="main">
+    <!-- Search -->
+    <div class="search-container">
+      <div class="search-icon">⌕</div>
+      <input type="text" class="search-input" id="searchInput" placeholder="Search documents, entities, keywords..." autocomplete="off">
+      <div class="search-filters">
+        <div class="filter-chip active" data-type="all">All</div>
+        <div class="filter-chip" data-type="people">People</div>
+        <div class="filter-chip" data-type="places">Places</div>
+        <div class="filter-chip" data-type="orgs">Organizations</div>
+        <div class="filter-chip" data-type="dates">Dates</div>
+        <div class="filter-chip" data-type="keywords">Keywords</div>
+      </div>
+    </div>
+
+    <!-- Processing Bar -->
+    <div class="processing-bar" id="processingBar">
+      <div class="processing-spinner"></div>
+      <div class="processing-text" id="processingText">Processing document...</div>
+      <div class="processing-progress">
+        <div class="processing-fill" id="processingFill"></div>
+      </div>
+    </div>
+
+    <!-- Results -->
+    <div class="results-header">
+      <div class="results-title" id="resultsTitle">Showing 47 documents</div>
+      <button class="results-sort" id="sortBtn">Sort: Relevance ↓</button>
+    </div>
+
+    <div class="document-list" id="documentList"></div>
+  </main>
+
+  <!-- RIGHT PANEL -->
+  <aside class="panel">
+    <!-- Top Keywords -->
+    <div class="panel-section">
+      <div class="panel-heading">
+        Top Keywords
+        <span class="toggle" id="keywordToggle">View All</span>
+      </div>
+      <div class="freq-list" id="keywordFreq"></div>
+    </div>
+
+    <!-- Top People -->
+    <div class="panel-section">
+      <div class="panel-heading">
+        Most Referenced People
+        <span class="toggle">View All</span>
+      </div>
+      <div class="freq-list" id="peopleFreq"></div>
+    </div>
+
+    <!-- Top Places -->
+    <div class="panel-section">
+      <div class="panel-heading">
+        Top Locations
+        <span class="toggle">View All</span>
+      </div>
+      <div class="freq-list" id="placeFreq"></div>
+    </div>
+
+    <!-- Connection Graph -->
+    <div class="panel-section">
+      <div class="panel-heading">Entity Network</div>
+      <div class="network-placeholder">
+        <canvas id="networkCanvas"></canvas>
+        <div class="network-label">Interactive graph — click entity to explore</div>
+      </div>
+    </div>
+  </aside>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════
+// DOSSIER — Document Intelligence System
+// Prototype UI with simulated data layer
+// ═══════════════════════════════════════════════
+
+// ─── MOCK DATA ───
+const DOCUMENTS = [
+  {
+    id: 1,
+    title: "Deposition of Victim 1 — Case No. 08-80736",
+    category: "deposition",
+    date: "2009-03-14",
+    pages: 87,
+    source: "SDNY Court Records",
+    excerpt: "The witness testified that she was first introduced at the Palm Beach residence in 2001, where she was told the appointment involved massage therapy. She described subsequent encounters at the New York townhouse and the island property.",
+    entities: {
+      people: ["Jeffrey Epstein", "Ghislaine Maxwell", "Sarah Kellen"],
+      places: ["Palm Beach", "New York", "Little St. James"],
+      orgs: ["SDNY", "Palm Beach PD"],
+      dates: ["2001", "March 2009"]
+    },
+    keywords: ["massage", "recruitment", "residence", "testimony", "minor"]
+  },
+  {
+    id: 2,
+    title: "Flight Log — N908JE — January to March 2002",
+    category: "flight",
+    date: "2002-03-30",
+    pages: 12,
+    source: "FAA Records / Subpoena",
+    excerpt: "Manifests for Gulfstream II (tail N908JE) showing passenger lists between Teterboro, Palm Beach International, St. Thomas, and Paris Le Bourget. Multiple entries show recurring passengers across 23 flights in this period.",
+    entities: {
+      people: ["Jeffrey Epstein", "Ghislaine Maxwell", "Jean-Luc Brunel", "Nadia Marcinkova"],
+      places: ["Teterboro", "Palm Beach", "St. Thomas", "Paris"],
+      orgs: ["FAA"],
+      dates: ["Jan 2002", "Feb 2002", "Mar 2002"]
+    },
+    keywords: ["aircraft", "manifest", "passenger", "Gulfstream", "flight"]
+  },
+  {
+    id: 3,
+    title: "Palm Beach Police Department — Incident Report #05-1563",
+    category: "report",
+    date: "2005-03-15",
+    pages: 34,
+    source: "Palm Beach PD FOIA",
+    excerpt: "Initial complaint filed by the mother of a 14-year-old female. Responding officers documented statements regarding activities at 358 El Brillo Way. Investigation subsequently expanded to include multiple victims.",
+    entities: {
+      people: ["Jeffrey Epstein", "Det. Joseph Recarey"],
+      places: ["Palm Beach", "358 El Brillo Way"],
+      orgs: ["Palm Beach Police Department"],
+      dates: ["March 2005", "2005"]
+    },
+    keywords: ["complaint", "investigation", "victim", "minor", "residence"]
+  },
+  {
+    id: 4,
+    title: "Correspondence — Legal Team re: NPA Negotiations",
+    category: "correspondence",
+    date: "2007-09-22",
+    pages: 8,
+    source: "FOIA / DOJ Release",
+    excerpt: "Internal memoranda between defense counsel and the U.S. Attorney's office regarding terms of the non-prosecution agreement. Discussion of immunity provisions extending to unnamed co-conspirators and conditions for registration.",
+    entities: {
+      people: ["Alexander Acosta", "Jay Lefkowitz", "Kenneth Starr"],
+      places: ["Washington D.C.", "Miami"],
+      orgs: ["DOJ", "U.S. Attorney's Office"],
+      dates: ["Sept 2007", "2007"]
+    },
+    keywords: ["NPA", "immunity", "co-conspirators", "prosecution", "plea"]
+  },
+  {
+    id: 5,
+    title: "Giuffre v. Maxwell — Unsealed Deposition Excerpt",
+    category: "legal",
+    date: "2016-04-22",
+    pages: 163,
+    source: "SDNY Case 15-cv-07433",
+    excerpt: "Deposition testimony describing organizational structure, recruitment methodology, and scheduling coordination. Witness identifies multiple residences used and describes travel arrangements facilitated by the defendant.",
+    entities: {
+      people: ["Virginia Giuffre", "Ghislaine Maxwell", "Jeffrey Epstein", "Alan Dershowitz"],
+      places: ["New York", "London", "Palm Beach", "New Mexico"],
+      orgs: ["SDNY"],
+      dates: ["April 2016", "1999-2002"]
+    },
+    keywords: ["recruitment", "scheduling", "travel", "residence", "deposition"]
+  },
+  {
+    id: 6,
+    title: "FBI Supplemental Investigation Notes — USVI Properties",
+    category: "report",
+    date: "2019-08-10",
+    pages: 22,
+    source: "FBI / FOIA",
+    excerpt: "Field agents documented structures, access points, and recovered materials from Great St. James and Little St. James islands following the 2019 arrest. Inventory includes electronic media, documents, and physical evidence cataloged by room.",
+    entities: {
+      people: ["Jeffrey Epstein"],
+      places: ["Little St. James", "Great St. James", "U.S. Virgin Islands"],
+      orgs: ["FBI", "USVI AG"],
+      dates: ["August 2019", "July 2019"]
+    },
+    keywords: ["island", "evidence", "search", "electronic media", "inventory"]
+  },
+  {
+    id: 7,
+    title: "Black Book — Contact Directory (Redacted)",
+    category: "correspondence",
+    date: "2004-01-01",
+    pages: 97,
+    source: "Civil Discovery / Leaked",
+    excerpt: "Personal contact directory containing names, phone numbers, and addresses organized by location and relationship category. Multiple entries show handwritten annotations including circled names and marginal notes.",
+    entities: {
+      people: ["Jeffrey Epstein", "Ghislaine Maxwell"],
+      places: ["New York", "Palm Beach", "Paris", "London"],
+      orgs: [],
+      dates: ["~2004-2005"]
+    },
+    keywords: ["contacts", "phone numbers", "addresses", "annotations", "directory"]
+  }
+];
+
+const TOP_KEYWORDS = [
+  { word: "recruitment", count: 847, type: "keyword" },
+  { word: "massage", count: 612, type: "keyword" },
+  { word: "residence", count: 589, type: "keyword" },
+  { word: "minor", count: 534, type: "keyword" },
+  { word: "testimony", count: 478, type: "keyword" },
+  { word: "aircraft", count: 412, type: "keyword" },
+  { word: "immunity", count: 367, type: "keyword" },
+  { word: "co-conspirator", count: 298, type: "keyword" },
+];
+
+const TOP_PEOPLE = [
+  { word: "Jeffrey Epstein", count: 3412, type: "person" },
+  { word: "Ghislaine Maxwell", count: 2187, type: "person" },
+  { word: "Virginia Giuffre", count: 876, type: "person" },
+  { word: "Sarah Kellen", count: 543, type: "person" },
+  { word: "Jean-Luc Brunel", count: 421, type: "person" },
+  { word: "Alan Dershowitz", count: 389, type: "person" },
+  { word: "Alexander Acosta", count: 312, type: "person" },
+];
+
+const TOP_PLACES = [
+  { word: "Palm Beach", count: 1823, type: "place" },
+  { word: "New York", count: 1654, type: "place" },
+  { word: "Little St. James", count: 987, type: "place" },
+  { word: "Paris", count: 612, type: "place" },
+  { word: "London", count: 534, type: "place" },
+  { word: "New Mexico", count: 423, type: "place" },
+];
+
+
+// ─── RENDER FUNCTIONS ───
+
+function renderDocuments(docs) {
+  const list = document.getElementById('documentList');
+  if (docs.length === 0) {
+    list.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-state-icon">⊘</div>
+        <div class="empty-state-title">No documents found</div>
+        <div class="empty-state-desc">Try adjusting your search query or filters</div>
+      </div>`;
+    return;
+  }
+
+  list.innerHTML = docs.map(doc => {
+    const searchTerm = document.getElementById('searchInput').value.trim();
+    let excerpt = doc.excerpt;
+    if (searchTerm) {
+      const regex = new RegExp(`(${escapeRegex(searchTerm)})`, 'gi');
+      excerpt = excerpt.replace(regex, '<mark>$1</mark>');
+    }
+
+    const allEntities = [
+      ...doc.entities.people.map(e => ({ name: e, type: 'person' })),
+      ...doc.entities.places.map(e => ({ name: e, type: 'place' })),
+      ...doc.entities.orgs.map(e => ({ name: e, type: 'org' })),
+    ].slice(0, 6);
+
+    return `
+      <div class="document-card cat-${doc.category}" data-id="${doc.id}" onclick="selectDocument(${doc.id})">
+        <div class="doc-header">
+          <div class="doc-title">${doc.title}</div>
+          <div class="doc-badge ${doc.category}">${doc.category}</div>
+        </div>
+        <div class="doc-excerpt">${excerpt}</div>
+        <div class="doc-entities">
+          ${allEntities.map(e => `<span class="entity-tag ${e.type}">${e.name}</span>`).join('')}
+        </div>
+        <div class="doc-meta">
+          <span>${doc.date}</span>
+          <span>${doc.pages} pages</span>
+          <span>${doc.source}</span>
+        </div>
+      </div>`;
+  }).join('');
+
+  document.getElementById('resultsTitle').textContent = `Showing ${docs.length} document${docs.length !== 1 ? 's' : ''}`;
+}
+
+function renderFreqList(containerId, data, maxCount) {
+  const container = document.getElementById(containerId);
+  const max = maxCount || Math.max(...data.map(d => d.count));
+
+  container.innerHTML = data.map((item, i) => `
+    <div class="freq-item" onclick="searchFor('${item.word}')">
+      <div class="freq-rank">${i + 1}</div>
+      <div class="freq-bar-container">
+        <div class="freq-label">${item.word}</div>
+        <div class="freq-bar-track">
+          <div class="freq-bar ${item.type}" style="width: ${(item.count / max * 100).toFixed(1)}%"></div>
+        </div>
+      </div>
+      <div class="freq-count">${item.count.toLocaleString()}</div>
+    </div>
+  `).join('');
+}
+
+function searchFor(term) {
+  document.getElementById('searchInput').value = term;
+  performSearch();
+}
+
+function escapeRegex(str) {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+
+// ─── SEARCH ───
+
+function performSearch() {
+  const query = document.getElementById('searchInput').value.trim().toLowerCase();
+
+  if (!query) {
+    renderDocuments(DOCUMENTS);
+    return;
+  }
+
+  const results = DOCUMENTS.filter(doc => {
+    const searchable = [
+      doc.title,
+      doc.excerpt,
+      doc.category,
+      doc.source,
+      ...doc.keywords,
+      ...doc.entities.people,
+      ...doc.entities.places,
+      ...doc.entities.orgs,
+      ...doc.entities.dates,
+    ].join(' ').toLowerCase();
+
+    return searchable.includes(query);
+  });
+
+  renderDocuments(results);
+}
+
+function selectDocument(id) {
+  document.querySelectorAll('.document-card').forEach(c => c.classList.remove('selected'));
+  const card = document.querySelector(`[data-id="${id}"]`);
+  if (card) card.classList.add('selected');
+}
+
+
+// ─── FILTER CHIPS ───
+
+document.querySelectorAll('.filter-chip').forEach(chip => {
+  chip.addEventListener('click', () => {
+    document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+    chip.classList.add('active');
+    performSearch();
+  });
+});
+
+// ─── SIDEBAR NAVIGATION ───
+
+document.querySelectorAll('.sidebar-item[data-filter]').forEach(item => {
+  item.addEventListener('click', () => {
+    document.querySelectorAll('.sidebar-item').forEach(i => i.classList.remove('active'));
+    item.classList.add('active');
+
+    const filter = item.dataset.filter;
+    if (filter === 'all') {
+      renderDocuments(DOCUMENTS);
+    } else {
+      const filtered = DOCUMENTS.filter(d => d.category === filter);
+      renderDocuments(filtered);
+    }
+  });
+});
+
+
+// ─── UPLOAD ZONE ───
+
+const uploadZone = document.getElementById('uploadZone');
+
+uploadZone.addEventListener('dragover', (e) => {
+  e.preventDefault();
+  uploadZone.classList.add('dragover');
+});
+
+uploadZone.addEventListener('dragleave', () => {
+  uploadZone.classList.remove('dragover');
+});
+
+uploadZone.addEventListener('drop', (e) => {
+  e.preventDefault();
+  uploadZone.classList.remove('dragover');
+  simulateIngestion(e.dataTransfer.files);
+});
+
+uploadZone.addEventListener('click', () => {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.multiple = true;
+  input.accept = '.pdf,.txt,.html,.docx,.png,.jpg,.jpeg';
+  input.onchange = () => simulateIngestion(input.files);
+  input.click();
+});
+
+function simulateIngestion(files) {
+  if (!files.length) return;
+
+  const bar = document.getElementById('processingBar');
+  const text = document.getElementById('processingText');
+  const fill = document.getElementById('processingFill');
+
+  bar.classList.add('active');
+
+  const steps = [
+    { msg: `Extracting text from ${files.length} file(s)...`, pct: 15 },
+    { msg: 'Running OCR on scanned pages...', pct: 35 },
+    { msg: 'Performing Named Entity Recognition...', pct: 55 },
+    { msg: 'Indexing keywords and building frequency tables...', pct: 75 },
+    { msg: 'Categorizing and labeling documents...', pct: 90 },
+    { msg: 'Complete — documents added to collection', pct: 100 },
+  ];
+
+  steps.forEach((step, i) => {
+    setTimeout(() => {
+      text.textContent = step.msg;
+      fill.style.width = step.pct + '%';
+      if (i === steps.length - 1) {
+        setTimeout(() => {
+          bar.classList.remove('active');
+          fill.style.width = '0%';
+        }, 1500);
+      }
+    }, i * 1200);
+  });
+}
+
+
+// ─── NETWORK CANVAS ───
+
+function drawNetwork() {
+  const canvas = document.getElementById('networkCanvas');
+  const ctx = canvas.getContext('2d');
+  const rect = canvas.parentElement.getBoundingClientRect();
+  canvas.width = rect.width;
+  canvas.height = rect.height;
+
+  const nodes = [
+    { x: 0.5, y: 0.4, r: 8, color: '#c4473a', label: 'JE' },
+    { x: 0.3, y: 0.25, r: 6, color: '#e07c4a', label: 'GM' },
+    { x: 0.7, y: 0.3, r: 5, color: '#e07c4a', label: 'VG' },
+    { x: 0.2, y: 0.55, r: 4, color: '#4a9de0', label: 'PB' },
+    { x: 0.75, y: 0.6, r: 4, color: '#4a9de0', label: 'NY' },
+    { x: 0.4, y: 0.7, r: 4, color: '#4a9de0', label: 'LSJ' },
+    { x: 0.6, y: 0.15, r: 3, color: '#9b6de0', label: 'DOJ' },
+    { x: 0.15, y: 0.75, r: 3, color: '#e07c4a', label: 'SK' },
+    { x: 0.85, y: 0.45, r: 3, color: '#e07c4a', label: 'JLB' },
+  ];
+
+  const edges = [
+    [0,1],[0,2],[0,3],[0,4],[0,5],[1,2],[1,3],[1,7],[1,8],
+    [2,4],[3,5],[0,6],[0,8],[5,6],[4,2]
+  ];
+
+  // Draw edges
+  ctx.strokeStyle = 'rgba(196,71,58,0.12)';
+  ctx.lineWidth = 1;
+  edges.forEach(([a,b]) => {
+    ctx.beginPath();
+    ctx.moveTo(nodes[a].x * canvas.width, nodes[a].y * canvas.height);
+    ctx.lineTo(nodes[b].x * canvas.width, nodes[b].y * canvas.height);
+    ctx.stroke();
+  });
+
+  // Draw nodes
+  nodes.forEach(n => {
+    ctx.beginPath();
+    ctx.arc(n.x * canvas.width, n.y * canvas.height, n.r, 0, Math.PI * 2);
+    ctx.fillStyle = n.color;
+    ctx.fill();
+
+    ctx.fillStyle = 'rgba(232,234,237,0.6)';
+    ctx.font = '8px JetBrains Mono';
+    ctx.textAlign = 'center';
+    ctx.fillText(n.label, n.x * canvas.width, n.y * canvas.height + n.r + 12);
+  });
+}
+
+
+// ─── INIT ───
+
+document.getElementById('searchInput').addEventListener('input', debounce(performSearch, 200));
+
+function debounce(fn, ms) {
+  let timer;
+  return (...args) => { clearTimeout(timer); timer = setTimeout(() => fn(...args), ms); };
+}
+
+renderDocuments(DOCUMENTS);
+renderFreqList('keywordFreq', TOP_KEYWORDS);
+renderFreqList('peopleFreq', TOP_PEOPLE);
+renderFreqList('placeFreq', TOP_PLACES);
+
+requestAnimationFrame(drawNetwork);
+window.addEventListener('resize', drawNetwork);
+</script>
+
+</body>
+</html>
