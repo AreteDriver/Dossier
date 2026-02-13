@@ -9,10 +9,8 @@ import pytest
 from dossier.core.graph_analysis import (
     Community,
     GraphAnalyzer,
-    GraphStats,
     NodeMetrics,
     PathResult,
-    VALID_METRICS,
 )
 
 
