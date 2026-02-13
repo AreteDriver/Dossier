@@ -21,6 +21,7 @@ dependencies = [
 dev = [
     "pytest",
     "pytest-cov",
+    "httpx",
     "ruff",
 ]
 
@@ -33,3 +34,11 @@ line-length = 100
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.coverage.run]
+source = ["dossier"]
+omit = [
+    "dossier/ingestion/scrapers/*",
+    "dossier/ingestion/email_parser.py",
+    "dossier/ingestion/email_pipeline.py",
+]
