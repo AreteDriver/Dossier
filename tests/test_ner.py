@@ -1,5 +1,7 @@
 """Tests for dossier.core.ner — entity extraction, classification, title generation."""
 
+from unittest.mock import patch
+
 import pytest
 
 from dossier.core.ner import (
@@ -13,6 +15,7 @@ from dossier.core.ner import (
 
 
 # ── Gazetteer lookup ──
+
 
 class TestGazetteerLookup:
     def test_known_person_found(self):
@@ -44,6 +47,7 @@ class TestGazetteerLookup:
 
 
 # ── Date extraction ──
+
 
 class TestDateExtraction:
     def test_full_date(self):
@@ -79,6 +83,7 @@ class TestDateExtraction:
 
 # ── Heuristic NER ──
 
+
 class TestHeuristicNER:
     def test_titled_name(self):
         result = extract_entities("The testimony of Mr. Smith was recorded.")
@@ -98,6 +103,7 @@ class TestHeuristicNER:
 
 
 # ── Keyword extraction ──
+
 
 class TestKeywordExtraction:
     def test_stop_words_filtered(self):
@@ -129,16 +135,26 @@ class TestKeywordExtraction:
 
 # ── Document classifier ──
 
+
 class TestClassifyDocument:
-    @pytest.mark.parametrize("category,signal_text", [
-        ("deposition", "The witness was deposed under oath. Q. State your name. A. Virginia."),
-        ("flight", "Flight log manifest showing passenger departure from Teterboro on N908JE."),
-        ("correspondence", "Dear Sir, Re: our previous memorandum. Sincerely, John."),
-        ("report", "Incident report filed by reporting officer. Case number 05-123. FBI investigation."),
-        ("legal", "The plaintiff filed a motion against the defendant. Case No. 08-cv-123."),
-        ("email", "Subject: Meeting\nFrom: test@example.com\nTo: other@example.com\nDate: today"),
-        ("lobbying", "FARA foreign agent lobbying disclosure for the registrant and client."),
-    ])
+    @pytest.mark.parametrize(
+        "category,signal_text",
+        [
+            ("deposition", "The witness was deposed under oath. Q. State your name. A. Virginia."),
+            ("flight", "Flight log manifest showing passenger departure from Teterboro on N908JE."),
+            ("correspondence", "Dear Sir, Re: our previous memorandum. Sincerely, John."),
+            (
+                "report",
+                "Incident report filed by reporting officer. Case number 05-123. FBI investigation.",
+            ),
+            ("legal", "The plaintiff filed a motion against the defendant. Case No. 08-cv-123."),
+            (
+                "email",
+                "Subject: Meeting\nFrom: test@example.com\nTo: other@example.com\nDate: today",
+            ),
+            ("lobbying", "FARA foreign agent lobbying disclosure for the registrant and client."),
+        ],
+    )
     def test_category_detection(self, category, signal_text):
         assert classify_document(signal_text) == category
 
@@ -155,6 +171,7 @@ class TestClassifyDocument:
 
 
 # ── Title generation ──
+
 
 class TestGenerateTitle:
     def test_extracts_first_suitable_line(self):
@@ -174,6 +191,7 @@ class TestGenerateTitle:
 
 
 # ── Capitalization helpers ──
+
 
 class TestCapitalizePlace:
     def test_usvi(self):
@@ -203,7 +221,71 @@ class TestCapitalizeOrg:
         assert _capitalize_org("goldman sachs") == "Goldman Sachs"
 
 
+# ── Heuristic NER filters ──
+
+
+class TestHeuristicNERFilters:
+    def test_false_positive_filtered(self):
+        """'United States' mid-sentence is filtered as a false positive."""
+        result = extract_entities("The case was filed in the United States district court.")
+        names = [p["name"] for p in result["people"]]
+        assert "United States" not in names
+
+    def test_skip_words_filtered(self):
+        """Words containing skip_words like 'department' are filtered."""
+        result = extract_entities("The employee visited the Aviation Department for review.")
+        names = [p["name"] for p in result["people"]]
+        assert all("Department" not in n for n in names)
+
+    def test_known_countries_filtered(self):
+        """Multi-word known country (not in gazetteers) is filtered from people (line 237).
+
+        'Saudi Arabia' is in both known_countries and KNOWN_PLACES, so the gazetteer
+        check catches it first. We patch KNOWN_PLACES to exclude it, forcing the
+        known_countries filter to be the one that catches it.
+        """
+        import dossier.core.ner as ner_mod
+
+        patched_places = ner_mod.KNOWN_PLACES - {"saudi arabia"}
+        with patch.object(ner_mod, "KNOWN_PLACES", patched_places):
+            result = extract_entities(
+                "The diplomat visited offices in Saudi Arabia for negotiations with officials."
+            )
+        names = [p["name"] for p in result["people"]]
+        assert "Saudi Arabia" not in names
+
+    def test_titled_multi_word_name_via_pre_context(self):
+        r"""Title like 'Det.' in pre_context triggers heuristic person detection (lines 242-243).
+
+        The title must NOT be followed by a space (otherwise (?<!\.\s) lookbehind blocks).
+        'Det.Frederick Hamilton' makes 'Frederick Hamilton' match the regex, with 'Det.'
+        in the 15-char pre_context window matching TITLE_PATTERNS.
+        """
+        result = extract_entities(
+            "Evidence from Det.Frederick Hamilton confirmed the allegations against the defendant."
+        )
+        names = [p["name"] for p in result["people"]]
+        assert "Frederick Hamilton" in names
+
+    def test_three_word_capitalized_not_person(self):
+        """3+ word capitalized sequences with skip words are excluded."""
+        result = extract_entities(
+            "She worked at the Aviation Management Center during the project."
+        )
+        names = [p["name"] for p in result["people"]]
+        assert all("Aviation" not in n for n in names)
+
+
+class TestClassifyDocumentEdge:
+    def test_empty_category_signals(self):
+        """When CATEGORY_SIGNALS is empty, classify returns 'other'."""
+        with patch.dict("dossier.core.ner.CATEGORY_SIGNALS", {}, clear=True):
+            result = classify_document("deposition under oath Q. A. sworn testimony")
+        assert result == "other"
+
+
 # ── Edge cases ──
+
 
 class TestEdgeCases:
     def test_empty_text(self):

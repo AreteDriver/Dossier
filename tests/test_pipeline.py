@@ -128,11 +128,38 @@ class TestIngestFile:
 
         conn = sqlite3.connect(str(pipeline_env / "pipeline_test.db"))
         conn.row_factory = sqlite3.Row
-        doc = conn.execute("SELECT source, date FROM documents WHERE id = ?",
-                           (result["document_id"],)).fetchone()
+        doc = conn.execute(
+            "SELECT source, date FROM documents WHERE id = ?", (result["document_id"],)
+        ).fetchone()
         conn.close()
         assert doc["source"] == "FOIA Release"
         assert doc["date"] == "2023-01-15"
+
+    def test_file_copy_collision(self, pipeline_env):
+        """Same filename but different content gets hash suffix in processed dir."""
+        f = pipeline_env / "collision.txt"
+        f.write_text(
+            "Jeffrey Epstein was investigated by the FBI in Palm Beach. "
+            "The investigation uncovered significant evidence of wrongdoing."
+        )
+        result1 = ingest_file(str(f), source="Test")
+        assert result1["success"] is True
+
+        # Overwrite with different content (different hash, same name)
+        f.write_text(
+            "Ghislaine Maxwell was investigated by the FBI in New York. "
+            "The investigation revealed a complex network of associates."
+        )
+        result2 = ingest_file(str(f), source="Test")
+        assert result2["success"] is True
+
+        # Both files should exist in processed dir
+        processed = pipeline_env / "processed"
+        all_files = list(processed.rglob("collision*"))
+        assert len(all_files) == 2
+        # One should have the hash suffix
+        names = [p.name for p in all_files]
+        assert any("_" in n and n != "collision.txt" for n in names)
 
 
 class TestIngestDirectory:
@@ -140,9 +167,11 @@ class TestIngestDirectory:
         d = pipeline_env / "batch"
         d.mkdir()
         (d / "doc1.txt").write_text(
-            "Jeffrey Epstein document one from Palm Beach investigation by the FBI.")
+            "Jeffrey Epstein document one from Palm Beach investigation by the FBI."
+        )
         (d / "doc2.txt").write_text(
-            "Ghislaine Maxwell document two from the New York investigation by the FBI.")
+            "Ghislaine Maxwell document two from the New York investigation by the FBI."
+        )
 
         results = ingest_directory(str(d), source="Batch")
         assert len(results) == 2
@@ -152,7 +181,8 @@ class TestIngestDirectory:
         d = pipeline_env / "mixed"
         d.mkdir()
         (d / "good.txt").write_text(
-            "Jeffrey Epstein investigation documents from Palm Beach FBI office records.")
+            "Jeffrey Epstein investigation documents from Palm Beach FBI office records."
+        )
         (d / "bad.xyz").write_text("unsupported format")
 
         results = ingest_directory(str(d), source="Mixed")

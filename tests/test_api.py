@@ -1,6 +1,7 @@
 """Tests for dossier.api.server — FastAPI REST endpoints."""
 
 import io
+from unittest.mock import MagicMock, patch
 
 
 class TestEmptyDb:
@@ -364,3 +365,157 @@ class TestGenericErrorHandler:
             assert body["detail"] == "Internal server error"
             assert "Traceback" not in r.text
             assert "exploded" not in r.text
+
+
+class TestSearchEmptyQueryWithCategory:
+    def test_empty_query_with_category_filter(self, client):
+        """Empty query + category filter covers the non-FTS category branch."""
+        _upload_sample(client)
+
+        # Get the category assigned to our uploaded doc
+        r = client.get("/api/documents")
+        docs = r.json()["documents"]
+        assert len(docs) >= 1
+        cat = docs[0]["category"]
+
+        # Search with empty query but matching category
+        r = client.get("/api/search", params={"q": "", "category": cat})
+        assert r.status_code == 200
+        data = r.json()
+        assert data["total"] >= 1
+        assert all(d["category"] == cat for d in data["results"])
+
+    def test_empty_query_with_nonmatching_category(self, client):
+        """Empty query + nonexistent category returns zero results."""
+        _upload_sample(client)
+        r = client.get("/api/search", params={"q": "", "category": "nonexistent_cat"})
+        assert r.status_code == 200
+        assert r.json()["total"] == 0
+
+
+class TestUploadEmail:
+    def test_success(self, client):
+        """Successful email upload returns 201."""
+        mock_fn = MagicMock(return_value=[{"success": True, "document_id": 1}])
+        with patch.dict(
+            "sys.modules",
+            {
+                "dossier.ingestion.email_pipeline": MagicMock(ingest_email_file=mock_fn),
+            },
+        ):
+            r = client.post(
+                "/api/upload-email",
+                files={"file": ("test.eml", io.BytesIO(b"email content here"), "message/rfc822")},
+                params={"source": "Email Test", "corpus": "test"},
+            )
+        assert r.status_code == 201
+        data = r.json()
+        assert data["ingested"] == 1
+        assert data["failed"] == 0
+
+    def test_all_failed(self, client):
+        """All-failed email upload returns 422."""
+        mock_fn = MagicMock(return_value=[{"success": False, "message": "parse error"}])
+        with patch.dict(
+            "sys.modules",
+            {
+                "dossier.ingestion.email_pipeline": MagicMock(ingest_email_file=mock_fn),
+            },
+        ):
+            r = client.post(
+                "/api/upload-email",
+                files={"file": ("bad.eml", io.BytesIO(b"bad email"), "message/rfc822")},
+                params={"source": "Email Test"},
+            )
+        assert r.status_code == 422
+        data = r.json()
+        assert data["ingested"] == 0
+        assert data["failed"] == 1
+
+
+class TestIngestEmailsDirectory:
+    def test_success(self, client, tmp_path):
+        """Successful email directory ingest."""
+        d = tmp_path / "emails"
+        d.mkdir()
+        (d / "sample.eml").write_text("From: test@example.com\nSubject: Test")
+
+        mock_fn = MagicMock(return_value={"ingested": 2, "failed": 0})
+        with patch.dict(
+            "sys.modules",
+            {
+                "dossier.ingestion.email_pipeline": MagicMock(ingest_email_directory=mock_fn),
+            },
+        ):
+            r = client.post(
+                "/api/ingest-emails-directory",
+                params={"dirpath": str(d), "source": "Email Import", "corpus": "test"},
+            )
+        assert r.status_code == 200
+        data = r.json()
+        assert data["ingested"] == 2
+
+    def test_bad_directory(self, client, tmp_path):
+        """Nonexistent directory returns 400."""
+        bad = tmp_path / "no_such_dir"
+        mock_fn = MagicMock()
+        with patch.dict(
+            "sys.modules",
+            {
+                "dossier.ingestion.email_pipeline": MagicMock(ingest_email_directory=mock_fn),
+            },
+        ):
+            r = client.post(
+                "/api/ingest-emails-directory",
+                params={"dirpath": str(bad)},
+            )
+        assert r.status_code == 400
+
+
+class TestLobbyingGenerate:
+    def test_success(self, client):
+        """Lobbying generate endpoint calls all three functions."""
+        mock_mod = MagicMock()
+        mock_mod.create_lobbying_index = MagicMock()
+        mock_mod.generate_ingestable_documents = MagicMock(return_value=5)
+        mock_mod.ingest_lobbying_docs = MagicMock()
+        with patch.dict(
+            "sys.modules",
+            {
+                "dossier.ingestion.scrapers": MagicMock(),
+                "dossier.ingestion.scrapers.fara_lobbying": mock_mod,
+            },
+        ):
+            r = client.post("/api/lobbying/generate")
+        assert r.status_code == 200
+        data = r.json()
+        assert "5" in data["message"]
+        mock_mod.create_lobbying_index.assert_called_once()
+        mock_mod.ingest_lobbying_docs.assert_called_once()
+
+
+class TestServeFrontendNoIndex:
+    def test_no_index_returns_api_message(self, client, monkeypatch):
+        """When no index.html exists, returns API running message."""
+        import dossier.api.server as srv_mod
+
+        monkeypatch.setattr(
+            srv_mod,
+            "STATIC_DIR",
+            client.app.state._tmp
+            if hasattr(client.app.state, "_tmp")
+            else monkeypatch.tmpdir
+            if hasattr(monkeypatch, "tmpdir")
+            else "/tmp/empty_static_dir_test",
+        )
+        # Use a fresh empty dir
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as td:
+            from pathlib import Path
+
+            monkeypatch.setattr(srv_mod, "STATIC_DIR", Path(td))
+            r = client.get("/")
+            assert r.status_code == 200
+            data = r.json()
+            assert "DOSSIER API is running" in data["message"]
