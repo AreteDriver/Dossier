@@ -221,6 +221,7 @@ class TestEntityResolver:
         result = resolver.resolve_all()
         assert result.auto_merged >= 1
 
+    @pytest.mark.skipif(not HAS_RAPIDFUZZ, reason="rapidfuzz not installed")
     def test_typo_match(self, memory_db):
         _insert_entity(memory_db, "John Alexander Smith")
         _insert_entity(memory_db, "John Alexannder Smith")
@@ -228,7 +229,7 @@ class TestEntityResolver:
 
         resolver = EntityResolver(memory_db)
         result = resolver.resolve_all()
-        # Should find a match (edit distance or jaccard)
+        # Should find a match (edit distance)
         assert len(result.matches) >= 1
 
     def test_no_cross_type(self, memory_db):
@@ -531,7 +532,7 @@ class TestImportGuard:
 
         # Restore
         importlib.reload(resolver_mod)
-        assert resolver_mod.HAS_RAPIDFUZZ is True
+        assert resolver_mod.HAS_RAPIDFUZZ is HAS_RAPIDFUZZ
 
 
 # ═══════════════════════════════════════════════════════════════════
