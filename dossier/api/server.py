@@ -27,6 +27,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from dossier.db.database import get_db, init_db
 from dossier.ingestion.pipeline import ingest_file, ingest_directory
+from dossier.forensics.api_timeline import router as timeline_router
 
 logger = logging.getLogger(__name__)
 
@@ -38,6 +39,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(timeline_router, prefix="/api/timeline", tags=["timeline"])
 
 
 @app.exception_handler(Exception)

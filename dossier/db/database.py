@@ -133,6 +133,10 @@ def init_db():
         CREATE INDEX IF NOT EXISTS idx_documents_date ON documents(date);
         CREATE INDEX IF NOT EXISTS idx_keywords_total ON keywords(total_count DESC);
         """)
+        # Initialize forensics tables
+        from dossier.forensics.timeline import init_timeline_tables
+
+        init_timeline_tables(conn)
     print(f"[DB] Initialized at {DB_PATH}")
 
 
