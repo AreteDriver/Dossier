@@ -390,11 +390,8 @@ class TestRelativeDateOverlap:
 
     def test_relative_overlapping_explicit_is_skipped(self, extractor):
         """'the following March 5, 2003' — 'the following' overlaps the full date span."""
-        dates = extractor.extract_dates(
-            "He returned the following day on March 5, 2003."
-        )
+        dates = extractor.extract_dates("He returned the following day on March 5, 2003.")
         day_dates = [d for d in dates if d.precision == DatePrecision.DAY]
-        relative_dates = [d for d in dates if d.precision == DatePrecision.RELATIVE]
         assert len(day_dates) == 1
         # The key invariant: no duplicate spans
         spans = [(d.char_start, d.char_end) for d in dates]
@@ -416,7 +413,7 @@ class TestNormalizationFallback:
 
     def test_unparseable_day_date_falls_back_to_year(self, extractor):
         """A date matching DAY pattern but dateutil can't parse — falls back to year."""
-        from dossier.forensics.timeline import DatePrecision, ExtractedDate
+        from dossier.forensics.timeline import DatePrecision
 
         # Directly test _normalize_to_iso with an unparseable DAY-precision string
         result = extractor._normalize_to_iso("32/13/2007", DatePrecision.DAY)

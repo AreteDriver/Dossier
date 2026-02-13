@@ -180,12 +180,33 @@ def ingest_file(filepath: str, source: str = "", date: str = "") -> dict:
                     (a, b),
                 )
 
+        # ─── Step 6: Timeline extraction ───
+        entity_names = [
+            ent["name"]
+            for etype_list in [entities["people"], entities["places"], entities["orgs"]]
+            for ent in etype_list
+        ]
+        from dossier.forensics.timeline import TimelineExtractor, store_events
+
+        extractor = TimelineExtractor(entity_names=entity_names)
+        timeline_events = extractor.extract_events(raw_text, document_id=doc_id)
+        timeline_event_ids = store_events(conn, timeline_events)
+
+        # ─── Step 7: Entity resolution ───
+        from dossier.core.resolver import EntityResolver
+
+        resolver = EntityResolver(conn)
+        resolution = resolver.resolve_all()
+
     stats = {
         "people": len(entities["people"]),
         "places": len(entities["places"]),
         "orgs": len(entities["orgs"]),
         "dates": len(entities["dates"]),
         "keywords": keyword_count,
+        "timeline_events": len(timeline_event_ids),
+        "resolved_entities": resolution.auto_merged,
+        "suggested_merges": resolution.suggested,
         "text_length": len(raw_text),
         "pages": pages,
         "method": extraction["method"],

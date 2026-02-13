@@ -137,6 +137,11 @@ def init_db():
         from dossier.forensics.timeline import init_timeline_tables
 
         init_timeline_tables(conn)
+
+        # Initialize resolver tables
+        from dossier.core.resolver import init_resolver_tables
+
+        init_resolver_tables(conn)
     print(f"[DB] Initialized at {DB_PATH}")
 
 

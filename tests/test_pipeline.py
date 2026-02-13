@@ -31,6 +31,7 @@ class TestIngestFile:
         assert result["success"] is True
         assert "document_id" in result
         assert result["stats"]["people"] > 0
+        assert result["stats"]["timeline_events"] > 0
 
     def test_file_not_found(self, pipeline_env):
         result = ingest_file("/nonexistent/file.txt")
@@ -160,6 +161,34 @@ class TestIngestFile:
         # One should have the hash suffix
         names = [p.name for p in all_files]
         assert any("_" in n and n != "collision.txt" for n in names)
+
+
+class TestResolverIntegration:
+    def test_resolver_runs_on_ingest(self, pipeline_env):
+        """Entity resolution runs automatically after ingestion."""
+        f = pipeline_env / "resolver_test.txt"
+        f.write_text(
+            "Jeffrey Epstein was investigated by the FBI in Palm Beach. "
+            "The deposition was taken on January 15, 2015. "
+            "Goldman Sachs provided financial records related to the case."
+        )
+        result = ingest_file(str(f), source="Test")
+        assert result["success"] is True
+        assert "resolved_entities" in result["stats"]
+        assert "suggested_merges" in result["stats"]
+
+    def test_resolver_stats_in_response(self, pipeline_env):
+        """Resolution stats are included in the ingest response."""
+        f = pipeline_env / "resolver_stats.txt"
+        f.write_text(
+            "Jeffrey Epstein and Ghislaine Maxwell were both present in Palm Beach. "
+            "The FBI filed the report in 2005. Goldman Sachs reviewed the financials."
+        )
+        result = ingest_file(str(f), source="Test")
+        assert result["success"] is True
+        stats = result["stats"]
+        assert isinstance(stats["resolved_entities"], int)
+        assert isinstance(stats["suggested_merges"], int)
 
 
 class TestIngestDirectory:

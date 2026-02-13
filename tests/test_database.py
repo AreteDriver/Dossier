@@ -16,6 +16,10 @@ EXPECTED_TABLES = {
     "keywords",
     "document_keywords",
     "entity_connections",
+    "entity_resolutions",
+    "entity_aliases",
+    "resolution_log",
+    "resolution_queue",
 }
 
 
