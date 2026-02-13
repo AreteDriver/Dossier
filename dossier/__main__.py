@@ -11,6 +11,9 @@ Usage:
     python -m dossier stats              # Show collection stats
     python -m dossier entities [type]    # List top entities
     python -m dossier init               # Initialize database
+    python -m dossier timeline           # Show reconstructed timeline
+                                          # --start 2003-01-01 --end 2009-12-31
+                                          # --entity "Jane Doe"
 
     # Podesta Email Scrapers
     python -m dossier podesta-download --range 1 100    # Download WikiLeaks emails
@@ -61,6 +64,8 @@ def main():
         stats_cmd()
     elif cmd == "entities":
         entities_cmd()
+    elif cmd == "timeline":
+        timeline_cmd()
     elif cmd == "podesta-download":
         podesta_download_cmd()
     elif cmd == "podesta-ingest":
@@ -217,6 +222,45 @@ def entities_cmd():
     print(f"  {'─' * 40}")
     for row in rows:
         print(f"  {row['total']:6d}  [{row['type']:6s}]  {row['name']}")
+    print()
+
+
+def timeline_cmd():
+    from dossier.db.database import init_db, get_db
+    from dossier.forensics.timeline import query_timeline
+
+    init_db()
+
+    start = None
+    end = None
+    entity = None
+    args = sys.argv[2:]
+    for i, arg in enumerate(args):
+        if arg == "--start" and i + 1 < len(args):
+            start = args[i + 1]
+        elif arg == "--end" and i + 1 < len(args):
+            end = args[i + 1]
+        elif arg == "--entity" and i + 1 < len(args):
+            entity = args[i + 1]
+
+    with get_db() as conn:
+        events = query_timeline(conn, start_date=start, end_date=end, entity_name=entity, limit=50)
+
+    if not events:
+        print("No timeline events found.")
+        return
+
+    print(f"\n─── Timeline ({len(events)} events) ───\n")
+    for ev in events:
+        date_str = ev["event_date"] or "(unresolved)"
+        precision = ev["precision"]
+        confidence = ev["confidence"]
+        context = ev["context"][:120]
+        entities_list = [e["name"] for e in ev.get("entities", [])]
+        ent_str = f"  [{', '.join(entities_list)}]" if entities_list else ""
+        print(f"  {date_str:12s}  [{precision:6s}] ({confidence:.0%})  {context}")
+        if ent_str:
+            print(f"               {ent_str}")
     print()
 
 

@@ -383,6 +383,54 @@ class TestMainGuard:
         runpy.run_module("dossier.__main__", run_name="__main__")
 
 
+class TestCliTimeline:
+    def test_timeline_empty(self, monkeypatch, capsys):
+        monkeypatch.setattr(sys, "argv", ["dossier", "init"])
+        main()
+        monkeypatch.setattr(sys, "argv", ["dossier", "timeline"])
+        main()
+        output = capsys.readouterr().out
+        assert "No timeline events" in output
+
+    def test_timeline_with_events(self, monkeypatch, cli_env, capsys):
+        monkeypatch.setattr(sys, "argv", ["dossier", "init"])
+        main()
+
+        f = cli_env / "timeline_test.txt"
+        f.write_text(
+            "On March 14, 2009, Jane Doe testified in the Southern District. "
+            "Jeffrey Epstein was arrested on July 6, 2019 at Teterboro Airport."
+        )
+        monkeypatch.setattr(sys, "argv", ["dossier", "ingest", str(f)])
+        main()
+        capsys.readouterr()  # clear
+
+        monkeypatch.setattr(sys, "argv", ["dossier", "timeline"])
+        main()
+        output = capsys.readouterr().out
+        assert "Timeline" in output
+        assert "2009" in output
+
+    def test_timeline_with_filters(self, monkeypatch, cli_env, capsys):
+        monkeypatch.setattr(sys, "argv", ["dossier", "init"])
+        main()
+
+        f = cli_env / "timeline_filter.txt"
+        f.write_text(
+            "On March 14, 2009, Jane Doe testified. Jeffrey Epstein was arrested on July 6, 2019."
+        )
+        monkeypatch.setattr(sys, "argv", ["dossier", "ingest", str(f)])
+        main()
+        capsys.readouterr()  # clear
+
+        monkeypatch.setattr(
+            sys, "argv", ["dossier", "timeline", "--start", "2015-01-01", "--end", "2020-12-31"]
+        )
+        main()
+        output = capsys.readouterr().out
+        assert "Timeline" in output
+
+
 class TestCliEntitiesWithResults:
     def test_entities_with_type_filter(self, monkeypatch, cli_env, capsys):
         monkeypatch.setattr(sys, "argv", ["dossier", "init"])

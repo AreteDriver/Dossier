@@ -31,6 +31,7 @@ class TestIngestFile:
         assert result["success"] is True
         assert "document_id" in result
         assert result["stats"]["people"] > 0
+        assert result["stats"]["timeline_events"] > 0
 
     def test_file_not_found(self, pipeline_env):
         result = ingest_file("/nonexistent/file.txt")
