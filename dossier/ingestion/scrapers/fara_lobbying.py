@@ -27,8 +27,6 @@ Usage:
     python -m dossier.ingestion.scrapers.fara_lobbying --ingest
 """
 
-import os
-import sys
 import json
 import time
 import re
@@ -38,9 +36,11 @@ from datetime import datetime
 
 try:
     import requests
+
     HAS_REQUESTS = True
 except ImportError:
     import urllib.request
+
     HAS_REQUESTS = False
 
 
@@ -92,16 +92,18 @@ def search_fara(registrant_name: str, delay: float = 2.0) -> list[dict]:
                 FARA_SEARCH_URL,
                 params=params,
                 timeout=30,
-                headers={"User-Agent": "Mozilla/5.0 (compatible; research-tool)"}
+                headers={"User-Agent": "Mozilla/5.0 (compatible; research-tool)"},
             )
             if resp.status_code == 200:
                 data = resp.json()
-                results = data if isinstance(data, list) else data.get("results", data.get("docs", []))
+                results = (
+                    data if isinstance(data, list) else data.get("results", data.get("docs", []))
+                )
         else:
             url = f"{FARA_SEARCH_URL}?q={registrant_name.replace(' ', '+')}"
-            req = urllib.request.Request(url, headers={
-                "User-Agent": "Mozilla/5.0 (compatible; research-tool)"
-            })
+            req = urllib.request.Request(
+                url, headers={"User-Agent": "Mozilla/5.0 (compatible; research-tool)"}
+            )
             with urllib.request.urlopen(req, timeout=30) as resp:
                 data = json.loads(resp.read().decode())
                 results = data if isinstance(data, list) else data.get("results", [])
@@ -110,8 +112,8 @@ def search_fara(registrant_name: str, delay: float = 2.0) -> list[dict]:
 
     except Exception as e:
         print(f"[FARA] Search error: {e}")
-        print(f"[FARA] Note: The FARA efile API may require manual access.")
-        print(f"[FARA] Visit https://efile.fara.gov/ to search manually.")
+        print("[FARA] Note: The FARA efile API may require manual access.")
+        print("[FARA] Visit https://efile.fara.gov/ to search manually.")
 
     return results
 
@@ -129,9 +131,9 @@ def download_fara_document(url: str, filename: str, delay: float = 2.0) -> dict:
 
     try:
         if HAS_REQUESTS:
-            resp = requests.get(url, timeout=60, headers={
-                "User-Agent": "Mozilla/5.0 (compatible; research-tool)"
-            })
+            resp = requests.get(
+                url, timeout=60, headers={"User-Agent": "Mozilla/5.0 (compatible; research-tool)"}
+            )
             resp.raise_for_status()
             with open(output_path, "wb") as f:
                 f.write(resp.content)
@@ -173,8 +175,8 @@ def create_lobbying_index():
                 "country": "Ukraine",
                 "period": "2012-2014",
                 "notes": "Lobbying on behalf of Ukrainian government interests. "
-                         "Connected to Paul Manafort's Ukraine work. "
-                         "Subject of Mueller investigation scrutiny.",
+                "Connected to Paul Manafort's Ukraine work. "
+                "Subject of Mueller investigation scrutiny.",
                 "compensation": "~$1.2M reported",
             },
             {
@@ -182,14 +184,14 @@ def create_lobbying_index():
                 "country": "Russia",
                 "period": "2016",
                 "notes": "Hired to lobby for lifting of sanctions. "
-                         "Contract terminated after media scrutiny.",
+                "Contract terminated after media scrutiny.",
             },
             {
                 "name": "Uranium One",
                 "country": "Russia (via Canada)",
                 "period": "2012-2016",
                 "notes": "Russian nuclear energy company. "
-                         "Subject of congressional inquiry regarding Clinton Foundation connections.",
+                "Subject of congressional inquiry regarding Clinton Foundation connections.",
             },
             {
                 "name": "Republic of Azerbaijan",
@@ -211,8 +213,13 @@ def create_lobbying_index():
             },
         ],
         "domestic_clients": [
-            "Walmart", "BP", "Lockheed Martin", "Bank of America",
-            "Google", "General Electric", "Comcast",
+            "Walmart",
+            "BP",
+            "Lockheed Martin",
+            "Bank of America",
+            "Google",
+            "General Electric",
+            "Comcast",
             "National Association of Broadcasters",
         ],
     }
@@ -225,7 +232,10 @@ def create_lobbying_index():
         "status": "Active (rebranded as Invariant LLC)",
         "notes": "Tony Podesta's ex-wife. Continued lobbying after Podesta Group closure.",
         "domestic_clients": [
-            "Amazon", "Airbnb", "Lyft", "TransCanada (Keystone XL)",
+            "Amazon",
+            "Airbnb",
+            "Lyft",
+            "TransCanada (Keystone XL)",
         ],
     }
     index["registrants"].append(heather_podesta)
@@ -258,32 +268,34 @@ def generate_ingestable_documents():
     doc_count = 0
     for registrant in index["registrants"]:
         # Main registrant doc
-        doc_path = docs_dir / f"lobbying_registrant_{registrant['name'].replace(' ', '_').lower()}.txt"
+        doc_path = (
+            docs_dir / f"lobbying_registrant_{registrant['name'].replace(' ', '_').lower()}.txt"
+        )
         with open(doc_path, "w") as f:
-            f.write(f"LOBBYING DISCLOSURE — REGISTRANT PROFILE\n")
-            f.write(f"{'='*50}\n\n")
+            f.write("LOBBYING DISCLOSURE — REGISTRANT PROFILE\n")
+            f.write(f"{'=' * 50}\n\n")
             f.write(f"Registrant: {registrant['name']}\n")
             f.write(f"Status: {registrant.get('status', 'Unknown')}\n")
-            if registrant.get('fara_number'):
+            if registrant.get("fara_number"):
                 f.write(f"FARA Registration #: {registrant['fara_number']}\n")
             f.write(f"Principals: {', '.join(registrant.get('principals', []))}\n")
-            if registrant.get('notes'):
+            if registrant.get("notes"):
                 f.write(f"\nNotes: {registrant['notes']}\n")
 
             if registrant.get("foreign_principals"):
-                f.write(f"\nFOREIGN PRINCIPALS:\n")
-                f.write(f"{'-'*30}\n")
+                f.write("\nFOREIGN PRINCIPALS:\n")
+                f.write(f"{'-' * 30}\n")
                 for fp in registrant["foreign_principals"]:
                     f.write(f"\n  Principal: {fp['name']}\n")
                     f.write(f"  Country: {fp['country']}\n")
                     f.write(f"  Period: {fp['period']}\n")
-                    if fp.get('compensation'):
+                    if fp.get("compensation"):
                         f.write(f"  Compensation: {fp['compensation']}\n")
                     f.write(f"  Details: {fp['notes']}\n")
 
             if registrant.get("domestic_clients"):
-                f.write(f"\nDOMESTIC CLIENTS:\n")
-                f.write(f"{'-'*30}\n")
+                f.write("\nDOMESTIC CLIENTS:\n")
+                f.write(f"{'-' * 30}\n")
                 for client in registrant["domestic_clients"]:
                     f.write(f"  - {client}\n")
 
@@ -294,16 +306,16 @@ def generate_ingestable_documents():
             safe_name = re.sub(r"[^\w]", "_", fp["name"].lower())
             fp_path = docs_dir / f"fara_filing_{safe_name}.txt"
             with open(fp_path, "w") as f:
-                f.write(f"FARA FILING — FOREIGN PRINCIPAL REPRESENTATION\n")
-                f.write(f"{'='*50}\n\n")
+                f.write("FARA FILING — FOREIGN PRINCIPAL REPRESENTATION\n")
+                f.write(f"{'=' * 50}\n\n")
                 f.write(f"Registrant: {registrant['name']}\n")
                 f.write(f"Foreign Principal: {fp['name']}\n")
                 f.write(f"Country: {fp['country']}\n")
                 f.write(f"Period of Engagement: {fp['period']}\n")
-                if fp.get('compensation'):
+                if fp.get("compensation"):
                     f.write(f"Reported Compensation: {fp['compensation']}\n")
                 f.write(f"\nDetails:\n{fp['notes']}\n")
-                f.write(f"\nSource: Public FARA Records, DOJ FARA efile system\n")
+                f.write("\nSource: Public FARA Records, DOJ FARA efile system\n")
             doc_count += 1
 
     print(f"[LOBBYING] Generated {doc_count} ingestable documents in {docs_dir}")
@@ -332,9 +344,13 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Download Podesta Group lobbying records")
     parser.add_argument("--search", type=str, help="Search FARA for a registrant name")
     parser.add_argument("--create-index", action="store_true", help="Create curated lobbying index")
-    parser.add_argument("--generate-docs", action="store_true", help="Generate ingestable documents from index")
+    parser.add_argument(
+        "--generate-docs", action="store_true", help="Generate ingestable documents from index"
+    )
     parser.add_argument("--ingest", action="store_true", help="Ingest lobbying docs into DOSSIER")
-    parser.add_argument("--all", action="store_true", help="Create index, generate docs, and ingest")
+    parser.add_argument(
+        "--all", action="store_true", help="Create index, generate docs, and ingest"
+    )
 
     args = parser.parse_args()
 

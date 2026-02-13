@@ -15,8 +15,6 @@ import csv
 from email import policy
 from email.utils import parsedate_to_datetime, parseaddr, getaddresses
 from pathlib import Path
-from typing import Optional
-from datetime import datetime
 
 
 def parse_email_file(filepath: str) -> list[dict]:
@@ -80,22 +78,26 @@ def _parse_json_emails(filepath: str) -> list[dict]:
 
     results = []
     for item in emails:
-        results.append({
-            "message_id": item.get("id", item.get("message_id", "")),
-            "subject": item.get("subject", ""),
-            "from_addr": item.get("from", item.get("from_addr", "")),
-            "from_name": _extract_name(item.get("from", "")),
-            "to": _parse_addr_list(item.get("to", "")),
-            "cc": _parse_addr_list(item.get("cc", "")),
-            "bcc": _parse_addr_list(item.get("bcc", "")),
-            "date": item.get("date", ""),
-            "body": item.get("body", item.get("text", item.get("content", ""))),
-            "attachments": item.get("attachments", []),
-            "headers": {k: v for k, v in item.items() if k not in {
-                "body", "text", "content", "attachments"
-            }},
-            "raw": json.dumps(item),
-        })
+        results.append(
+            {
+                "message_id": item.get("id", item.get("message_id", "")),
+                "subject": item.get("subject", ""),
+                "from_addr": item.get("from", item.get("from_addr", "")),
+                "from_name": _extract_name(item.get("from", "")),
+                "to": _parse_addr_list(item.get("to", "")),
+                "cc": _parse_addr_list(item.get("cc", "")),
+                "bcc": _parse_addr_list(item.get("bcc", "")),
+                "date": item.get("date", ""),
+                "body": item.get("body", item.get("text", item.get("content", ""))),
+                "attachments": item.get("attachments", []),
+                "headers": {
+                    k: v
+                    for k, v in item.items()
+                    if k not in {"body", "text", "content", "attachments"}
+                },
+                "raw": json.dumps(item),
+            }
+        )
     return results
 
 
@@ -106,20 +108,24 @@ def _parse_csv_emails(filepath: str) -> list[dict]:
         reader = csv.DictReader(f)
         for row in reader:
             # Flexible column mapping
-            results.append({
-                "message_id": row.get("id", row.get("message_id", row.get("ID", ""))),
-                "subject": row.get("subject", row.get("Subject", "")),
-                "from_addr": row.get("from", row.get("From", row.get("sender", ""))),
-                "from_name": _extract_name(row.get("from", row.get("From", ""))),
-                "to": _parse_addr_list(row.get("to", row.get("To", ""))),
-                "cc": _parse_addr_list(row.get("cc", row.get("Cc", ""))),
-                "bcc": _parse_addr_list(row.get("bcc", row.get("Bcc", ""))),
-                "date": row.get("date", row.get("Date", "")),
-                "body": row.get("body", row.get("Body", row.get("content", row.get("Content", "")))),
-                "attachments": [],
-                "headers": dict(row),
-                "raw": str(row),
-            })
+            results.append(
+                {
+                    "message_id": row.get("id", row.get("message_id", row.get("ID", ""))),
+                    "subject": row.get("subject", row.get("Subject", "")),
+                    "from_addr": row.get("from", row.get("From", row.get("sender", ""))),
+                    "from_name": _extract_name(row.get("from", row.get("From", ""))),
+                    "to": _parse_addr_list(row.get("to", row.get("To", ""))),
+                    "cc": _parse_addr_list(row.get("cc", row.get("Cc", ""))),
+                    "bcc": _parse_addr_list(row.get("bcc", row.get("Bcc", ""))),
+                    "date": row.get("date", row.get("Date", "")),
+                    "body": row.get(
+                        "body", row.get("Body", row.get("content", row.get("Content", "")))
+                    ),
+                    "attachments": [],
+                    "headers": dict(row),
+                    "raw": str(row),
+                }
+            )
     return results
 
 
@@ -150,20 +156,22 @@ def _parse_raw_email_text(filepath: str) -> list[dict]:
             return results
 
     # Fall back: treat as a single email-like document
-    return [{
-        "message_id": "",
-        "subject": _guess_subject(content),
-        "from_addr": "",
-        "from_name": "",
-        "to": [],
-        "cc": [],
-        "bcc": [],
-        "date": "",
-        "body": content,
-        "attachments": [],
-        "headers": {},
-        "raw": content,
-    }]
+    return [
+        {
+            "message_id": "",
+            "subject": _guess_subject(content),
+            "from_addr": "",
+            "from_name": "",
+            "to": [],
+            "cc": [],
+            "bcc": [],
+            "date": "",
+            "body": content,
+            "attachments": [],
+            "headers": {},
+            "raw": content,
+        }
+    ]
 
 
 def _parse_wikileaks_html(filepath: str) -> list[dict]:
@@ -176,20 +184,19 @@ def _parse_wikileaks_html(filepath: str) -> list[dict]:
 
     # Extract email fields from WikiLeaks HTML structure
     def extract_field(label):
-        pattern = rf'<td[^>]*>\s*{label}\s*</td>\s*<td[^>]*>(.*?)</td>'
+        pattern = rf"<td[^>]*>\s*{label}\s*</td>\s*<td[^>]*>(.*?)</td>"
         match = re.search(pattern, html, re.DOTALL | re.IGNORECASE)
         if match:
             # Strip HTML tags
             return re.sub(r"<[^>]+>", "", match.group(1)).strip()
         # Also try simpler patterns
-        pattern2 = rf'{label}:\s*([^\n<]+)'
+        pattern2 = rf"{label}:\s*([^\n<]+)"
         match2 = re.search(pattern2, html, re.IGNORECASE)
         return match2.group(1).strip() if match2 else ""
 
     # Try to get the email body
     body_match = re.search(
-        r'<div[^>]*class="[^"]*email-body[^"]*"[^>]*>(.*?)</div>',
-        html, re.DOTALL | re.IGNORECASE
+        r'<div[^>]*class="[^"]*email-body[^"]*"[^>]*>(.*?)</div>', html, re.DOTALL | re.IGNORECASE
     )
     if not body_match:
         # Try pre tag
@@ -215,25 +222,28 @@ def _parse_wikileaks_html(filepath: str) -> list[dict]:
     wl_id_match = re.search(r"emailid/(\d+)", html)
     wl_id = wl_id_match.group(1) if wl_id_match else ""
 
-    return [{
-        "message_id": wl_id,
-        "subject": subject,
-        "from_addr": from_addr,
-        "from_name": _extract_name(from_addr),
-        "to": _parse_addr_list(to_field),
-        "cc": _parse_addr_list(cc_field),
-        "bcc": [],
-        "date": date_field,
-        "body": body,
-        "attachments": [],
-        "headers": {"wikileaks_id": wl_id},
-        "raw": html,
-    }]
+    return [
+        {
+            "message_id": wl_id,
+            "subject": subject,
+            "from_addr": from_addr,
+            "from_name": _extract_name(from_addr),
+            "to": _parse_addr_list(to_field),
+            "cc": _parse_addr_list(cc_field),
+            "bcc": [],
+            "date": date_field,
+            "body": body,
+            "attachments": [],
+            "headers": {"wikileaks_id": wl_id},
+            "raw": html,
+        }
+    ]
 
 
 # ═══════════════════════════════════════════
 # HELPERS
 # ═══════════════════════════════════════════
+
 
 def _email_to_dict(msg) -> dict:
     """Convert an email.message.Message to our standard dict format."""
@@ -263,11 +273,13 @@ def _email_to_dict(msg) -> dict:
     if msg.is_multipart():
         for part in msg.walk():
             if part.get_content_disposition() == "attachment":
-                attachments.append({
-                    "filename": part.get_filename() or "unknown",
-                    "content_type": part.get_content_type(),
-                    "size": len(part.get_payload(decode=True) or b""),
-                })
+                attachments.append(
+                    {
+                        "filename": part.get_filename() or "unknown",
+                        "content_type": part.get_content_type(),
+                        "size": len(part.get_payload(decode=True) or b""),
+                    }
+                )
 
     # Parse date
     date_str = msg.get("Date", "")

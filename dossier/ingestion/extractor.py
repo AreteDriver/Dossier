@@ -8,7 +8,6 @@ import hashlib
 import subprocess
 import tempfile
 from pathlib import Path
-from typing import Optional
 
 
 def file_hash(filepath: str) -> str:
@@ -88,14 +87,17 @@ def _ocr_pdf(filepath: str) -> str:
             # Convert PDF to PNG images
             subprocess.run(
                 ["pdftoppm", "-png", "-r", "300", filepath, os.path.join(tmpdir, "page")],
-                capture_output=True, timeout=120
+                capture_output=True,
+                timeout=120,
             )
 
             text_parts = []
             for img_file in sorted(Path(tmpdir).glob("*.png")):
                 result = subprocess.run(
                     ["tesseract", str(img_file), "stdout", "--psm", "3"],
-                    capture_output=True, text=True, timeout=60
+                    capture_output=True,
+                    text=True,
+                    timeout=60,
                 )
                 if result.stdout.strip():
                     text_parts.append(result.stdout.strip())
@@ -122,6 +124,7 @@ def _extract_text(filepath: str) -> dict:
 def _extract_html(filepath: str) -> dict:
     """Strip HTML tags, extract text content."""
     import re
+
     try:
         with open(filepath, "r", encoding="utf-8", errors="replace") as f:
             html = f.read()
@@ -145,7 +148,9 @@ def _extract_image_ocr(filepath: str) -> dict:
     try:
         result = subprocess.run(
             ["tesseract", filepath, "stdout", "--psm", "3"],
-            capture_output=True, text=True, timeout=60
+            capture_output=True,
+            text=True,
+            timeout=60,
         )
         text = result.stdout.strip()
         return {"text": text, "pages": 1, "method": "image_ocr"}

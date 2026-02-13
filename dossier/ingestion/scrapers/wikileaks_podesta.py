@@ -30,11 +30,8 @@ Usage:
     python -m dossier.ingestion.scrapers.wikileaks_podesta --from-file email_ids.txt
 """
 
-import os
-import sys
 import json
 import time
-import hashlib
 import re
 import argparse
 from pathlib import Path
@@ -43,10 +40,12 @@ from datetime import datetime
 # Optional: use requests if available, fall back to urllib
 try:
     import requests
+
     HAS_REQUESTS = True
 except ImportError:
     import urllib.request
     import urllib.error
+
     HAS_REQUESTS = False
 
 
@@ -67,17 +66,17 @@ def download_email(email_id: int, delay: float = 1.0) -> dict:
 
     try:
         if HAS_REQUESTS:
-            resp = requests.get(url, timeout=30, headers={
-                "User-Agent": "Mozilla/5.0 (compatible; research-tool)"
-            })
+            resp = requests.get(
+                url, timeout=30, headers={"User-Agent": "Mozilla/5.0 (compatible; research-tool)"}
+            )
             if resp.status_code == 404:
                 return {"id": email_id, "status": "not_found"}
             resp.raise_for_status()
             html = resp.text
         else:
-            req = urllib.request.Request(url, headers={
-                "User-Agent": "Mozilla/5.0 (compatible; research-tool)"
-            })
+            req = urllib.request.Request(
+                url, headers={"User-Agent": "Mozilla/5.0 (compatible; research-tool)"}
+            )
             with urllib.request.urlopen(req, timeout=30) as resp:
                 html = resp.read().decode("utf-8", errors="replace")
 
@@ -103,12 +102,12 @@ def _parse_wikileaks_page(html: str, email_id: int) -> dict:
 
     def extract(label):
         # Try table cell format
-        pattern = rf'<td[^>]*>\s*{label}\s*</td>\s*<td[^>]*>(.*?)</td>'
+        pattern = rf"<td[^>]*>\s*{label}\s*</td>\s*<td[^>]*>(.*?)</td>"
         match = re.search(pattern, html, re.DOTALL | re.IGNORECASE)
         if match:
             return re.sub(r"<[^>]+>", "", match.group(1)).strip()
         # Try label: value format
-        pattern2 = rf'{label}[:\s]+(.*?)(?:<|$)'
+        pattern2 = rf"{label}[:\s]+(.*?)(?:<|$)"
         match2 = re.search(pattern2, html, re.IGNORECASE)
         return match2.group(1).strip() if match2 else ""
 
@@ -117,7 +116,7 @@ def _parse_wikileaks_page(html: str, email_id: int) -> dict:
     for pattern in [
         r'<div[^>]*class="[^"]*email-body[^"]*"[^>]*>(.*?)</div>',
         r'<div[^>]*id="[^"]*email-body[^"]*"[^>]*>(.*?)</div>',
-        r'<pre[^>]*>(.*?)</pre>',
+        r"<pre[^>]*>(.*?)</pre>",
     ]:
         match = re.search(pattern, html, re.DOTALL | re.IGNORECASE)
         if match:
@@ -224,13 +223,9 @@ def ingest_downloaded(limit: int = 0):
 
     for i, f in enumerate(json_files):
         if (i + 1) % 100 == 0:
-            print(f"  [{i+1}/{total}] {success} ingested, {failed} failed")
+            print(f"  [{i + 1}/{total}] {success} ingested, {failed} failed")
 
-        results = ingest_email_file(
-            str(f),
-            source="WikiLeaks Podesta Emails",
-            corpus="Podesta"
-        )
+        results = ingest_email_file(str(f), source="WikiLeaks Podesta Emails", corpus="Podesta")
         for r in results:
             if r.get("success"):
                 success += 1
@@ -243,14 +238,16 @@ def ingest_downloaded(limit: int = 0):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Download WikiLeaks Podesta emails")
     parser.add_argument("--id", type=int, help="Download a single email by ID")
-    parser.add_argument("--range", nargs=2, type=int, metavar=("START", "END"),
-                        help="Download a range of email IDs")
-    parser.add_argument("--delay", type=float, default=1.5,
-                        help="Delay between requests (seconds)")
-    parser.add_argument("--ingest", action="store_true",
-                        help="Ingest all downloaded emails into DOSSIER")
-    parser.add_argument("--ingest-limit", type=int, default=0,
-                        help="Limit number of emails to ingest (0 = all)")
+    parser.add_argument(
+        "--range", nargs=2, type=int, metavar=("START", "END"), help="Download a range of email IDs"
+    )
+    parser.add_argument("--delay", type=float, default=1.5, help="Delay between requests (seconds)")
+    parser.add_argument(
+        "--ingest", action="store_true", help="Ingest all downloaded emails into DOSSIER"
+    )
+    parser.add_argument(
+        "--ingest-limit", type=int, default=0, help="Limit number of emails to ingest (0 = all)"
+    )
 
     args = parser.parse_args()
 

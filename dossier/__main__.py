@@ -20,7 +20,6 @@ Usage:
 
 import sys
 import json
-from pathlib import Path
 
 
 def main():
@@ -34,6 +33,7 @@ def main():
         serve()
     elif cmd == "init":
         from dossier.db.database import init_db
+
         init_db()
     elif cmd == "ingest":
         if len(sys.argv) < 3:
@@ -47,7 +47,9 @@ def main():
         ingest_dir_cmd()
     elif cmd == "ingest-emails":
         if len(sys.argv) < 3:
-            print("Usage: python -m dossier ingest-emails <directory> [--source NAME] [--corpus NAME]")
+            print(
+                "Usage: python -m dossier ingest-emails <directory> [--source NAME] [--corpus NAME]"
+            )
             sys.exit(1)
         ingest_emails_cmd()
     elif cmd == "search":
@@ -73,12 +75,13 @@ def main():
 
 def serve():
     import uvicorn
+
     port = int(sys.argv[2]) if len(sys.argv) > 2 else 8000
-    print(f"\n  ╔══════════════════════════════════════╗")
-    print(f"  ║  DOSSIER — Document Intelligence     ║")
+    print("\n  ╔══════════════════════════════════════╗")
+    print("  ║  DOSSIER — Document Intelligence     ║")
     print(f"  ║  http://localhost:{port}               ║")
     print(f"  ║  API: http://localhost:{port}/docs      ║")
-    print(f"  ╚══════════════════════════════════════╝\n")
+    print("  ╚══════════════════════════════════════╝\n")
     uvicorn.run("dossier.api.server:app", host="0.0.0.0", port=port, reload=True)
 
 
@@ -124,9 +127,9 @@ def ingest_dir_cmd():
     success = sum(1 for r in results if r["success"])
     failed = len(results) - success
 
-    print(f"\n{'='*40}")
+    print(f"\n{'=' * 40}")
     print(f"  Ingested: {success} | Failed: {failed}")
-    print(f"{'='*40}")
+    print(f"{'=' * 40}")
 
 
 def search_cmd():
@@ -136,7 +139,8 @@ def search_cmd():
     query = " ".join(sys.argv[2:])
 
     with get_db() as conn:
-        rows = conn.execute("""
+        rows = conn.execute(
+            """
             SELECT d.id, d.title, d.category, d.date,
                    snippet(documents_fts, 1, '>>>', '<<<', '...', 30) as excerpt
             FROM documents_fts
@@ -144,7 +148,9 @@ def search_cmd():
             WHERE documents_fts MATCH ?
             ORDER BY rank
             LIMIT 20
-        """, (f'"{query}"',)).fetchall()
+        """,
+            (f'"{query}"',),
+        ).fetchall()
 
     if not rows:
         print(f"No results for: {query}")
@@ -171,13 +177,13 @@ def stats_cmd():
             "SELECT category, COUNT(*) as c FROM documents GROUP BY category ORDER BY c DESC"
         ).fetchall()
 
-    print(f"\n  DOSSIER — Collection Stats")
-    print(f"  {'─'*30}")
+    print("\n  DOSSIER — Collection Stats")
+    print(f"  {'─' * 30}")
     print(f"  Documents:  {docs}")
     print(f"  Entities:   {entities}")
     print(f"  Pages:      {pages}")
     print(f"  Keywords:   {keywords}")
-    print(f"\n  Categories:")
+    print("\n  Categories:")
     for row in cats:
         print(f"    {row['category']:20s} {row['c']}")
     print()
@@ -208,7 +214,7 @@ def entities_cmd():
         return
 
     print(f"\n  Top Entities{' (' + etype + ')' if etype else ''}:")
-    print(f"  {'─'*40}")
+    print(f"  {'─' * 40}")
     for row in rows:
         print(f"  {row['total']:6d}  [{row['type']:6s}]  {row['name']}")
     print()
@@ -230,9 +236,9 @@ def ingest_emails_cmd():
             corpus = args[i + 1]
 
     result = ingest_email_directory(dirpath, source=source, corpus=corpus)
-    print(f"\n{'='*40}")
+    print(f"\n{'=' * 40}")
     print(f"  Ingested: {result['ingested']} | Failed: {result['failed']}")
-    print(f"{'='*40}")
+    print(f"{'=' * 40}")
 
 
 def podesta_download_cmd():
@@ -251,6 +257,7 @@ def podesta_download_cmd():
             delay = float(args[i + 1])
 
     from dossier.ingestion.scrapers.wikileaks_podesta import download_range
+
     download_range(start, end, delay=delay)
 
 
@@ -264,6 +271,7 @@ def podesta_ingest_cmd():
 
     from dossier.ingestion.scrapers.wikileaks_podesta import ingest_downloaded
     from dossier.db.database import init_db
+
     init_db()
     ingest_downloaded(limit=limit)
 
@@ -274,19 +282,25 @@ def lobbying_cmd():
 
     if "--all" in args:
         from dossier.ingestion.scrapers.fara_lobbying import (
-            create_lobbying_index, generate_ingestable_documents, ingest_lobbying_docs
+            create_lobbying_index,
+            generate_ingestable_documents,
+            ingest_lobbying_docs,
         )
+
         create_lobbying_index()
         generate_ingestable_documents()
         ingest_lobbying_docs()
     elif "--create-index" in args:
         from dossier.ingestion.scrapers.fara_lobbying import create_lobbying_index
+
         create_lobbying_index()
     elif "--generate-docs" in args:
         from dossier.ingestion.scrapers.fara_lobbying import generate_ingestable_documents
+
         generate_ingestable_documents()
     elif "--ingest" in args:
         from dossier.ingestion.scrapers.fara_lobbying import ingest_lobbying_docs
+
         ingest_lobbying_docs()
     else:
         print("Usage: python -m dossier lobbying [--all|--create-index|--generate-docs|--ingest]")
