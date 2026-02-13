@@ -192,6 +192,12 @@ def ingest_file(filepath: str, source: str = "", date: str = "") -> dict:
         timeline_events = extractor.extract_events(raw_text, document_id=doc_id)
         timeline_event_ids = store_events(conn, timeline_events)
 
+        # ─── Step 7: Entity resolution ───
+        from dossier.core.resolver import EntityResolver
+
+        resolver = EntityResolver(conn)
+        resolution = resolver.resolve_all()
+
     stats = {
         "people": len(entities["people"]),
         "places": len(entities["places"]),
@@ -199,6 +205,8 @@ def ingest_file(filepath: str, source: str = "", date: str = "") -> dict:
         "dates": len(entities["dates"]),
         "keywords": keyword_count,
         "timeline_events": len(timeline_event_ids),
+        "resolved_entities": resolution.auto_merged,
+        "suggested_merges": resolution.suggested,
         "text_length": len(raw_text),
         "pages": pages,
         "method": extraction["method"],
