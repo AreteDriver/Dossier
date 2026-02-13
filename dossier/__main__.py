@@ -14,6 +14,9 @@ Usage:
     python -m dossier timeline           # Show reconstructed timeline
                                           # --start 2003-01-01 --end 2009-12-31
                                           # --entity "Jane Doe"
+    python -m dossier resolve            # Run entity resolution
+                                          # --type person  (filter by entity type)
+                                          # --dry-run      (show matches without merging)
 
     # Podesta Email Scrapers
     python -m dossier podesta-download --range 1 100    # Download WikiLeaks emails
@@ -66,6 +69,8 @@ def main():
         entities_cmd()
     elif cmd == "timeline":
         timeline_cmd()
+    elif cmd == "resolve":
+        resolve_cmd()
     elif cmd == "podesta-download":
         podesta_download_cmd()
     elif cmd == "podesta-ingest":
@@ -261,6 +266,66 @@ def timeline_cmd():
         print(f"  {date_str:12s}  [{precision:6s}] ({confidence:.0%})  {context}")
         if ent_str:
             print(f"               {ent_str}")
+    print()
+
+
+def resolve_cmd():
+    from dossier.db.database import init_db, get_db
+    from dossier.core.resolver import EntityResolver
+
+    init_db()
+
+    entity_type = None
+    dry_run = False
+    args = sys.argv[2:]
+    for i, arg in enumerate(args):
+        if arg == "--type" and i + 1 < len(args):
+            entity_type = args[i + 1]
+        elif arg == "--dry-run":
+            dry_run = True
+
+    with get_db() as conn:
+        resolver = EntityResolver(conn)
+
+        if dry_run:
+            # Show candidates without merging
+            entities = conn.execute(
+                "SELECT id, name, type FROM entities" + (" WHERE type = ?" if entity_type else ""),
+                [entity_type] if entity_type else [],
+            ).fetchall()
+
+            print(f"\n─── Dry Run: Scanning {len(entities)} entities ───\n")
+            total_candidates = 0
+            for entity in entities:
+                matches = resolver.resolve_entity(entity["id"])
+                for m in matches:
+                    total_candidates += 1
+                    print(
+                        f"  {m.source_name:30s} → {m.target_name:30s}  "
+                        f"({m.confidence:.0%} {m.strategy}) [{m.action.value}]"
+                    )
+
+            if total_candidates == 0:
+                print("  No candidates found.")
+            print(f"\n  Total candidates: {total_candidates}")
+        else:
+            result = resolver.resolve_all(entity_type=entity_type)
+            print("\n  DOSSIER — Entity Resolution")
+            print(f"  {'─' * 30}")
+            print(f"  Entities scanned:  {result.entities_scanned}")
+            print(f"  Auto-merged:       {result.auto_merged}")
+            print(f"  Suggested (queue): {result.suggested}")
+            print()
+
+            if result.matches:
+                print("  Matches:")
+                for m in result.matches:
+                    print(
+                        f"    {m.source_name:30s} → {m.target_name:30s}  "
+                        f"({m.confidence:.0%} {m.strategy})"
+                    )
+                print()
+
     print()
 
 

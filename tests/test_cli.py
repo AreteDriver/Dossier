@@ -450,3 +450,135 @@ class TestCliEntitiesWithResults:
         output = capsys.readouterr().out
         assert "Top Entities" in output
         assert "person" in output
+
+
+class TestCliResolve:
+    def test_resolve_empty(self, monkeypatch, capsys):
+        monkeypatch.setattr(sys, "argv", ["dossier", "init"])
+        main()
+        capsys.readouterr()
+
+        monkeypatch.setattr(sys, "argv", ["dossier", "resolve"])
+        main()
+        output = capsys.readouterr().out
+        assert "Entity Resolution" in output
+        assert "Entities scanned:  0" in output
+
+    def test_resolve_with_data(self, monkeypatch, cli_env, capsys):
+        monkeypatch.setattr(sys, "argv", ["dossier", "init"])
+        main()
+
+        f = cli_env / "resolve_test.txt"
+        f.write_text(
+            "Jeffrey Epstein and Ghislaine Maxwell were investigated by the FBI "
+            "in Palm Beach. The investigation uncovered significant evidence."
+        )
+        monkeypatch.setattr(sys, "argv", ["dossier", "ingest", str(f)])
+        main()
+        capsys.readouterr()
+
+        monkeypatch.setattr(sys, "argv", ["dossier", "resolve"])
+        main()
+        output = capsys.readouterr().out
+        assert "Entity Resolution" in output
+
+    def test_resolve_with_type_filter(self, monkeypatch, cli_env, capsys):
+        monkeypatch.setattr(sys, "argv", ["dossier", "init"])
+        main()
+
+        f = cli_env / "resolve_type.txt"
+        f.write_text(
+            "Jeffrey Epstein and Ghislaine Maxwell were investigated by the FBI "
+            "in Palm Beach. The investigation uncovered significant evidence."
+        )
+        monkeypatch.setattr(sys, "argv", ["dossier", "ingest", str(f)])
+        main()
+        capsys.readouterr()
+
+        monkeypatch.setattr(sys, "argv", ["dossier", "resolve", "--type", "person"])
+        main()
+        output = capsys.readouterr().out
+        assert "Entity Resolution" in output
+
+    def test_resolve_dry_run(self, monkeypatch, cli_env, capsys):
+        monkeypatch.setattr(sys, "argv", ["dossier", "init"])
+        main()
+
+        f = cli_env / "resolve_dry.txt"
+        f.write_text(
+            "Jeffrey Epstein and Ghislaine Maxwell were investigated by the FBI "
+            "in Palm Beach. The investigation uncovered significant evidence."
+        )
+        monkeypatch.setattr(sys, "argv", ["dossier", "ingest", str(f)])
+        main()
+        capsys.readouterr()
+
+        monkeypatch.setattr(sys, "argv", ["dossier", "resolve", "--dry-run"])
+        main()
+        output = capsys.readouterr().out
+        assert "Dry Run" in output
+
+    def test_resolve_dry_run_no_candidates(self, monkeypatch, capsys):
+        monkeypatch.setattr(sys, "argv", ["dossier", "init"])
+        main()
+        capsys.readouterr()
+
+        monkeypatch.setattr(sys, "argv", ["dossier", "resolve", "--dry-run"])
+        main()
+        output = capsys.readouterr().out
+        assert "No candidates found" in output
+
+    def test_resolve_dry_run_with_candidates(self, monkeypatch, cli_env, capsys):
+        """Dry run shows candidates when duplicate entities exist."""
+        import sqlite3
+        import dossier.db.database as db_mod
+
+        monkeypatch.setattr(sys, "argv", ["dossier", "init"])
+        main()
+        capsys.readouterr()
+
+        # Manually insert entities that would resolve
+        conn = sqlite3.connect(db_mod.DB_PATH)
+        conn.execute(
+            "INSERT INTO entities (name, type, canonical) VALUES (?, ?, ?)",
+            ("John Smith", "person", "john smith"),
+        )
+        conn.execute(
+            "INSERT INTO entities (name, type, canonical) VALUES (?, ?, ?)",
+            ("Smith, John", "person", "smith, john"),
+        )
+        conn.commit()
+        conn.close()
+
+        monkeypatch.setattr(sys, "argv", ["dossier", "resolve", "--dry-run"])
+        main()
+        output = capsys.readouterr().out
+        assert "Total candidates:" in output
+        assert "John Smith" in output
+
+    def test_resolve_with_matches(self, monkeypatch, cli_env, capsys):
+        """Full resolve shows match details when entities merge."""
+        import sqlite3
+        import dossier.db.database as db_mod
+
+        monkeypatch.setattr(sys, "argv", ["dossier", "init"])
+        main()
+        capsys.readouterr()
+
+        conn = sqlite3.connect(db_mod.DB_PATH)
+        conn.execute(
+            "INSERT INTO entities (name, type, canonical) VALUES (?, ?, ?)",
+            ("John Smith", "person", "john smith"),
+        )
+        conn.execute(
+            "INSERT INTO entities (name, type, canonical) VALUES (?, ?, ?)",
+            ("Smith, John", "person", "smith, john"),
+        )
+        conn.commit()
+        conn.close()
+
+        monkeypatch.setattr(sys, "argv", ["dossier", "resolve"])
+        main()
+        output = capsys.readouterr().out
+        assert "Auto-merged:" in output
+        assert "Matches:" in output
