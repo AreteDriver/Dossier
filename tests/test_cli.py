@@ -1,6 +1,7 @@
 """Tests for dossier.__main__ — CLI entry point."""
 
 import runpy
+import sqlite3
 import sys
 from unittest.mock import patch, MagicMock
 
@@ -582,3 +583,195 @@ class TestCliResolve:
         output = capsys.readouterr().out
         assert "Auto-merged:" in output
         assert "Matches:" in output
+
+
+class TestCliGraph:
+    def _seed_graph(self):
+        """Insert entities + connections into the CLI test DB."""
+        import dossier.db.database as db_mod
+
+        conn = sqlite3.connect(db_mod.DB_PATH)
+        conn.execute("PRAGMA foreign_keys=ON")
+        entities = [
+            (1, "Alice", "person", "alice"),
+            (2, "Bob", "person", "bob"),
+            (3, "Acme Corp", "org", "acme corp"),
+        ]
+        conn.executemany(
+            "INSERT INTO entities (id, name, type, canonical) VALUES (?, ?, ?, ?)", entities
+        )
+        connections = [(1, 2, 5), (1, 3, 2), (2, 3, 3)]
+        conn.executemany(
+            "INSERT INTO entity_connections (entity_a_id, entity_b_id, weight) VALUES (?, ?, ?)",
+            connections,
+        )
+        conn.commit()
+        conn.close()
+
+    def test_graph_no_subcommand(self, monkeypatch):
+        monkeypatch.setattr(sys, "argv", ["dossier", "graph"])
+        with pytest.raises(SystemExit) as exc_info:
+            main()
+        assert exc_info.value.code == 1
+
+    def test_graph_unknown_subcommand(self, monkeypatch):
+        monkeypatch.setattr(sys, "argv", ["dossier", "init"])
+        main()
+        monkeypatch.setattr(sys, "argv", ["dossier", "graph", "foobar"])
+        with pytest.raises(SystemExit) as exc_info:
+            main()
+        assert exc_info.value.code == 1
+
+    def test_graph_stats_empty(self, monkeypatch, capsys):
+        monkeypatch.setattr(sys, "argv", ["dossier", "init"])
+        main()
+        capsys.readouterr()
+
+        monkeypatch.setattr(sys, "argv", ["dossier", "graph", "stats"])
+        main()
+        output = capsys.readouterr().out
+        assert "Network Stats" in output
+        assert "Nodes:" in output
+
+    def test_graph_stats_with_data(self, monkeypatch, capsys):
+        monkeypatch.setattr(sys, "argv", ["dossier", "init"])
+        main()
+        self._seed_graph()
+        capsys.readouterr()
+
+        monkeypatch.setattr(sys, "argv", ["dossier", "graph", "stats"])
+        main()
+        output = capsys.readouterr().out
+        assert "Nodes:" in output
+
+    def test_graph_stats_type_filter(self, monkeypatch, capsys):
+        monkeypatch.setattr(sys, "argv", ["dossier", "init"])
+        main()
+        self._seed_graph()
+        capsys.readouterr()
+
+        monkeypatch.setattr(sys, "argv", ["dossier", "graph", "stats", "--type", "person"])
+        main()
+        output = capsys.readouterr().out
+        assert "Nodes:" in output
+
+    def test_graph_centrality_empty(self, monkeypatch, capsys):
+        monkeypatch.setattr(sys, "argv", ["dossier", "init"])
+        main()
+        capsys.readouterr()
+
+        monkeypatch.setattr(sys, "argv", ["dossier", "graph", "centrality"])
+        main()
+        output = capsys.readouterr().out
+        assert "No entities found" in output
+
+    def test_graph_centrality_with_data(self, monkeypatch, capsys):
+        monkeypatch.setattr(sys, "argv", ["dossier", "init"])
+        main()
+        self._seed_graph()
+        capsys.readouterr()
+
+        monkeypatch.setattr(
+            sys,
+            "argv",
+            [
+                "dossier",
+                "graph",
+                "centrality",
+                "--metric",
+                "degree",
+                "--type",
+                "person",
+                "--limit",
+                "2",
+            ],
+        )
+        main()
+        output = capsys.readouterr().out
+        assert "degree centrality" in output
+
+    def test_graph_communities_empty(self, monkeypatch, capsys):
+        monkeypatch.setattr(sys, "argv", ["dossier", "init"])
+        main()
+        capsys.readouterr()
+
+        monkeypatch.setattr(sys, "argv", ["dossier", "graph", "communities"])
+        main()
+        output = capsys.readouterr().out
+        assert "No communities found" in output
+
+    def test_graph_communities_with_data(self, monkeypatch, capsys):
+        monkeypatch.setattr(sys, "argv", ["dossier", "init"])
+        main()
+        self._seed_graph()
+        capsys.readouterr()
+
+        monkeypatch.setattr(
+            sys,
+            "argv",
+            ["dossier", "graph", "communities", "--type", "person", "--min-size", "2"],
+        )
+        main()
+        output = capsys.readouterr().out
+        assert "communities" in output.lower()
+
+    def test_graph_path_missing_args(self, monkeypatch):
+        monkeypatch.setattr(sys, "argv", ["dossier", "init"])
+        main()
+        monkeypatch.setattr(sys, "argv", ["dossier", "graph", "path"])
+        with pytest.raises(SystemExit) as exc_info:
+            main()
+        assert exc_info.value.code == 1
+
+    def test_graph_path_with_data(self, monkeypatch, capsys):
+        monkeypatch.setattr(sys, "argv", ["dossier", "init"])
+        main()
+        self._seed_graph()
+        capsys.readouterr()
+
+        monkeypatch.setattr(sys, "argv", ["dossier", "graph", "path", "1", "2"])
+        main()
+        output = capsys.readouterr().out
+        assert "Path" in output
+
+    def test_graph_path_no_path(self, monkeypatch, capsys):
+        monkeypatch.setattr(sys, "argv", ["dossier", "init"])
+        main()
+        self._seed_graph()
+        capsys.readouterr()
+
+        monkeypatch.setattr(sys, "argv", ["dossier", "graph", "path", "1", "999"])
+        main()
+        output = capsys.readouterr().out
+        assert "No path found" in output
+
+    def test_graph_neighbors_missing_args(self, monkeypatch):
+        monkeypatch.setattr(sys, "argv", ["dossier", "init"])
+        main()
+        monkeypatch.setattr(sys, "argv", ["dossier", "graph", "neighbors"])
+        with pytest.raises(SystemExit) as exc_info:
+            main()
+        assert exc_info.value.code == 1
+
+    def test_graph_neighbors_with_data(self, monkeypatch, capsys):
+        monkeypatch.setattr(sys, "argv", ["dossier", "init"])
+        main()
+        self._seed_graph()
+        capsys.readouterr()
+
+        monkeypatch.setattr(
+            sys, "argv", ["dossier", "graph", "neighbors", "1", "--hops", "1", "--min-weight", "1"]
+        )
+        main()
+        output = capsys.readouterr().out
+        assert "Neighbors" in output
+
+    def test_graph_neighbors_no_neighbors(self, monkeypatch, capsys):
+        monkeypatch.setattr(sys, "argv", ["dossier", "init"])
+        main()
+        capsys.readouterr()
+
+        monkeypatch.setattr(sys, "argv", ["dossier", "graph", "neighbors", "999"])
+        main()
+        output = capsys.readouterr().out
+        assert "No neighbors found" in output

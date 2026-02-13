@@ -17,6 +17,15 @@ Usage:
     python -m dossier resolve            # Run entity resolution
                                           # --type person  (filter by entity type)
                                           # --dry-run      (show matches without merging)
+    python -m dossier graph stats        # Network statistics
+    python -m dossier graph centrality   # Top entities by centrality
+                                          # --metric degree|betweenness|closeness|eigenvector
+                                          # --type person  --limit 20
+    python -m dossier graph communities  # Detect communities
+                                          # --type person  --min-size 2
+    python -m dossier graph path <src> <tgt>  # Shortest path between entities
+    python -m dossier graph neighbors <id>    # Entity neighborhood
+                                          # --hops 1  --min-weight 1
 
     # Podesta Email Scrapers
     python -m dossier podesta-download --range 1 100    # Download WikiLeaks emails
@@ -75,6 +84,8 @@ def main():
         podesta_download_cmd()
     elif cmd == "podesta-ingest":
         podesta_ingest_cmd()
+    elif cmd == "graph":
+        graph_cmd()
     elif cmd == "lobbying":
         lobbying_cmd()
     else:
@@ -327,6 +338,130 @@ def resolve_cmd():
                 print()
 
     print()
+
+
+def graph_cmd():
+    from dossier.db.database import init_db, get_db
+    from dossier.core.graph_analysis import GraphAnalyzer
+
+    init_db()
+
+    args = sys.argv[2:]
+    if not args:
+        print("Usage: python -m dossier graph <stats|centrality|communities|path|neighbors>")
+        sys.exit(1)
+
+    subcmd = args[0]
+    sub_args = args[1:]
+
+    with get_db() as conn:
+        analyzer = GraphAnalyzer(conn)
+
+        if subcmd == "stats":
+            entity_type = None
+            for i, arg in enumerate(sub_args):
+                if arg == "--type" and i + 1 < len(sub_args):
+                    entity_type = sub_args[i + 1]
+            stats = analyzer.get_stats(entity_type=entity_type)
+            print("\n  DOSSIER — Network Stats")
+            print(f"  {'─' * 30}")
+            print(f"  Nodes:              {stats.node_count}")
+            print(f"  Edges:              {stats.edge_count}")
+            print(f"  Density:            {stats.density:.4f}")
+            print(f"  Components:         {stats.components}")
+            print(f"  Avg degree:         {stats.avg_degree:.2f}")
+            print(f"  Avg weighted degree: {stats.avg_weighted_degree:.2f}")
+            print()
+
+        elif subcmd == "centrality":
+            metric = "degree"
+            entity_type = None
+            limit = 20
+            for i, arg in enumerate(sub_args):
+                if arg == "--metric" and i + 1 < len(sub_args):
+                    metric = sub_args[i + 1]
+                elif arg == "--type" and i + 1 < len(sub_args):
+                    entity_type = sub_args[i + 1]
+                elif arg == "--limit" and i + 1 < len(sub_args):
+                    limit = int(sub_args[i + 1])
+            results = analyzer.get_centrality(metric=metric, entity_type=entity_type, limit=limit)
+            if not results:
+                print("No entities found.")
+                return
+            print(f"\n  Top {len(results)} by {metric} centrality:")
+            print(f"  {'─' * 50}")
+            for r in results:
+                score = getattr(r, metric)
+                print(f"  {score:8.4f}  [{r.type:6s}]  {r.name}")
+            print()
+
+        elif subcmd == "communities":
+            entity_type = None
+            min_size = 2
+            for i, arg in enumerate(sub_args):
+                if arg == "--type" and i + 1 < len(sub_args):
+                    entity_type = sub_args[i + 1]
+                elif arg == "--min-size" and i + 1 < len(sub_args):
+                    min_size = int(sub_args[i + 1])
+            communities = analyzer.get_communities(entity_type=entity_type, min_size=min_size)
+            if not communities:
+                print("No communities found.")
+                return
+            print(f"\n  Detected {len(communities)} communities:")
+            print(f"  {'─' * 50}")
+            for c in communities:
+                names = [m["name"] for m in c.members[:5]]
+                extra = f" +{c.size - 5} more" if c.size > 5 else ""
+                print(f"  Community {c.id} ({c.size} members, density={c.density:.2f}):")
+                print(f"    {', '.join(names)}{extra}")
+            print()
+
+        elif subcmd == "path":
+            if len(sub_args) < 2:
+                print("Usage: python -m dossier graph path <source_id> <target_id>")
+                sys.exit(1)
+            source_id = int(sub_args[0])
+            target_id = int(sub_args[1])
+            result = analyzer.find_shortest_path(source_id, target_id)
+            if result is None:
+                print("No path found.")
+                return
+            print(f"\n  Path ({result.hops} hops, total weight {result.total_weight}):")
+            print(f"  {'─' * 50}")
+            for i, node in enumerate(result.nodes):
+                print(f"  {node['name']} [{node['type']}]")
+                if i < len(result.edges):
+                    print(f"    -- weight {result.edges[i]['weight']} -->")
+            print()
+
+        elif subcmd == "neighbors":
+            if not sub_args:
+                print(
+                    "Usage: python -m dossier graph neighbors <entity_id> [--hops N] [--min-weight N]"
+                )
+                sys.exit(1)
+            entity_id = int(sub_args[0])
+            hops = 1
+            min_weight = 1
+            for i, arg in enumerate(sub_args[1:]):
+                if arg == "--hops" and i + 2 < len(sub_args):
+                    hops = int(sub_args[i + 2])
+                elif arg == "--min-weight" and i + 2 < len(sub_args):
+                    min_weight = int(sub_args[i + 2])
+            neighbors = analyzer.get_neighbors(entity_id, hops=hops, min_weight=min_weight)
+            if not neighbors:
+                print("No neighbors found.")
+                return
+            print(f"\n  Neighbors of entity {entity_id} ({len(neighbors)} found):")
+            print(f"  {'─' * 50}")
+            for n in neighbors:
+                print(f"  hop {n['hop']}  weight {n['weight']:3d}  [{n['type']:6s}]  {n['name']}")
+            print()
+
+        else:
+            print(f"Unknown graph subcommand: {subcmd}")
+            print("Usage: python -m dossier graph <stats|centrality|communities|path|neighbors>")
+            sys.exit(1)
 
 
 def ingest_emails_cmd():
