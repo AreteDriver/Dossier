@@ -4,7 +4,6 @@ import sqlite3
 import pytest
 from dossier.forensics.timeline import (
     TimelineExtractor,
-    init_timeline_tables,
     store_events,
 )
 
@@ -188,11 +187,9 @@ class TestExtractDocument:
 
     def test_extract_nonexistent_document(self, seeded_client):
         r = seeded_client.post("/api/timeline/extract/999")
-        # Returns a tuple (dict, 404) but FastAPI serializes it as 200 with the tuple
-        # The endpoint returns {"error": ...}, 404 which is non-standard
-        assert r.status_code == 200
+        assert r.status_code == 404
         data = r.json()
-        assert data[0]["error"] == "Document 999 not found"
+        assert data["detail"] == "Document 999 not found"
 
 
 # ═══════════════════════════════════════════════════════════════════

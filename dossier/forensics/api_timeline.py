@@ -6,7 +6,7 @@ Mount these into the existing FastAPI app:
     app.include_router(timeline_router, prefix="/api/timeline", tags=["timeline"])
 """
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, HTTPException, Query
 from typing import Optional
 
 router = APIRouter()
@@ -99,7 +99,7 @@ def extract_timeline_for_document(document_id: int):
         ).fetchone()
 
         if not doc:
-            return {"error": f"Document {document_id} not found"}, 404
+            raise HTTPException(status_code=404, detail=f"Document {document_id} not found")
 
         # Get known entities for linking
         entity_rows = conn.execute("SELECT name FROM entities").fetchall()
