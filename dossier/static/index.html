@@ -726,15 +726,15 @@ body::before {
     </div>
     <div class="header-stats">
       <div class="stat">
-        <div class="stat-value" id="totalDocs">47</div>
+        <div class="stat-value" id="totalDocs">—</div>
         <div class="stat-label">Documents</div>
       </div>
       <div class="stat">
-        <div class="stat-value" id="totalEntities">1,284</div>
+        <div class="stat-value" id="totalEntities">—</div>
         <div class="stat-label">Entities</div>
       </div>
       <div class="stat">
-        <div class="stat-value" id="totalPages">3,891</div>
+        <div class="stat-value" id="totalPages">—</div>
         <div class="stat-label">Pages</div>
       </div>
     </div>
@@ -747,17 +747,17 @@ body::before {
       <div class="sidebar-item active" data-filter="all">
         <div class="sidebar-dot"></div>
         All Documents
-        <span class="sidebar-count">47</span>
+        <span class="sidebar-count">—</span>
       </div>
       <div class="sidebar-item" data-filter="recent">
         <div class="sidebar-dot"></div>
         Recently Added
-        <span class="sidebar-count">8</span>
+        <span class="sidebar-count">—</span>
       </div>
       <div class="sidebar-item" data-filter="flagged">
         <div class="sidebar-dot"></div>
         Flagged
-        <span class="sidebar-count">12</span>
+        <span class="sidebar-count">—</span>
       </div>
     </div>
 
@@ -766,27 +766,27 @@ body::before {
       <div class="sidebar-item" data-filter="deposition">
         <div class="sidebar-dot category-dot deposition"></div>
         Depositions
-        <span class="sidebar-count">14</span>
+        <span class="sidebar-count">—</span>
       </div>
       <div class="sidebar-item" data-filter="flight">
         <div class="sidebar-dot category-dot flight"></div>
         Flight Logs
-        <span class="sidebar-count">6</span>
+        <span class="sidebar-count">—</span>
       </div>
       <div class="sidebar-item" data-filter="correspondence">
         <div class="sidebar-dot category-dot correspondence"></div>
         Correspondence
-        <span class="sidebar-count">9</span>
+        <span class="sidebar-count">—</span>
       </div>
       <div class="sidebar-item" data-filter="report">
         <div class="sidebar-dot category-dot report"></div>
         Police / FBI Reports
-        <span class="sidebar-count">8</span>
+        <span class="sidebar-count">—</span>
       </div>
       <div class="sidebar-item" data-filter="legal">
         <div class="sidebar-dot category-dot legal"></div>
         Legal Filings
-        <span class="sidebar-count">10</span>
+        <span class="sidebar-count">—</span>
       </div>
     </div>
 
@@ -795,22 +795,22 @@ body::before {
       <div class="sidebar-item" data-entity="person">
         <div class="sidebar-dot" style="background:var(--entity-person)"></div>
         People
-        <span class="sidebar-count">342</span>
+        <span class="sidebar-count">—</span>
       </div>
       <div class="sidebar-item" data-entity="place">
         <div class="sidebar-dot" style="background:var(--entity-place)"></div>
         Places
-        <span class="sidebar-count">187</span>
+        <span class="sidebar-count">—</span>
       </div>
       <div class="sidebar-item" data-entity="org">
         <div class="sidebar-dot" style="background:var(--entity-org)"></div>
         Organizations
-        <span class="sidebar-count">98</span>
+        <span class="sidebar-count">—</span>
       </div>
       <div class="sidebar-item" data-entity="date">
         <div class="sidebar-dot" style="background:var(--entity-date)"></div>
         Dates
-        <span class="sidebar-count">657</span>
+        <span class="sidebar-count">—</span>
       </div>
     </div>
 
@@ -850,7 +850,7 @@ body::before {
 
     <!-- Results -->
     <div class="results-header">
-      <div class="results-title" id="resultsTitle">Showing 47 documents</div>
+      <div class="results-title" id="resultsTitle">Loading...</div>
       <button class="results-sort" id="sortBtn">Sort: Relevance ↓</button>
     </div>
 
@@ -900,174 +900,71 @@ body::before {
 <script>
 // ═══════════════════════════════════════════════
 // DOSSIER — Document Intelligence System
-// Prototype UI with simulated data layer
+// Live API integration
 // ═══════════════════════════════════════════════
 
-// ─── MOCK DATA ───
-const DOCUMENTS = [
-  {
-    id: 1,
-    title: "Deposition of Victim 1 — Case No. 08-80736",
-    category: "deposition",
-    date: "2009-03-14",
-    pages: 87,
-    source: "SDNY Court Records",
-    excerpt: "The witness testified that she was first introduced at the Palm Beach residence in 2001, where she was told the appointment involved massage therapy. She described subsequent encounters at the New York townhouse and the island property.",
-    entities: {
-      people: ["Jeffrey Epstein", "Ghislaine Maxwell", "Sarah Kellen"],
-      places: ["Palm Beach", "New York", "Little St. James"],
-      orgs: ["SDNY", "Palm Beach PD"],
-      dates: ["2001", "March 2009"]
-    },
-    keywords: ["massage", "recruitment", "residence", "testimony", "minor"]
-  },
-  {
-    id: 2,
-    title: "Flight Log — N908JE — January to March 2002",
-    category: "flight",
-    date: "2002-03-30",
-    pages: 12,
-    source: "FAA Records / Subpoena",
-    excerpt: "Manifests for Gulfstream II (tail N908JE) showing passenger lists between Teterboro, Palm Beach International, St. Thomas, and Paris Le Bourget. Multiple entries show recurring passengers across 23 flights in this period.",
-    entities: {
-      people: ["Jeffrey Epstein", "Ghislaine Maxwell", "Jean-Luc Brunel", "Nadia Marcinkova"],
-      places: ["Teterboro", "Palm Beach", "St. Thomas", "Paris"],
-      orgs: ["FAA"],
-      dates: ["Jan 2002", "Feb 2002", "Mar 2002"]
-    },
-    keywords: ["aircraft", "manifest", "passenger", "Gulfstream", "flight"]
-  },
-  {
-    id: 3,
-    title: "Palm Beach Police Department — Incident Report #05-1563",
-    category: "report",
-    date: "2005-03-15",
-    pages: 34,
-    source: "Palm Beach PD FOIA",
-    excerpt: "Initial complaint filed by the mother of a 14-year-old female. Responding officers documented statements regarding activities at 358 El Brillo Way. Investigation subsequently expanded to include multiple victims.",
-    entities: {
-      people: ["Jeffrey Epstein", "Det. Joseph Recarey"],
-      places: ["Palm Beach", "358 El Brillo Way"],
-      orgs: ["Palm Beach Police Department"],
-      dates: ["March 2005", "2005"]
-    },
-    keywords: ["complaint", "investigation", "victim", "minor", "residence"]
-  },
-  {
-    id: 4,
-    title: "Correspondence — Legal Team re: NPA Negotiations",
-    category: "correspondence",
-    date: "2007-09-22",
-    pages: 8,
-    source: "FOIA / DOJ Release",
-    excerpt: "Internal memoranda between defense counsel and the U.S. Attorney's office regarding terms of the non-prosecution agreement. Discussion of immunity provisions extending to unnamed co-conspirators and conditions for registration.",
-    entities: {
-      people: ["Alexander Acosta", "Jay Lefkowitz", "Kenneth Starr"],
-      places: ["Washington D.C.", "Miami"],
-      orgs: ["DOJ", "U.S. Attorney's Office"],
-      dates: ["Sept 2007", "2007"]
-    },
-    keywords: ["NPA", "immunity", "co-conspirators", "prosecution", "plea"]
-  },
-  {
-    id: 5,
-    title: "Giuffre v. Maxwell — Unsealed Deposition Excerpt",
-    category: "legal",
-    date: "2016-04-22",
-    pages: 163,
-    source: "SDNY Case 15-cv-07433",
-    excerpt: "Deposition testimony describing organizational structure, recruitment methodology, and scheduling coordination. Witness identifies multiple residences used and describes travel arrangements facilitated by the defendant.",
-    entities: {
-      people: ["Virginia Giuffre", "Ghislaine Maxwell", "Jeffrey Epstein", "Alan Dershowitz"],
-      places: ["New York", "London", "Palm Beach", "New Mexico"],
-      orgs: ["SDNY"],
-      dates: ["April 2016", "1999-2002"]
-    },
-    keywords: ["recruitment", "scheduling", "travel", "residence", "deposition"]
-  },
-  {
-    id: 6,
-    title: "FBI Supplemental Investigation Notes — USVI Properties",
-    category: "report",
-    date: "2019-08-10",
-    pages: 22,
-    source: "FBI / FOIA",
-    excerpt: "Field agents documented structures, access points, and recovered materials from Great St. James and Little St. James islands following the 2019 arrest. Inventory includes electronic media, documents, and physical evidence cataloged by room.",
-    entities: {
-      people: ["Jeffrey Epstein"],
-      places: ["Little St. James", "Great St. James", "U.S. Virgin Islands"],
-      orgs: ["FBI", "USVI AG"],
-      dates: ["August 2019", "July 2019"]
-    },
-    keywords: ["island", "evidence", "search", "electronic media", "inventory"]
-  },
-  {
-    id: 7,
-    title: "Black Book — Contact Directory (Redacted)",
-    category: "correspondence",
-    date: "2004-01-01",
-    pages: 97,
-    source: "Civil Discovery / Leaked",
-    excerpt: "Personal contact directory containing names, phone numbers, and addresses organized by location and relationship category. Multiple entries show handwritten annotations including circled names and marginal notes.",
-    entities: {
-      people: ["Jeffrey Epstein", "Ghislaine Maxwell"],
-      places: ["New York", "Palm Beach", "Paris", "London"],
-      orgs: [],
-      dates: ["~2004-2005"]
-    },
-    keywords: ["contacts", "phone numbers", "addresses", "annotations", "directory"]
-  }
-];
+// ─── UTILITY ───
 
-const TOP_KEYWORDS = [
-  { word: "recruitment", count: 847, type: "keyword" },
-  { word: "massage", count: 612, type: "keyword" },
-  { word: "residence", count: 589, type: "keyword" },
-  { word: "minor", count: 534, type: "keyword" },
-  { word: "testimony", count: 478, type: "keyword" },
-  { word: "aircraft", count: 412, type: "keyword" },
-  { word: "immunity", count: 367, type: "keyword" },
-  { word: "co-conspirator", count: 298, type: "keyword" },
-];
+function debounce(fn, ms) {
+  let timer;
+  return (...args) => { clearTimeout(timer); timer = setTimeout(() => fn(...args), ms); };
+}
 
-const TOP_PEOPLE = [
-  { word: "Jeffrey Epstein", count: 3412, type: "person" },
-  { word: "Ghislaine Maxwell", count: 2187, type: "person" },
-  { word: "Virginia Giuffre", count: 876, type: "person" },
-  { word: "Sarah Kellen", count: 543, type: "person" },
-  { word: "Jean-Luc Brunel", count: 421, type: "person" },
-  { word: "Alan Dershowitz", count: 389, type: "person" },
-  { word: "Alexander Acosta", count: 312, type: "person" },
-];
+function escapeRegex(str) {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
 
-const TOP_PLACES = [
-  { word: "Palm Beach", count: 1823, type: "place" },
-  { word: "New York", count: 1654, type: "place" },
-  { word: "Little St. James", count: 987, type: "place" },
-  { word: "Paris", count: 612, type: "place" },
-  { word: "London", count: 534, type: "place" },
-  { word: "New Mexico", count: 423, type: "place" },
-];
+async function api(path) {
+  const resp = await fetch(path);
+  if (!resp.ok) throw new Error(`API ${resp.status}: ${resp.statusText}`);
+  return resp.json();
+}
 
+// ─── STATE ───
 
-// ─── RENDER FUNCTIONS ───
+let selectedDocId = null;
+let cachedConnections = [];
+
+// ─── RENDER ───
+
+function normalizeDoc(doc) {
+  const mapEntities = arr => (arr || []).map(e => typeof e === 'string' ? e : e.name);
+  return {
+    id: doc.id,
+    title: doc.title || doc.filename || 'Untitled',
+    category: doc.category || 'other',
+    date: doc.date || '',
+    pages: doc.pages || 0,
+    source: doc.source || '',
+    excerpt: doc.excerpt || '',
+    entities: {
+      people: mapEntities(doc.entities?.people),
+      places: mapEntities(doc.entities?.places),
+      orgs: mapEntities(doc.entities?.orgs),
+      dates: mapEntities(doc.entities?.dates),
+    },
+  };
+}
 
 function renderDocuments(docs) {
   const list = document.getElementById('documentList');
-  if (docs.length === 0) {
+  if (!docs.length) {
     list.innerHTML = `
       <div class="empty-state">
         <div class="empty-state-icon">⊘</div>
         <div class="empty-state-title">No documents found</div>
-        <div class="empty-state-desc">Try adjusting your search query or filters</div>
+        <div class="empty-state-desc">Try adjusting your search or filters, or upload documents to get started</div>
       </div>`;
+    document.getElementById('resultsTitle').textContent = 'No documents';
     return;
   }
 
-  list.innerHTML = docs.map(doc => {
-    const searchTerm = document.getElementById('searchInput').value.trim();
+  const searchTerm = document.getElementById('searchInput').value.trim();
+
+  list.innerHTML = docs.map(raw => {
+    const doc = normalizeDoc(raw);
     let excerpt = doc.excerpt;
-    if (searchTerm) {
+    if (searchTerm && excerpt) {
       const regex = new RegExp(`(${escapeRegex(searchTerm)})`, 'gi');
       excerpt = excerpt.replace(regex, '<mark>$1</mark>');
     }
@@ -1079,19 +976,19 @@ function renderDocuments(docs) {
     ].slice(0, 6);
 
     return `
-      <div class="document-card cat-${doc.category}" data-id="${doc.id}" onclick="selectDocument(${doc.id})">
+      <div class="document-card cat-${doc.category}${selectedDocId === doc.id ? ' selected' : ''}" data-id="${doc.id}" onclick="selectDocument(${doc.id})">
         <div class="doc-header">
           <div class="doc-title">${doc.title}</div>
           <div class="doc-badge ${doc.category}">${doc.category}</div>
         </div>
-        <div class="doc-excerpt">${excerpt}</div>
-        <div class="doc-entities">
+        ${excerpt ? `<div class="doc-excerpt">${excerpt}</div>` : ''}
+        ${allEntities.length ? `<div class="doc-entities">
           ${allEntities.map(e => `<span class="entity-tag ${e.type}">${e.name}</span>`).join('')}
-        </div>
+        </div>` : ''}
         <div class="doc-meta">
-          <span>${doc.date}</span>
+          ${doc.date ? `<span>${doc.date}</span>` : ''}
           <span>${doc.pages} pages</span>
-          <span>${doc.source}</span>
+          ${doc.source ? `<span>${doc.source}</span>` : ''}
         </div>
       </div>`;
   }).join('');
@@ -1101,10 +998,14 @@ function renderDocuments(docs) {
 
 function renderFreqList(containerId, data, maxCount) {
   const container = document.getElementById(containerId);
+  if (!data.length) {
+    container.innerHTML = '<div style="color:var(--text-muted);font-size:12px;padding:8px 0;">No data yet</div>';
+    return;
+  }
   const max = maxCount || Math.max(...data.map(d => d.count));
 
   container.innerHTML = data.map((item, i) => `
-    <div class="freq-item" onclick="searchFor('${item.word}')">
+    <div class="freq-item" onclick="searchFor('${item.word.replace(/'/g, "\\'")}')">
       <div class="freq-rank">${i + 1}</div>
       <div class="freq-bar-container">
         <div class="freq-label">${item.word}</div>
@@ -1122,44 +1023,177 @@ function searchFor(term) {
   performSearch();
 }
 
-function escapeRegex(str) {
-  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+// ─── STATS ───
+
+async function loadStats() {
+  try {
+    const stats = await api('/api/stats');
+    document.getElementById('totalDocs').textContent = (stats.documents || 0).toLocaleString();
+    document.getElementById('totalEntities').textContent = (stats.entities || 0).toLocaleString();
+    document.getElementById('totalPages').textContent = (stats.pages || 0).toLocaleString();
+
+    // Sidebar counts
+    const setCount = (sel, val) => { const el = document.querySelector(sel); if (el) el.textContent = val; };
+    setCount('[data-filter="all"] .sidebar-count', stats.documents || 0);
+    setCount('[data-filter="flagged"] .sidebar-count', stats.flagged || 0);
+
+    if (stats.categories) {
+      for (const [cat, count] of Object.entries(stats.categories)) {
+        setCount(`[data-filter="${cat}"] .sidebar-count`, count);
+      }
+    }
+    if (stats.entity_types) {
+      for (const [type, count] of Object.entries(stats.entity_types)) {
+        setCount(`[data-entity="${type}"] .sidebar-count`, count);
+      }
+    }
+  } catch (e) {
+    console.error('Failed to load stats:', e);
+  }
+}
+
+
+// ─── DOCUMENTS ───
+
+async function loadDocuments(params = {}) {
+  try {
+    const qs = new URLSearchParams();
+    if (params.category) qs.set('category', params.category);
+    if (params.flagged) qs.set('flagged', 'true');
+    qs.set('limit', params.limit || 50);
+    if (params.offset) qs.set('offset', params.offset);
+
+    const data = await api(`/api/documents?${qs}`);
+    renderDocuments(data.documents || []);
+  } catch (e) {
+    console.error('Failed to load documents:', e);
+    renderDocuments([]);
+  }
+}
+
+function applyCurrentFilter() {
+  const active = document.querySelector('.sidebar-item.active');
+  const filter = active?.dataset.filter;
+  const entity = active?.dataset.entity;
+
+  if (entity) {
+    loadDocuments();
+  } else if (filter === 'all' || !filter) {
+    loadDocuments();
+  } else if (filter === 'flagged') {
+    loadDocuments({ flagged: true });
+  } else if (filter === 'recent') {
+    loadDocuments({ limit: 8 });
+  } else {
+    loadDocuments({ category: filter });
+  }
 }
 
 
 // ─── SEARCH ───
 
-function performSearch() {
-  const query = document.getElementById('searchInput').value.trim().toLowerCase();
+async function performSearch() {
+  const query = document.getElementById('searchInput').value.trim();
 
   if (!query) {
-    renderDocuments(DOCUMENTS);
+    applyCurrentFilter();
     return;
   }
 
-  const results = DOCUMENTS.filter(doc => {
-    const searchable = [
-      doc.title,
-      doc.excerpt,
-      doc.category,
-      doc.source,
-      ...doc.keywords,
-      ...doc.entities.people,
-      ...doc.entities.places,
-      ...doc.entities.orgs,
-      ...doc.entities.dates,
-    ].join(' ').toLowerCase();
+  try {
+    const qs = new URLSearchParams({ q: query, limit: '50' });
 
-    return searchable.includes(query);
-  });
+    const chipType = document.querySelector('.filter-chip.active')?.dataset.type;
+    if (chipType && chipType !== 'all' && chipType !== 'keywords') {
+      const chipMap = { people: 'person', places: 'place', orgs: 'org', dates: 'date' };
+      if (chipMap[chipType]) qs.set('entity_type', chipMap[chipType]);
+    }
 
-  renderDocuments(results);
+    const data = await api(`/api/search?${qs}`);
+    renderDocuments(data.results || []);
+  } catch (e) {
+    console.error('Search failed:', e);
+    renderDocuments([]);
+  }
 }
 
-function selectDocument(id) {
+
+// ─── DOCUMENT SELECTION ───
+
+async function selectDocument(id) {
+  if (selectedDocId === id) {
+    selectedDocId = null;
+    document.querySelectorAll('.document-card').forEach(c => c.classList.remove('selected'));
+    loadKeywords();
+    loadPeople();
+    loadPlaces();
+    return;
+  }
+
+  selectedDocId = id;
   document.querySelectorAll('.document-card').forEach(c => c.classList.remove('selected'));
   const card = document.querySelector(`[data-id="${id}"]`);
   if (card) card.classList.add('selected');
+
+  try {
+    const doc = await api(`/api/documents/${id}`);
+
+    if (doc.keywords?.length) {
+      const kw = doc.keywords.slice(0, 8).map(k => ({ word: k.word, count: k.count, type: 'keyword' }));
+      renderFreqList('keywordFreq', kw);
+    }
+
+    const mapEnts = (arr, type) => (arr || []).map(e => ({
+      word: typeof e === 'string' ? e : e.name,
+      count: typeof e === 'string' ? 1 : (e.count || 1),
+      type,
+    }));
+
+    const people = mapEnts(doc.entities?.people, 'person');
+    if (people.length) renderFreqList('peopleFreq', people.slice(0, 7));
+
+    const places = mapEnts(doc.entities?.places, 'place');
+    if (places.length) renderFreqList('placeFreq', places.slice(0, 6));
+  } catch (e) {
+    console.error('Failed to load document detail:', e);
+  }
+}
+
+
+// ─── SIDEBAR FREQUENCY BARS ───
+
+async function loadKeywords() {
+  try {
+    const data = await api('/api/keywords?limit=8');
+    const items = (data.keywords || []).map(k => ({ word: k.word, count: k.total_count, type: 'keyword' }));
+    renderFreqList('keywordFreq', items);
+  } catch (e) {
+    console.error('Failed to load keywords:', e);
+    renderFreqList('keywordFreq', []);
+  }
+}
+
+async function loadPeople() {
+  try {
+    const data = await api('/api/entities?type=person&limit=7');
+    const items = (data.entities || []).map(e => ({ word: e.name, count: e.total_count, type: 'person' }));
+    renderFreqList('peopleFreq', items);
+  } catch (e) {
+    console.error('Failed to load people:', e);
+    renderFreqList('peopleFreq', []);
+  }
+}
+
+async function loadPlaces() {
+  try {
+    const data = await api('/api/entities?type=place&limit=6');
+    const items = (data.entities || []).map(e => ({ word: e.name, count: e.total_count, type: 'place' }));
+    renderFreqList('placeFreq', items);
+  } catch (e) {
+    console.error('Failed to load places:', e);
+    renderFreqList('placeFreq', []);
+  }
 }
 
 
@@ -1173,20 +1207,45 @@ document.querySelectorAll('.filter-chip').forEach(chip => {
   });
 });
 
+
 // ─── SIDEBAR NAVIGATION ───
 
 document.querySelectorAll('.sidebar-item[data-filter]').forEach(item => {
   item.addEventListener('click', () => {
     document.querySelectorAll('.sidebar-item').forEach(i => i.classList.remove('active'));
     item.classList.add('active');
+    document.getElementById('searchInput').value = '';
 
     const filter = item.dataset.filter;
     if (filter === 'all') {
-      renderDocuments(DOCUMENTS);
+      loadDocuments();
+    } else if (filter === 'flagged') {
+      loadDocuments({ flagged: true });
+    } else if (filter === 'recent') {
+      loadDocuments({ limit: 8 });
     } else {
-      const filtered = DOCUMENTS.filter(d => d.category === filter);
-      renderDocuments(filtered);
+      loadDocuments({ category: filter });
     }
+  });
+});
+
+document.querySelectorAll('.sidebar-item[data-entity]').forEach(item => {
+  item.addEventListener('click', async () => {
+    document.querySelectorAll('.sidebar-item').forEach(i => i.classList.remove('active'));
+    item.classList.add('active');
+    document.getElementById('searchInput').value = '';
+
+    const type = item.dataset.entity;
+    try {
+      const data = await api(`/api/entities?type=${type}&limit=15`);
+      const items = (data.entities || []).map(e => ({ word: e.name, count: e.total_count, type }));
+      if (type === 'person') renderFreqList('peopleFreq', items.slice(0, 10));
+      else if (type === 'place') renderFreqList('placeFreq', items.slice(0, 10));
+      else renderFreqList('keywordFreq', items.slice(0, 10));
+    } catch (e) {
+      console.error('Failed to load entities:', e);
+    }
+    loadDocuments();
   });
 });
 
@@ -1207,7 +1266,7 @@ uploadZone.addEventListener('dragleave', () => {
 uploadZone.addEventListener('drop', (e) => {
   e.preventDefault();
   uploadZone.classList.remove('dragover');
-  simulateIngestion(e.dataTransfer.files);
+  uploadFiles(e.dataTransfer.files);
 });
 
 uploadZone.addEventListener('click', () => {
@@ -1215,11 +1274,11 @@ uploadZone.addEventListener('click', () => {
   input.type = 'file';
   input.multiple = true;
   input.accept = '.pdf,.txt,.html,.docx,.png,.jpg,.jpeg';
-  input.onchange = () => simulateIngestion(input.files);
+  input.onchange = () => uploadFiles(input.files);
   input.click();
 });
 
-function simulateIngestion(files) {
+async function uploadFiles(files) {
   if (!files.length) return;
 
   const bar = document.getElementById('processingBar');
@@ -1227,98 +1286,164 @@ function simulateIngestion(files) {
   const fill = document.getElementById('processingFill');
 
   bar.classList.add('active');
+  let uploaded = 0;
+  const total = files.length;
 
-  const steps = [
-    { msg: `Extracting text from ${files.length} file(s)...`, pct: 15 },
-    { msg: 'Running OCR on scanned pages...', pct: 35 },
-    { msg: 'Performing Named Entity Recognition...', pct: 55 },
-    { msg: 'Indexing keywords and building frequency tables...', pct: 75 },
-    { msg: 'Categorizing and labeling documents...', pct: 90 },
-    { msg: 'Complete — documents added to collection', pct: 100 },
-  ];
+  for (const file of files) {
+    text.textContent = `Uploading ${file.name}... (${uploaded + 1}/${total})`;
+    fill.style.width = `${((uploaded + 0.5) / total * 100).toFixed(0)}%`;
 
-  steps.forEach((step, i) => {
-    setTimeout(() => {
-      text.textContent = step.msg;
-      fill.style.width = step.pct + '%';
-      if (i === steps.length - 1) {
-        setTimeout(() => {
-          bar.classList.remove('active');
-          fill.style.width = '0%';
-        }, 1500);
-      }
-    }, i * 1200);
-  });
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const resp = await fetch('/api/upload', { method: 'POST', body: formData });
+      const data = await resp.json();
+      if (data.success) uploaded++;
+      else console.warn(`Upload failed for ${file.name}: ${data.message}`);
+    } catch (e) {
+      console.error(`Upload error for ${file.name}:`, e);
+    }
+    fill.style.width = `${((uploaded) / total * 100).toFixed(0)}%`;
+  }
+
+  text.textContent = uploaded === total
+    ? `Complete — ${uploaded} document${uploaded !== 1 ? 's' : ''} ingested`
+    : `Done — ${uploaded}/${total} succeeded`;
+  fill.style.width = '100%';
+
+  setTimeout(async () => {
+    bar.classList.remove('active');
+    fill.style.width = '0%';
+    await Promise.all([loadStats(), loadDocuments(), loadKeywords(), loadPeople(), loadPlaces(), loadNetwork()]);
+  }, 1500);
 }
 
 
 // ─── NETWORK CANVAS ───
 
-function drawNetwork() {
+const TYPE_COLORS = {
+  person: '#e07c4a',
+  place: '#4a9de0',
+  org: '#9b6de0',
+  date: '#4ae0a8',
+};
+
+async function loadNetwork() {
+  try {
+    const data = await api('/api/connections?limit=30');
+    cachedConnections = data.connections || [];
+  } catch (e) {
+    console.error('Failed to load network:', e);
+    cachedConnections = [];
+  }
+  drawNetwork(cachedConnections);
+}
+
+function drawNetwork(connections) {
   const canvas = document.getElementById('networkCanvas');
   const ctx = canvas.getContext('2d');
   const rect = canvas.parentElement.getBoundingClientRect();
   canvas.width = rect.width;
   canvas.height = rect.height;
 
-  const nodes = [
-    { x: 0.5, y: 0.4, r: 8, color: '#c4473a', label: 'JE' },
-    { x: 0.3, y: 0.25, r: 6, color: '#e07c4a', label: 'GM' },
-    { x: 0.7, y: 0.3, r: 5, color: '#e07c4a', label: 'VG' },
-    { x: 0.2, y: 0.55, r: 4, color: '#4a9de0', label: 'PB' },
-    { x: 0.75, y: 0.6, r: 4, color: '#4a9de0', label: 'NY' },
-    { x: 0.4, y: 0.7, r: 4, color: '#4a9de0', label: 'LSJ' },
-    { x: 0.6, y: 0.15, r: 3, color: '#9b6de0', label: 'DOJ' },
-    { x: 0.15, y: 0.75, r: 3, color: '#e07c4a', label: 'SK' },
-    { x: 0.85, y: 0.45, r: 3, color: '#e07c4a', label: 'JLB' },
-  ];
+  const label = canvas.parentElement.querySelector('.network-label');
 
-  const edges = [
-    [0,1],[0,2],[0,3],[0,4],[0,5],[1,2],[1,3],[1,7],[1,8],
-    [2,4],[3,5],[0,6],[0,8],[5,6],[4,2]
-  ];
+  if (!connections.length) {
+    if (label) label.style.display = '';
+    ctx.fillStyle = 'rgba(232,234,237,0.3)';
+    ctx.font = '10px JetBrains Mono';
+    ctx.textAlign = 'center';
+    ctx.fillText('No connections yet', canvas.width / 2, canvas.height / 2);
+    return;
+  }
+
+  if (label) label.style.display = 'none';
+
+  // Build node map from connections
+  const nodeMap = new Map();
+  connections.forEach(c => {
+    if (!nodeMap.has(c.source_name)) nodeMap.set(c.source_name, { name: c.source_name, type: c.source_type, weight: 0 });
+    if (!nodeMap.has(c.target_name)) nodeMap.set(c.target_name, { name: c.target_name, type: c.target_type, weight: 0 });
+    nodeMap.get(c.source_name).weight += c.weight;
+    nodeMap.get(c.target_name).weight += c.weight;
+  });
+
+  const nodes = Array.from(nodeMap.values());
+  const maxWeight = Math.max(...nodes.map(n => n.weight));
+  const nameToIdx = {};
+  nodes.forEach((n, i) => { nameToIdx[n.name] = i; });
+
+  // Initialize random positions
+  nodes.forEach(n => { n.x = 0.15 + Math.random() * 0.7; n.y = 0.15 + Math.random() * 0.7; n.vx = 0; n.vy = 0; });
+
+  // Force-directed layout
+  for (let iter = 0; iter < 80; iter++) {
+    for (let i = 0; i < nodes.length; i++) {
+      for (let j = i + 1; j < nodes.length; j++) {
+        let dx = nodes[i].x - nodes[j].x;
+        let dy = nodes[i].y - nodes[j].y;
+        let dist = Math.sqrt(dx * dx + dy * dy) || 0.01;
+        let force = 0.002 / (dist * dist);
+        nodes[i].vx += dx * force; nodes[i].vy += dy * force;
+        nodes[j].vx -= dx * force; nodes[j].vy -= dy * force;
+      }
+    }
+    connections.forEach(c => {
+      const si = nameToIdx[c.source_name], ti = nameToIdx[c.target_name];
+      if (si === undefined || ti === undefined) return;
+      let dx = nodes[ti].x - nodes[si].x, dy = nodes[ti].y - nodes[si].y;
+      let force = Math.sqrt(dx * dx + dy * dy) * 0.05;
+      nodes[si].vx += dx * force; nodes[si].vy += dy * force;
+      nodes[ti].vx -= dx * force; nodes[ti].vy -= dy * force;
+    });
+    nodes.forEach(n => {
+      n.vx += (0.5 - n.x) * 0.01; n.vy += (0.5 - n.y) * 0.01;
+      n.x += n.vx; n.y += n.vy;
+      n.vx *= 0.6; n.vy *= 0.6;
+      n.x = Math.max(0.08, Math.min(0.92, n.x));
+      n.y = Math.max(0.08, Math.min(0.92, n.y));
+    });
+  }
 
   // Draw edges
   ctx.strokeStyle = 'rgba(196,71,58,0.12)';
   ctx.lineWidth = 1;
-  edges.forEach(([a,b]) => {
+  connections.forEach(c => {
+    const si = nameToIdx[c.source_name], ti = nameToIdx[c.target_name];
+    if (si === undefined || ti === undefined) return;
     ctx.beginPath();
-    ctx.moveTo(nodes[a].x * canvas.width, nodes[a].y * canvas.height);
-    ctx.lineTo(nodes[b].x * canvas.width, nodes[b].y * canvas.height);
+    ctx.moveTo(nodes[si].x * canvas.width, nodes[si].y * canvas.height);
+    ctx.lineTo(nodes[ti].x * canvas.width, nodes[ti].y * canvas.height);
     ctx.stroke();
   });
 
   // Draw nodes
   nodes.forEach(n => {
+    const r = 3 + (n.weight / maxWeight) * 6;
     ctx.beginPath();
-    ctx.arc(n.x * canvas.width, n.y * canvas.height, n.r, 0, Math.PI * 2);
-    ctx.fillStyle = n.color;
+    ctx.arc(n.x * canvas.width, n.y * canvas.height, r, 0, Math.PI * 2);
+    ctx.fillStyle = TYPE_COLORS[n.type] || '#c4473a';
     ctx.fill();
 
+    const lbl = n.name.length > 10 ? n.name.substring(0, 8) + '..' : n.name;
     ctx.fillStyle = 'rgba(232,234,237,0.6)';
     ctx.font = '8px JetBrains Mono';
     ctx.textAlign = 'center';
-    ctx.fillText(n.label, n.x * canvas.width, n.y * canvas.height + n.r + 12);
+    ctx.fillText(lbl, n.x * canvas.width, n.y * canvas.height + r + 10);
   });
 }
 
 
 // ─── INIT ───
 
-document.getElementById('searchInput').addEventListener('input', debounce(performSearch, 200));
+document.getElementById('searchInput').addEventListener('input', debounce(performSearch, 250));
 
-function debounce(fn, ms) {
-  let timer;
-  return (...args) => { clearTimeout(timer); timer = setTimeout(() => fn(...args), ms); };
+async function init() {
+  await Promise.all([loadStats(), loadDocuments(), loadKeywords(), loadPeople(), loadPlaces(), loadNetwork()]);
 }
 
-renderDocuments(DOCUMENTS);
-renderFreqList('keywordFreq', TOP_KEYWORDS);
-renderFreqList('peopleFreq', TOP_PEOPLE);
-renderFreqList('placeFreq', TOP_PLACES);
-
-requestAnimationFrame(drawNetwork);
-window.addEventListener('resize', drawNetwork);
+init();
+window.addEventListener('resize', () => drawNetwork(cachedConnections));
 </script>
 
 </body>
