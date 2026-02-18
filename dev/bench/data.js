@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1771445646653,
+  "lastUpdate": 1771445938412,
   "repoUrl": "https://github.com/AreteDriver/Dossier",
   "entries": {
     "Benchmark": [
@@ -198,6 +198,72 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.0010384182065777845",
             "extra": "mean: 8.86889198484782 msec\nrounds: 66"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "AreteDriver@users.noreply.github.com",
+            "name": "AreteDriver",
+            "username": "AreteDriver"
+          },
+          "committer": {
+            "email": "AreteDriver@users.noreply.github.com",
+            "name": "AreteDriver",
+            "username": "AreteDriver"
+          },
+          "distinct": true,
+          "id": "061de58fd0b40083f831b31a8f177f4b93078bce",
+          "message": "ci: add security audit workflow\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>",
+          "timestamp": "2026-02-18T12:17:00-08:00",
+          "tree_id": "2eff97a264bdc187374d87ccd6a9264ce80fbf1c",
+          "url": "https://github.com/AreteDriver/Dossier/commit/061de58fd0b40083f831b31a8f177f4b93078bce"
+        },
+        "date": 1771445937804,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/test_benchmarks.py::TestNERBenchmark::test_extract_entities_5k",
+            "value": 218.06053490728726,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00008092924622498913",
+            "extra": "mean: 4.585882541401495 msec\nrounds: 157"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestFTS5Benchmark::test_fts5_search_500_docs",
+            "value": 1508.0487046492299,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00001382115214045117",
+            "extra": "mean: 663.1085567177346 usec\nrounds: 1243"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestResolverBenchmark::test_resolve_all_200_entities",
+            "value": 13.555341804813294,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0024538433701777364",
+            "extra": "mean: 73.7716550714284 msec\nrounds: 14"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestGraphBenchmark::test_centrality_betweenness_100",
+            "value": 35.45763873013646,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00060327401782158",
+            "extra": "mean: 28.20266762857143 msec\nrounds: 35"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestGraphBenchmark::test_communities_100",
+            "value": 214.7499714307218,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0011781185796244844",
+            "extra": "mean: 4.6565780350876524 msec\nrounds: 171"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestBulkInsertBenchmark::test_bulk_insert_100_docs",
+            "value": 141.71827117474766,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0010376569209190726",
+            "extra": "mean: 7.056253168421285 msec\nrounds: 95"
           }
         ]
       }
