@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1771419266400,
+  "lastUpdate": 1771445646653,
   "repoUrl": "https://github.com/AreteDriver/Dossier",
   "entries": {
     "Benchmark": [
@@ -132,6 +132,72 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.0008792452718252252",
             "extra": "mean: 7.355558275862193 msec\nrounds: 87"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "AreteDriver@users.noreply.github.com",
+            "name": "AreteDriver",
+            "username": "AreteDriver"
+          },
+          "committer": {
+            "email": "AreteDriver@users.noreply.github.com",
+            "name": "AreteDriver",
+            "username": "AreteDriver"
+          },
+          "distinct": true,
+          "id": "a47dbee422bcc53def76a5ae4d9d2f1e6ed2cd17",
+          "message": "fix: resolve 12 CodeQL alerts (empty-except, string-concat, repeated-import)\n\n- Narrow email date parse catch to (ValueError, TypeError) with comment\n- Wrap 5 implicit string concatenations in test_benchmarks.py with parens\n- Remove 6 redundant inner imports in test_cli.py (already at module level)\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>",
+          "timestamp": "2026-02-18T12:12:21-08:00",
+          "tree_id": "540f5a00e5503dfa8a79c56997995a0a503d6c76",
+          "url": "https://github.com/AreteDriver/Dossier/commit/a47dbee422bcc53def76a5ae4d9d2f1e6ed2cd17"
+        },
+        "date": 1771445646351,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/test_benchmarks.py::TestNERBenchmark::test_extract_entities_5k",
+            "value": 217.13753064656683,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00004829605247841487",
+            "extra": "mean: 4.605376127389478 msec\nrounds: 157"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestFTS5Benchmark::test_fts5_search_500_docs",
+            "value": 1556.5914468073615,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000015432556425648955",
+            "extra": "mean: 642.4293298354199 usec\nrounds: 1334"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestResolverBenchmark::test_resolve_all_200_entities",
+            "value": 13.682098574039555,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00015307000644468736",
+            "extra": "mean: 73.08820314285721 msec\nrounds: 14"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestGraphBenchmark::test_centrality_betweenness_100",
+            "value": 35.806564235931084,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00018929041738697386",
+            "extra": "mean: 27.92784008571597 msec\nrounds: 35"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestGraphBenchmark::test_communities_100",
+            "value": 213.53807738393684,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0011040347453492674",
+            "extra": "mean: 4.683005542856986 msec\nrounds: 175"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestBulkInsertBenchmark::test_bulk_insert_100_docs",
+            "value": 112.75365645544717,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0010384182065777845",
+            "extra": "mean: 8.86889198484782 msec\nrounds: 66"
           }
         ]
       }
