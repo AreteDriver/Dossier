@@ -286,8 +286,8 @@ def _email_to_dict(msg) -> dict:
     try:
         parsed_date = parsedate_to_datetime(date_str)
         date_str = parsed_date.isoformat()
-    except Exception:
-        pass
+    except (ValueError, TypeError):
+        pass  # Malformed or missing date; keep original string
 
     from_field = msg.get("From", "")
     from_name, from_addr = parseaddr(from_field)

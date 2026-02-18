@@ -38,8 +38,6 @@ class TestCliBasic:
         monkeypatch.setattr(sys, "argv", ["dossier", "init"])
         main()
         # DB should now exist
-        import sqlite3
-
         conn = sqlite3.connect(str(cli_env / "cli_test.db"))
         tables = {
             r[0]
@@ -531,9 +529,6 @@ class TestCliResolve:
 
     def test_resolve_dry_run_with_candidates(self, monkeypatch, cli_env, capsys):
         """Dry run shows candidates when duplicate entities exist."""
-        import sqlite3
-        import dossier.db.database as db_mod
-
         monkeypatch.setattr(sys, "argv", ["dossier", "init"])
         main()
         capsys.readouterr()
@@ -559,9 +554,6 @@ class TestCliResolve:
 
     def test_resolve_with_matches(self, monkeypatch, cli_env, capsys):
         """Full resolve shows match details when entities merge."""
-        import sqlite3
-        import dossier.db.database as db_mod
-
         monkeypatch.setattr(sys, "argv", ["dossier", "init"])
         main()
         capsys.readouterr()
@@ -588,8 +580,6 @@ class TestCliResolve:
 class TestCliGraph:
     def _seed_graph(self):
         """Insert entities + connections into the CLI test DB."""
-        import dossier.db.database as db_mod
-
         conn = sqlite3.connect(db_mod.DB_PATH)
         conn.execute("PRAGMA foreign_keys=ON")
         entities = [

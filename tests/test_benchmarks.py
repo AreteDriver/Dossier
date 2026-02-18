@@ -21,22 +21,32 @@ from dossier.core.resolver import EntityResolver, init_resolver_tables
 def sample_5k_text():
     """Generate a ~5K-word document with mixed entity types."""
     paragraphs = [
-        "Jeffrey Epstein met with Ghislaine Maxwell at the Palm Beach residence "
-        "on January 15, 2008. The FBI launched an investigation into the matter "
-        "while the Department of Justice reviewed the case. Representatives from "
-        "JPMorgan Chase and Deutsche Bank were called to testify before Congress.",
-        "The investigation expanded to include New York City, London, and the "
-        "US Virgin Islands. Bill Clinton, Prince Andrew, and Alan Dershowitz "
-        "were named in court documents filed in the Southern District of New York.",
-        "According to the CIA report dated March 2019, the operation involved "
-        "multiple agencies including Interpol and MI6. The United Nations Human "
-        "Rights Council issued a statement condemning the actions.",
-        "Senator John Smith met with Governor Jane Doe in Washington DC to discuss "
-        "the implications. The National Security Agency provided surveillance data "
-        "to the Federal Bureau of Investigation for the ongoing probe.",
-        "Documents recovered from the Manhattan townhouse revealed connections to "
-        "Deutsche Bank AG, Barclays, and Goldman Sachs. Financial records spanning "
-        "from 2005 to 2019 were analyzed by forensic accountants in Miami.",
+        (
+            "Jeffrey Epstein met with Ghislaine Maxwell at the Palm Beach residence "
+            "on January 15, 2008. The FBI launched an investigation into the matter "
+            "while the Department of Justice reviewed the case. Representatives from "
+            "JPMorgan Chase and Deutsche Bank were called to testify before Congress."
+        ),
+        (
+            "The investigation expanded to include New York City, London, and the "
+            "US Virgin Islands. Bill Clinton, Prince Andrew, and Alan Dershowitz "
+            "were named in court documents filed in the Southern District of New York."
+        ),
+        (
+            "According to the CIA report dated March 2019, the operation involved "
+            "multiple agencies including Interpol and MI6. The United Nations Human "
+            "Rights Council issued a statement condemning the actions."
+        ),
+        (
+            "Senator John Smith met with Governor Jane Doe in Washington DC to discuss "
+            "the implications. The National Security Agency provided surveillance data "
+            "to the Federal Bureau of Investigation for the ongoing probe."
+        ),
+        (
+            "Documents recovered from the Manhattan townhouse revealed connections to "
+            "Deutsche Bank AG, Barclays, and Goldman Sachs. Financial records spanning "
+            "from 2005 to 2019 were analyzed by forensic accountants in Miami."
+        ),
     ]
     # Repeat to reach ~5K words
     return " ".join(paragraphs * 10)
