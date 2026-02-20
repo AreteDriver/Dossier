@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1771624771960,
+  "lastUpdate": 1771624794276,
   "repoUrl": "https://github.com/AreteDriver/Dossier",
   "entries": {
     "Benchmark": [
@@ -582,6 +582,72 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.0005106740937261438",
             "extra": "mean: 7.1902614239135225 msec\nrounds: 92"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "49699333+dependabot[bot]@users.noreply.github.com",
+            "name": "dependabot[bot]",
+            "username": "dependabot[bot]"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "3a0c4f02106b98cc37222e369b555e40c5d8fa52",
+          "message": "chore(deps): bump actions/setup-python from 5 to 6 (#5)\n\nBumps [actions/setup-python](https://github.com/actions/setup-python) from 5 to 6.\n- [Release notes](https://github.com/actions/setup-python/releases)\n- [Commits](https://github.com/actions/setup-python/compare/v5...v6)\n\n---\nupdated-dependencies:\n- dependency-name: actions/setup-python\n  dependency-version: '6'\n  dependency-type: direct:production\n  update-type: version-update:semver-major\n...\n\nSigned-off-by: dependabot[bot] <support@github.com>\nCo-authored-by: dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com>",
+          "timestamp": "2026-02-20T13:58:18-08:00",
+          "tree_id": "0d910fd20ffc37ef7d75352d0a3b42e72044b713",
+          "url": "https://github.com/AreteDriver/Dossier/commit/3a0c4f02106b98cc37222e369b555e40c5d8fa52"
+        },
+        "date": 1771624793753,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/test_benchmarks.py::TestNERBenchmark::test_extract_entities_5k",
+            "value": 218.17588501832546,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000030865474280024464",
+            "extra": "mean: 4.583457974358651 msec\nrounds: 156"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestFTS5Benchmark::test_fts5_search_500_docs",
+            "value": 1565.9581186434593,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000013794450758912984",
+            "extra": "mean: 638.5866825520652 usec\nrounds: 1301"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestResolverBenchmark::test_resolve_all_200_entities",
+            "value": 13.729491683349618,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00029733861206630597",
+            "extra": "mean: 72.83590850000265 msec\nrounds: 14"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestGraphBenchmark::test_centrality_betweenness_100",
+            "value": 35.66826408142268,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0011433111280384255",
+            "extra": "mean: 28.036127514286186 msec\nrounds: 35"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestGraphBenchmark::test_communities_100",
+            "value": 211.44046356798953,
+            "unit": "iter/sec",
+            "range": "stddev: 0.001092038017370921",
+            "extra": "mean: 4.729463713450695 msec\nrounds: 171"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestBulkInsertBenchmark::test_bulk_insert_100_docs",
+            "value": 140.31325293267471,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0009232355253352523",
+            "extra": "mean: 7.1269105312512515 msec\nrounds: 96"
           }
         ]
       }
