@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1771619839394,
+  "lastUpdate": 1771619850116,
   "repoUrl": "https://github.com/AreteDriver/Dossier",
   "entries": {
     "Benchmark": [
@@ -458,6 +458,68 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.0006271126082219101",
             "extra": "mean: 7.2404310425538565 msec\nrounds: 94"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "name": "AreteDriver",
+            "username": "AreteDriver"
+          },
+          "committer": {
+            "name": "AreteDriver",
+            "username": "AreteDriver"
+          },
+          "id": "e4fa304fd61ef0ded651946ddf22ba64e8fb5f68",
+          "message": "chore(deps): bump actions/setup-python from 5 to 6",
+          "timestamp": "2026-02-20T09:15:51Z",
+          "url": "https://github.com/AreteDriver/Dossier/pull/5/commits/e4fa304fd61ef0ded651946ddf22ba64e8fb5f68"
+        },
+        "date": 1771619849852,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/test_benchmarks.py::TestNERBenchmark::test_extract_entities_5k",
+            "value": 215.98766181143955,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00009197799627762004",
+            "extra": "mean: 4.6298940949368435 msec\nrounds: 158"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestFTS5Benchmark::test_fts5_search_500_docs",
+            "value": 1533.9301286150164,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000015101191598514464",
+            "extra": "mean: 651.9201763791541 usec\nrounds: 1287"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestResolverBenchmark::test_resolve_all_200_entities",
+            "value": 13.607923553297962,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00021067519173443563",
+            "extra": "mean: 73.48659742857271 msec\nrounds: 14"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestGraphBenchmark::test_centrality_betweenness_100",
+            "value": 35.67275158987018,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00021419060499834166",
+            "extra": "mean: 28.032600666665846 msec\nrounds: 36"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestGraphBenchmark::test_communities_100",
+            "value": 213.9448871975174,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0010030511686434157",
+            "extra": "mean: 4.674100947674359 msec\nrounds: 172"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestBulkInsertBenchmark::test_bulk_insert_100_docs",
+            "value": 121.71665663724147,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0007683220125880466",
+            "extra": "mean: 8.21580240229858 msec\nrounds: 87"
           }
         ]
       }
