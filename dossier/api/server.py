@@ -313,6 +313,28 @@ def list_entities(
     return {"entities": [dict(r) for r in rows]}
 
 
+@app.get("/api/entities/search")
+def search_entities(
+    q: str = Query("", description="Search query"),
+    limit: int = Query(10, ge=1, le=50),
+):
+    """Search entities by name (substring match)."""
+    with get_db() as conn:
+        rows = conn.execute(
+            """
+            SELECT e.id, e.name, e.type,
+                   SUM(de.count) as total_count,
+                   COUNT(DISTINCT de.document_id) as doc_count
+            FROM entities e
+            JOIN document_entities de ON de.entity_id = e.id
+            WHERE e.name LIKE ?
+            GROUP BY e.id ORDER BY total_count DESC LIMIT ?
+        """,
+            (f"%{q}%", limit),
+        ).fetchall()
+    return {"entities": [dict(r) for r in rows]}
+
+
 @app.get("/api/entities/{entity_id}/documents")
 def entity_documents(entity_id: int, limit: int = 20):
     """Get all documents containing a specific entity."""
@@ -1703,6 +1725,487 @@ def detect_anomalies():
         anomalies["isolated_entities"] = [dict(r) for r in isolated]
 
     return anomalies
+
+
+# ═══════════════════════════════════════════
+# ENTITY PROFILES
+# ═══════════════════════════════════════════
+
+
+@app.get("/api/entities/{entity_id}/profile")
+def entity_profile(entity_id: int):
+    """Full entity dossier: docs, timeline, connections, co-occurring entities, risk."""
+    with get_db() as conn:
+        entity = conn.execute(
+            "SELECT id, name, type, canonical FROM entities WHERE id = ?", (entity_id,)
+        ).fetchone()
+        if not entity:
+            raise HTTPException(404, "Entity not found")
+
+        # Documents containing this entity
+        docs = conn.execute("""
+            SELECT d.id, d.title, d.filename, d.category, d.source, d.date,
+                   d.pages, de.count as mentions
+            FROM document_entities de
+            JOIN documents d ON d.id = de.document_id
+            WHERE de.entity_id = ?
+            ORDER BY de.count DESC
+        """, (entity_id,)).fetchall()
+
+        # Risk exposure — docs with risk scores
+        risk_docs = conn.execute("""
+            SELECT df.score, d.id, d.title
+            FROM document_entities de
+            JOIN document_forensics df ON df.document_id = de.document_id
+              AND df.analysis_type = 'risk_score'
+            JOIN documents d ON d.id = de.document_id
+            WHERE de.entity_id = ?
+            ORDER BY df.score DESC LIMIT 10
+        """, (entity_id,)).fetchall()
+
+        avg_risk = 0.0
+        if risk_docs:
+            avg_risk = sum(r["score"] for r in risk_docs) / len(risk_docs)
+
+        # Timeline events mentioning this entity
+        timeline = conn.execute("""
+            SELECT ev.event_date, ev.precision, ev.confidence, ev.context,
+                   ev.document_id
+            FROM events ev
+            JOIN document_entities de ON de.document_id = ev.document_id
+            WHERE de.entity_id = ? AND ev.event_date IS NOT NULL
+              AND ev.confidence >= 0.5
+            ORDER BY ev.event_date
+            LIMIT 50
+        """, (entity_id,)).fetchall()
+
+        # Top co-occurring entities
+        cooccurring = conn.execute("""
+            SELECT e.id, e.name, e.type, ec.weight
+            FROM entity_connections ec
+            JOIN entities e ON e.id = CASE
+                WHEN ec.entity_a_id = ? THEN ec.entity_b_id
+                ELSE ec.entity_a_id END
+            WHERE (ec.entity_a_id = ? OR ec.entity_b_id = ?)
+              AND ec.weight >= 1
+            ORDER BY ec.weight DESC
+            LIMIT 30
+        """, (entity_id, entity_id, entity_id)).fetchall()
+
+        # Tags
+        _ensure_tags_table(conn)
+        tags = conn.execute(
+            "SELECT tag FROM entity_tags WHERE entity_id = ? ORDER BY tag",
+            (entity_id,),
+        ).fetchall()
+
+        # Watchlist status
+        _ensure_watchlist_table(conn)
+        watched = conn.execute(
+            "SELECT 1 FROM watchlist WHERE entity_id = ?", (entity_id,)
+        ).fetchone() is not None
+
+    return {
+        "entity": dict(entity),
+        "documents": [dict(d) for d in docs],
+        "document_count": len(docs),
+        "total_mentions": sum(d["mentions"] for d in docs),
+        "risk_exposure": {
+            "avg_risk": round(avg_risk, 3),
+            "high_risk_docs": [dict(r) for r in risk_docs],
+        },
+        "timeline": [dict(t) for t in timeline],
+        "cooccurring": [dict(c) for c in cooccurring],
+        "tags": [r["tag"] for r in tags],
+        "watched": watched,
+    }
+
+
+# ═══════════════════════════════════════════
+# DOCUMENT SIMILARITY
+# ═══════════════════════════════════════════
+
+
+@app.get("/api/documents/{doc_id}/similar")
+def document_similar(doc_id: int, limit: int = Query(10, ge=1, le=50)):
+    """Find documents most similar to this one based on shared entities."""
+    with get_db() as conn:
+        row = conn.execute("SELECT id FROM documents WHERE id = ?", (doc_id,)).fetchone()
+        if not row:
+            raise HTTPException(404, "Document not found")
+
+        # Jaccard-like similarity: shared entities / union of entities
+        similar = conn.execute("""
+            SELECT d.id, d.title, d.filename, d.category, d.source, d.date, d.pages,
+                   COUNT(DISTINCT de2.entity_id) as shared_entities,
+                   (SELECT COUNT(DISTINCT entity_id) FROM document_entities
+                    WHERE document_id = d.id) as target_total
+            FROM document_entities de1
+            JOIN document_entities de2 ON de1.entity_id = de2.entity_id
+              AND de2.document_id != ?
+            JOIN documents d ON d.id = de2.document_id
+            WHERE de1.document_id = ?
+            GROUP BY d.id
+            ORDER BY shared_entities DESC
+            LIMIT ?
+        """, (doc_id, doc_id, limit)).fetchall()
+
+        # Get source doc entity count for similarity score
+        src_total = conn.execute(
+            "SELECT COUNT(DISTINCT entity_id) FROM document_entities WHERE document_id = ?",
+            (doc_id,),
+        ).fetchone()[0] or 1
+
+        results = []
+        for r in similar:
+            doc = dict(r)
+            union = src_total + (doc["target_total"] or 1) - doc["shared_entities"]
+            doc["similarity"] = round(doc["shared_entities"] / max(union, 1), 3)
+            results.append(doc)
+
+    return {"doc_id": doc_id, "similar": results}
+
+
+# ═══════════════════════════════════════════
+# REPORT GENERATOR
+# ═══════════════════════════════════════════
+
+
+@app.get("/api/export/report")
+def export_report(
+    min_risk: float = Query(0.5, ge=0, le=1),
+    source: Optional[str] = Query(None),
+):
+    """Generate a comprehensive HTML investigation report."""
+    import datetime
+
+    with get_db() as conn:
+        doc_count = conn.execute("SELECT COUNT(*) FROM documents").fetchone()[0]
+        entity_count = conn.execute("SELECT COUNT(*) FROM entities").fetchone()[0]
+        page_count = conn.execute("SELECT COALESCE(SUM(pages),0) FROM documents").fetchone()[0]
+
+        # Risk docs
+        risk_sql = """
+            SELECT df.document_id, df.score, d.title, d.filename, d.category, d.source
+            FROM document_forensics df JOIN documents d ON d.id = df.document_id
+            WHERE df.analysis_type = 'risk_score' AND df.score >= ?
+        """
+        params: list = [min_risk]
+        if source:
+            risk_sql += " AND d.source = ?"
+            params.append(source)
+        risk_sql += " ORDER BY df.score DESC"
+        risk_docs = conn.execute(risk_sql, params).fetchall()
+
+        # Key persons
+        persons = conn.execute("""
+            SELECT e.name, COUNT(DISTINCT de.document_id) as doc_count,
+                   SUM(de.count) as mentions
+            FROM entities e
+            JOIN document_entities de ON de.entity_id = e.id
+            WHERE e.type = 'person'
+            GROUP BY e.id ORDER BY doc_count DESC LIMIT 20
+        """).fetchall()
+
+        # AML flags
+        aml = conn.execute("""
+            SELECT label, severity, COUNT(*) as count
+            FROM document_forensics WHERE analysis_type = 'aml_flag'
+            GROUP BY label, severity ORDER BY count DESC
+        """).fetchall()
+
+        # Anomalies — temporal spikes
+        spikes = conn.execute("""
+            SELECT event_date, COUNT(*) as count FROM events
+            WHERE event_date IS NOT NULL AND length(event_date) >= 10
+              AND confidence >= 0.5
+            GROUP BY event_date ORDER BY count DESC LIMIT 10
+        """).fetchall()
+
+        # Communities
+        try:
+            from dossier.core.graph_analysis import GraphAnalyzer
+            analyzer = GraphAnalyzer(conn)
+            communities = analyzer.get_communities(min_size=3)
+        except Exception:
+            communities = []
+
+    now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+
+    # Build HTML report
+    html = f"""<!DOCTYPE html><html><head><meta charset="UTF-8">
+<title>DOSSIER Investigation Report</title>
+<style>
+body{{font-family:'Helvetica Neue',sans-serif;max-width:900px;margin:0 auto;padding:40px;color:#222;line-height:1.6;}}
+h1{{color:#c4473a;border-bottom:3px solid #c4473a;padding-bottom:10px;}}
+h2{{color:#333;margin-top:30px;border-bottom:1px solid #ddd;padding-bottom:6px;}}
+table{{border-collapse:collapse;width:100%;margin:12px 0;}}
+th,td{{border:1px solid #ddd;padding:8px;text-align:left;font-size:13px;}}
+th{{background:#f5f5f5;font-weight:600;}}
+.badge{{display:inline-block;padding:2px 8px;border-radius:3px;font-size:11px;font-weight:600;}}
+.badge.critical{{background:#fee;color:#c44;}} .badge.high{{background:#fec;color:#a63;}}
+.badge.medium{{background:#ffd;color:#963;}} .badge.low{{background:#efe;color:#396;}}
+.stat{{display:inline-block;text-align:center;padding:12px 24px;margin:4px;background:#f8f8f8;border-radius:6px;}}
+.stat-val{{font-size:24px;font-weight:700;color:#c4473a;}} .stat-lbl{{font-size:11px;color:#888;text-transform:uppercase;}}
+</style></head><body>
+<h1>DOSSIER — Investigation Report</h1>
+<p><strong>Generated:</strong> {now} | <strong>Risk Threshold:</strong> {min_risk*100:.0f}%+
+{f' | <strong>Source:</strong> {source}' if source else ''}</p>
+
+<div>
+<div class="stat"><div class="stat-val">{doc_count:,}</div><div class="stat-lbl">Documents</div></div>
+<div class="stat"><div class="stat-val">{entity_count:,}</div><div class="stat-lbl">Entities</div></div>
+<div class="stat"><div class="stat-val">{page_count:,}</div><div class="stat-lbl">Pages</div></div>
+<div class="stat"><div class="stat-val">{len(risk_docs)}</div><div class="stat-lbl">Flagged</div></div>
+</div>
+
+<h2>Key Persons</h2>
+<table><thead><tr><th>Name</th><th>Documents</th><th>Mentions</th></tr></thead><tbody>
+{''.join(f'<tr><td>{p["name"]}</td><td>{p["doc_count"]}</td><td>{p["mentions"]:,}</td></tr>' for p in persons)}
+</tbody></table>
+
+<h2>Highest Risk Documents</h2>
+<table><thead><tr><th>Risk</th><th>Document</th><th>Category</th><th>Source</th></tr></thead><tbody>
+{''.join(f'<tr><td><span class="badge {"critical" if d["score"]>0.7 else "high" if d["score"]>0.5 else "medium"}">{d["score"]*100:.0f}%</span></td><td>{d["title"] or d["filename"]}</td><td>{d["category"]}</td><td>{d["source"] or ""}</td></tr>' for d in risk_docs[:30])}
+</tbody></table>
+
+<h2>AML Flags</h2>
+<table><thead><tr><th>Flag</th><th>Severity</th><th>Count</th></tr></thead><tbody>
+{''.join(f'<tr><td>{f["label"].replace("_"," ")}</td><td>{f["severity"]}</td><td>{f["count"]}</td></tr>' for f in aml)}
+</tbody></table>
+
+<h2>Network Communities ({len(communities)} detected)</h2>"""
+
+    for i, comm in enumerate(communities[:10]):
+        members = ", ".join(m["name"] for m in comm.members[:15])
+        html += f"<p><strong>Community {i+1}</strong> ({comm.size} members, density {comm.density:.2f}): {members}</p>"
+
+    html += f"""
+<h2>Temporal Hotspots</h2>
+<table><thead><tr><th>Date</th><th>Events</th></tr></thead><tbody>
+{''.join(f'<tr><td>{s["event_date"][:10]}</td><td>{s["count"]}</td></tr>' for s in spikes)}
+</tbody></table>
+
+<hr><p style="color:#888;font-size:11px;">Generated by DOSSIER Document Intelligence System — {now}</p>
+</body></html>"""
+
+    return {"html": html, "stats": {
+        "documents": doc_count, "flagged": len(risk_docs),
+        "persons": len(persons), "communities": len(communities),
+    }}
+
+
+# ═══════════════════════════════════════════
+# ENTITY TAGGING
+# ═══════════════════════════════════════════
+
+
+def _ensure_tags_table(conn):
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS entity_tags (
+            entity_id INTEGER NOT NULL,
+            tag TEXT NOT NULL,
+            created_at TEXT DEFAULT (datetime('now')),
+            PRIMARY KEY (entity_id, tag)
+        )
+    """)
+
+
+@app.get("/api/entities/{entity_id}/tags")
+def get_entity_tags(entity_id: int):
+    """Get tags for an entity."""
+    with get_db() as conn:
+        _ensure_tags_table(conn)
+        rows = conn.execute(
+            "SELECT tag FROM entity_tags WHERE entity_id = ? ORDER BY tag",
+            (entity_id,),
+        ).fetchall()
+    return {"entity_id": entity_id, "tags": [r["tag"] for r in rows]}
+
+
+@app.post("/api/entities/{entity_id}/tags")
+async def add_entity_tag(entity_id: int, request: Request):
+    """Add a tag to an entity."""
+    body = await request.json()
+    tag = body.get("tag", "").strip().lower()
+    if not tag:
+        raise HTTPException(400, "tag required")
+
+    with get_db() as conn:
+        entity = conn.execute("SELECT id FROM entities WHERE id = ?", (entity_id,)).fetchone()
+        if not entity:
+            raise HTTPException(404, "Entity not found")
+        _ensure_tags_table(conn)
+        conn.execute(
+            "INSERT OR IGNORE INTO entity_tags (entity_id, tag) VALUES (?, ?)",
+            (entity_id, tag),
+        )
+    return {"entity_id": entity_id, "tag": tag, "added": True}
+
+
+@app.delete("/api/entities/{entity_id}/tags/{tag}")
+def remove_entity_tag(entity_id: int, tag: str):
+    """Remove a tag from an entity."""
+    with get_db() as conn:
+        _ensure_tags_table(conn)
+        conn.execute(
+            "DELETE FROM entity_tags WHERE entity_id = ? AND tag = ?",
+            (entity_id, tag),
+        )
+    return {"entity_id": entity_id, "tag": tag, "removed": True}
+
+
+@app.get("/api/entities/by-tag")
+def entities_by_tag(tag: str = Query(...)):
+    """Get all entities with a specific tag."""
+    with get_db() as conn:
+        _ensure_tags_table(conn)
+        rows = conn.execute("""
+            SELECT e.id, e.name, e.type, et.tag,
+                   COUNT(DISTINCT de.document_id) as doc_count,
+                   SUM(de.count) as total_mentions
+            FROM entity_tags et
+            JOIN entities e ON e.id = et.entity_id
+            LEFT JOIN document_entities de ON de.entity_id = e.id
+            WHERE et.tag = ?
+            GROUP BY e.id
+            ORDER BY total_mentions DESC
+        """, (tag,)).fetchall()
+    return {"tag": tag, "entities": [dict(r) for r in rows]}
+
+
+@app.get("/api/tags")
+def list_all_tags():
+    """Get all tags with counts."""
+    with get_db() as conn:
+        _ensure_tags_table(conn)
+        rows = conn.execute("""
+            SELECT tag, COUNT(*) as count
+            FROM entity_tags GROUP BY tag ORDER BY count DESC
+        """).fetchall()
+    return {"tags": [dict(r) for r in rows]}
+
+
+# ═══════════════════════════════════════════
+# WATCHLIST
+# ═══════════════════════════════════════════
+
+
+def _ensure_watchlist_table(conn):
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS watchlist (
+            entity_id INTEGER PRIMARY KEY,
+            notes TEXT DEFAULT '',
+            added_at TEXT DEFAULT (datetime('now'))
+        )
+    """)
+
+
+@app.get("/api/watchlist")
+def get_watchlist():
+    """Get all watched entities with details."""
+    with get_db() as conn:
+        _ensure_watchlist_table(conn)
+        rows = conn.execute("""
+            SELECT w.entity_id, w.notes, w.added_at,
+                   e.name, e.type,
+                   COUNT(DISTINCT de.document_id) as doc_count,
+                   SUM(de.count) as total_mentions
+            FROM watchlist w
+            JOIN entities e ON e.id = w.entity_id
+            LEFT JOIN document_entities de ON de.entity_id = e.id
+            GROUP BY w.entity_id
+            ORDER BY total_mentions DESC
+        """).fetchall()
+    return {"watchlist": [dict(r) for r in rows]}
+
+
+@app.post("/api/watchlist")
+async def add_to_watchlist(request: Request):
+    """Add an entity to the watchlist."""
+    body = await request.json()
+    entity_id = body.get("entity_id")
+    notes = body.get("notes", "")
+    if not entity_id:
+        raise HTTPException(400, "entity_id required")
+
+    with get_db() as conn:
+        entity = conn.execute("SELECT id, name FROM entities WHERE id = ?", (entity_id,)).fetchone()
+        if not entity:
+            raise HTTPException(404, "Entity not found")
+        _ensure_watchlist_table(conn)
+        conn.execute(
+            "INSERT OR REPLACE INTO watchlist (entity_id, notes) VALUES (?, ?)",
+            (entity_id, notes),
+        )
+    return {"entity_id": entity_id, "name": entity["name"], "added": True}
+
+
+@app.delete("/api/watchlist/{entity_id}")
+def remove_from_watchlist(entity_id: int):
+    """Remove an entity from the watchlist."""
+    with get_db() as conn:
+        _ensure_watchlist_table(conn)
+        conn.execute("DELETE FROM watchlist WHERE entity_id = ?", (entity_id,))
+    return {"entity_id": entity_id, "removed": True}
+
+
+# ═══════════════════════════════════════════
+# NETWORK COMMUNITIES
+# ═══════════════════════════════════════════
+
+
+@app.get("/api/graph/communities-labeled")
+def communities_labeled(min_size: int = Query(3, ge=2)):
+    """Get communities with auto-generated labels based on top members."""
+    from dossier.core.graph_analysis import GraphAnalyzer
+
+    with get_db() as conn:
+        try:
+            analyzer = GraphAnalyzer(conn)
+            communities = analyzer.get_communities(min_size=min_size)
+        except Exception as e:
+            logger.exception("Community detection error")
+            return {"communities": [], "error": str(e)}
+
+        result = []
+        for i, comm in enumerate(communities):
+            # Auto-label: use top 2-3 person names, or top member names
+            persons = [m for m in comm.members if m.get("type") == "person"]
+            if persons:
+                label = " / ".join(m["name"] for m in persons[:3])
+            else:
+                label = " / ".join(m["name"] for m in comm.members[:3])
+
+            # Get shared documents for this community
+            member_ids = [m["entity_id"] for m in comm.members[:20]]
+            if len(member_ids) >= 2:
+                ph = ",".join("?" * len(member_ids))
+                shared = conn.execute(f"""
+                    SELECT d.id, d.title, d.category, COUNT(DISTINCT de.entity_id) as member_count
+                    FROM document_entities de
+                    JOIN documents d ON d.id = de.document_id
+                    WHERE de.entity_id IN ({ph})
+                    GROUP BY d.id
+                    HAVING COUNT(DISTINCT de.entity_id) >= 2
+                    ORDER BY member_count DESC LIMIT 5
+                """, member_ids).fetchall()
+            else:
+                shared = []
+
+            result.append({
+                "id": i,
+                "label": label,
+                "size": comm.size,
+                "density": comm.density,
+                "members": [dict(m) if isinstance(m, dict) else
+                            {"entity_id": m.entity_id, "name": m.name, "type": m.type}
+                            if hasattr(m, "entity_id") else m
+                            for m in comm.members],
+                "shared_documents": [dict(d) for d in shared],
+            })
+
+    return {"communities": result, "total": len(result)}
 
 
 # ═══════════════════════════════════════════

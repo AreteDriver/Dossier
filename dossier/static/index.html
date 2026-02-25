@@ -1622,6 +1622,80 @@ body::before {
 .anomaly-badge.cooccurrence { background: rgba(224,168,74,0.15); color: #e0a84a; }
 .anomaly-badge.financial { background: rgba(74,157,224,0.15); color: var(--entity-place); }
 .anomaly-badge.isolated { background: rgba(155,109,224,0.15); color: var(--entity-org); }
+
+/* ─── ENTITY PROFILE ─── */
+.entity-view { display: none; flex-direction: column; gap: 16px; }
+.entity-view.active { display: flex; }
+.entity-header-card {
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 24px;
+  display: flex; align-items: center; gap: 20px;
+}
+.entity-avatar {
+  width: 56px; height: 56px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-mono); font-size: 22px; font-weight: 700; color: #fff; flex-shrink: 0;
+}
+.entity-header-info { flex: 1; }
+.entity-header-name { font-size: 20px; font-weight: 600; }
+.entity-header-type { font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--text-muted); margin-top: 2px; }
+.entity-stat-row { display: flex; gap: 16px; margin-top: 10px; }
+.entity-stat-pill {
+  font-family: var(--font-mono); font-size: 11px; padding: 4px 12px; border-radius: 20px;
+  background: var(--bg-tertiary); border: 1px solid var(--border); color: var(--text-secondary);
+}
+.entity-section {
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 18px;
+}
+.entity-section-title {
+  font-family: var(--font-mono); font-size: 10px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: 2px; color: var(--text-muted); margin-bottom: 12px;
+}
+.entity-tag-chip {
+  display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 20px;
+  font-family: var(--font-mono); font-size: 11px; background: var(--bg-tertiary); border: 1px solid var(--border);
+  color: var(--text-secondary); margin: 3px;
+}
+.entity-tag-chip .remove-tag { cursor: pointer; color: var(--text-muted); }
+.entity-tag-chip .remove-tag:hover { color: #e05555; }
+.entity-watch-btn {
+  padding: 6px 16px; border-radius: var(--radius); font-family: var(--font-mono); font-size: 11px;
+  text-transform: uppercase; letter-spacing: 1px; cursor: pointer; border: 1px solid var(--border);
+  background: var(--bg-tertiary); color: var(--text-secondary); transition: all var(--transition);
+}
+.entity-watch-btn.watched { background: rgba(224,85,85,0.15); border-color: #e05555; color: #e05555; }
+
+/* ─── WATCHLIST VIEW ─── */
+.watchlist-view { display: none; flex-direction: column; gap: 16px; }
+.watchlist-view.active { display: flex; }
+.watchlist-card {
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 16px;
+  display: flex; align-items: center; gap: 14px; cursor: pointer; transition: all var(--transition);
+}
+.watchlist-card:hover { border-color: var(--border-active); background: var(--bg-hover); }
+
+/* ─── COMMUNITIES VIEW ─── */
+.communities-view { display: none; flex-direction: column; gap: 16px; }
+.communities-view.active { display: flex; }
+.community-card {
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 18px;
+}
+.community-label {
+  font-size: 14px; font-weight: 600; margin-bottom: 8px;
+}
+.community-meta {
+  font-family: var(--font-mono); font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px;
+  margin-bottom: 12px;
+}
+.community-members {
+  display: flex; flex-wrap: wrap; gap: 6px;
+}
+
+/* ─── REPORT BUTTON ─── */
+.report-btn {
+  padding: 8px 18px; border-radius: var(--radius); font-family: var(--font-mono); font-size: 11px;
+  text-transform: uppercase; letter-spacing: 1px; cursor: pointer; border: 1px solid var(--accent-dim);
+  background: var(--accent-glow); color: var(--accent); transition: all var(--transition);
+}
+.report-btn:hover { background: var(--accent-dim); color: #fff; }
 </style>
 </head>
 <body>
@@ -1730,6 +1804,14 @@ body::before {
       <div class="sidebar-item" data-view="ai" id="aiNav">
         <div class="sidebar-dot" style="background:#4ae0a8"></div>
         AI Analyst
+      </div>
+      <div class="sidebar-item" data-view="watchlist" id="watchlistNav">
+        <div class="sidebar-dot" style="background:#e05555"></div>
+        Watchlist
+      </div>
+      <div class="sidebar-item" data-view="communities" id="communitiesNav">
+        <div class="sidebar-dot" style="background:var(--entity-org)"></div>
+        Network Communities
       </div>
     </div>
 
@@ -2198,6 +2280,26 @@ body::before {
     <div class="anomaly-view" id="anomalyView">
       <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Anomaly Detection</div>
       <div id="anomalyContent">Loading anomalies...</div>
+    </div>
+
+    <!-- ENTITY PROFILE VIEW -->
+    <div class="entity-view" id="entityView">
+      <div id="entityContent">Loading entity profile...</div>
+    </div>
+
+    <!-- WATCHLIST VIEW -->
+    <div class="watchlist-view" id="watchlistView">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Watchlist</div>
+        <button class="report-btn" onclick="generateReport()">Generate Report</button>
+      </div>
+      <div id="watchlistContent">Loading watchlist...</div>
+    </div>
+
+    <!-- COMMUNITIES VIEW -->
+    <div class="communities-view" id="communitiesView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Network Communities</div>
+      <div id="communitiesContent">Loading communities...</div>
     </div>
   </main>
 
@@ -2804,6 +2906,9 @@ function hideAllViews() {
   document.getElementById('advsearchView').classList.remove('active');
   document.getElementById('boardView').classList.remove('active');
   document.getElementById('anomalyView').classList.remove('active');
+  document.getElementById('entityView').classList.remove('active');
+  document.getElementById('watchlistView').classList.remove('active');
+  document.getElementById('communitiesView').classList.remove('active');
 }
 
 function showDocumentView() {
@@ -2863,6 +2968,8 @@ document.querySelectorAll('.sidebar-item[data-view]').forEach(item => {
     else if (view === 'advsearch') showAdvSearchView();
     else if (view === 'board') showBoardView();
     else if (view === 'anomalies') showAnomalyView();
+    else if (view === 'watchlist') showWatchlistView();
+    else if (view === 'communities') showCommunitiesView();
   });
 });
 
@@ -3929,6 +4036,9 @@ function goBackFromReader() {
   else if (readerPreviousView === 'advsearch') showAdvSearchView();
   else if (readerPreviousView === 'anomalies') showAnomalyView();
   else if (readerPreviousView === 'dashboard') showDashboardView();
+  else if (readerPreviousView === 'entity') showEntityView(lastEntityId);
+  else if (readerPreviousView === 'watchlist') showWatchlistView();
+  else if (readerPreviousView === 'communities') showCommunitiesView();
   else showDocumentView();
 }
 
@@ -4749,6 +4859,279 @@ async function loadAnomalies() {
   } catch (e) {
     console.error('Anomaly detection failed:', e);
     el.innerHTML = '<div style="color:#e05555;padding:20px;">Failed to load anomalies</div>';
+  }
+}
+
+
+// ─── ENTITY PROFILE ───
+
+let lastEntityId = null;
+
+async function openEntityByName(name) {
+  try {
+    const data = await api(`/api/entities/search?q=${encodeURIComponent(name)}&limit=1`);
+    if (data.entities.length) {
+      showEntityView(data.entities[0].id);
+    }
+  } catch (err) { console.error('Entity search failed:', err); }
+}
+
+function showEntityView(entityId) {
+  if (!entityId) return;
+  lastEntityId = entityId;
+  currentView = 'entity';
+  hideAllViews();
+  document.getElementById('entityView').classList.add('active');
+  loadEntityProfile(entityId);
+}
+
+async function loadEntityProfile(entityId) {
+  const el = document.getElementById('entityContent');
+  el.innerHTML = 'Loading entity profile...';
+  try {
+    const data = await api(`/api/entities/${entityId}/profile`);
+    const e = data;
+    const typeColor = e.type === 'person' ? 'var(--entity-person)' : e.type === 'place' ? 'var(--entity-place)' : e.type === 'org' ? 'var(--entity-org)' : 'var(--entity-date)';
+    const initial = (e.name || '?')[0].toUpperCase();
+
+    let html = `<div class="entity-header-card">
+      <div class="entity-avatar" style="background:${typeColor}">${initial}</div>
+      <div class="entity-header-info">
+        <div class="entity-header-name">${e.name}</div>
+        <div class="entity-header-type">${e.type}</div>
+        <div class="entity-stat-row">
+          <span class="entity-stat-pill">${e.doc_count} documents</span>
+          <span class="entity-stat-pill">${e.total_mentions} mentions</span>
+          <span class="entity-stat-pill">Risk: ${(e.risk_exposure * 100).toFixed(0)}%</span>
+        </div>
+      </div>
+      <button class="entity-watch-btn ${e.watched ? 'watched' : ''}" id="entityWatchBtn"
+        onclick="toggleWatch(${entityId})">${e.watched ? 'Watching' : 'Watch'}</button>
+    </div>`;
+
+    // Tags
+    html += `<div class="entity-section">
+      <div class="entity-section-title">Tags</div>
+      <div id="entityTagsContainer">`;
+    (e.tags || []).forEach(t => {
+      html += `<span class="entity-tag-chip">${t} <span class="remove-tag" onclick="removeEntityTag(${entityId},'${t.replace(/'/g,"\\'")}')">×</span></span>`;
+    });
+    html += `</div>
+      <div style="margin-top:8px;display:flex;gap:8px;">
+        <input id="newTagInput" placeholder="Add tag..." style="background:var(--bg-tertiary);border:1px solid var(--border);border-radius:var(--radius);padding:5px 10px;font-family:var(--font-mono);font-size:11px;color:var(--text-primary);flex:1;outline:none;">
+        <button onclick="addEntityTag(${entityId})" style="background:var(--bg-tertiary);border:1px solid var(--border);border-radius:var(--radius);padding:5px 12px;font-family:var(--font-mono);font-size:11px;color:var(--text-secondary);cursor:pointer;">+ Add</button>
+      </div>
+    </div>`;
+
+    // Documents
+    html += `<div class="entity-section">
+      <div class="entity-section-title">Documents (${e.documents.length})</div>`;
+    e.documents.forEach(d => {
+      html += `<div class="anomaly-row" style="cursor:pointer;" onclick="readerPreviousView='entity';openReader(${d.id})">
+        <span class="anomaly-badge" style="background:rgba(74,157,224,0.15);color:var(--entity-place);">${d.count}x</span>
+        <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${d.title || d.filename}</span>
+        <span style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted);">${d.category}</span>
+      </div>`;
+    });
+    html += '</div>';
+
+    // Timeline
+    if (e.timeline && e.timeline.length) {
+      html += `<div class="entity-section">
+        <div class="entity-section-title">Timeline (${e.timeline.length} events)</div>`;
+      e.timeline.slice(0, 20).forEach(t => {
+        html += `<div class="anomaly-row">
+          <span style="font-family:var(--font-mono);font-size:10px;color:var(--entity-date);min-width:90px;">${t.date || 'undated'}</span>
+          <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${t.description}</span>
+        </div>`;
+      });
+      if (e.timeline.length > 20) html += `<div style="color:var(--text-muted);font-size:11px;padding:4px 10px;">+ ${e.timeline.length - 20} more events</div>`;
+      html += '</div>';
+    }
+
+    // Co-occurring entities
+    if (e.cooccurring && e.cooccurring.length) {
+      html += `<div class="entity-section">
+        <div class="entity-section-title">Co-occurring Entities (${e.cooccurring.length})</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;">`;
+      e.cooccurring.forEach(c => {
+        html += `<span class="entity-tag ${c.type}" style="cursor:pointer;font-size:12px;" onclick="showEntityView(${c.id})">${c.name} <span style="opacity:0.5;">(${c.shared_docs})</span></span>`;
+      });
+      html += '</div></div>';
+    }
+
+    // Similar documents
+    html += `<div class="entity-section">
+      <div class="entity-section-title">Similar Documents</div>
+      <div id="entitySimilarDocs">Loading...</div>
+    </div>`;
+
+    el.innerHTML = html;
+
+    // Load similar docs for first document
+    if (e.documents.length) {
+      loadSimilarDocs(e.documents[0].id, 'entitySimilarDocs');
+    } else {
+      document.getElementById('entitySimilarDocs').innerHTML = '<div style="color:var(--text-muted);font-size:12px;">No documents to compare</div>';
+    }
+  } catch (err) {
+    console.error('Entity profile failed:', err);
+    el.innerHTML = '<div style="color:#e05555;padding:20px;">Failed to load entity profile</div>';
+  }
+}
+
+async function loadSimilarDocs(docId, targetElId) {
+  try {
+    const data = await api(`/api/documents/${docId}/similar?limit=8`);
+    const el = document.getElementById(targetElId);
+    if (!data.similar.length) {
+      el.innerHTML = '<div style="color:var(--text-muted);font-size:12px;">No similar documents found</div>';
+      return;
+    }
+    let html = '';
+    data.similar.forEach(d => {
+      html += `<div class="anomaly-row" style="cursor:pointer;" onclick="openReader(${d.id})">
+        <span class="anomaly-badge" style="background:rgba(74,224,168,0.15);color:var(--entity-date);">${(d.similarity * 100).toFixed(0)}%</span>
+        <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${d.title || d.filename}</span>
+        <span style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted);">${d.shared_entities} shared</span>
+      </div>`;
+    });
+    el.innerHTML = html;
+  } catch (err) {
+    document.getElementById(targetElId).innerHTML = '<div style="color:var(--text-muted);font-size:12px;">Failed to load similar docs</div>';
+  }
+}
+
+async function addEntityTag(entityId) {
+  const input = document.getElementById('newTagInput');
+  const tag = input.value.trim();
+  if (!tag) return;
+  try {
+    await fetch(`/api/entities/${entityId}/tags`, {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({tag})
+    });
+    input.value = '';
+    loadEntityProfile(entityId);
+  } catch (err) { console.error('Add tag failed:', err); }
+}
+
+async function removeEntityTag(entityId, tag) {
+  try {
+    await fetch(`/api/entities/${entityId}/tags/${encodeURIComponent(tag)}`, {method: 'DELETE'});
+    loadEntityProfile(entityId);
+  } catch (err) { console.error('Remove tag failed:', err); }
+}
+
+async function toggleWatch(entityId) {
+  const btn = document.getElementById('entityWatchBtn');
+  const isWatched = btn.classList.contains('watched');
+  try {
+    if (isWatched) {
+      await fetch(`/api/watchlist/${entityId}`, {method: 'DELETE'});
+      btn.classList.remove('watched');
+      btn.textContent = 'Watch';
+    } else {
+      await fetch('/api/watchlist', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({entity_id: entityId, notes: ''})
+      });
+      btn.classList.add('watched');
+      btn.textContent = 'Watching';
+    }
+  } catch (err) { console.error('Toggle watch failed:', err); }
+}
+
+
+// ─── WATCHLIST VIEW ───
+
+function showWatchlistView() {
+  currentView = 'watchlist';
+  hideAllViews();
+  document.getElementById('watchlistView').classList.add('active');
+  loadWatchlist();
+}
+
+async function loadWatchlist() {
+  const el = document.getElementById('watchlistContent');
+  el.innerHTML = 'Loading watchlist...';
+  try {
+    const data = await api('/api/watchlist');
+    if (!data.watchlist.length) {
+      el.innerHTML = '<div style="color:var(--text-muted);font-size:13px;padding:20px 0;">No entities in watchlist. Open an entity profile and click "Watch" to add.</div>';
+      return;
+    }
+    let html = '';
+    data.watchlist.forEach(w => {
+      const typeColor = w.type === 'person' ? 'var(--entity-person)' : w.type === 'place' ? 'var(--entity-place)' : w.type === 'org' ? 'var(--entity-org)' : 'var(--entity-date)';
+      html += `<div class="watchlist-card" onclick="showEntityView(${w.entity_id})">
+        <div style="width:36px;height:36px;border-radius:50%;background:${typeColor};display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-weight:700;color:#fff;font-size:15px;">${(w.name || '?')[0].toUpperCase()}</div>
+        <div style="flex:1;">
+          <div style="font-weight:500;font-size:13px;">${w.name}</div>
+          <div style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;">${w.type} · ${w.doc_count} docs · ${w.mentions} mentions</div>
+          ${w.notes ? `<div style="font-size:11px;color:var(--text-secondary);margin-top:4px;">${w.notes}</div>` : ''}
+        </div>
+        <div style="font-size:10px;font-family:var(--font-mono);color:var(--text-muted);">${w.added_at ? w.added_at.split('T')[0] : ''}</div>
+      </div>`;
+    });
+    el.innerHTML = html;
+  } catch (err) {
+    console.error('Watchlist load failed:', err);
+    el.innerHTML = '<div style="color:#e05555;padding:20px;">Failed to load watchlist</div>';
+  }
+}
+
+
+// ─── NETWORK COMMUNITIES ───
+
+function showCommunitiesView() {
+  currentView = 'communities';
+  hideAllViews();
+  document.getElementById('communitiesView').classList.add('active');
+  loadCommunities();
+}
+
+async function loadCommunities() {
+  const el = document.getElementById('communitiesContent');
+  el.innerHTML = 'Loading communities...';
+  try {
+    const data = await api('/api/graph/communities-labeled?min_size=3');
+    if (!data.communities.length) {
+      el.innerHTML = '<div style="color:var(--text-muted);font-size:13px;padding:20px 0;">No communities detected with minimum size 3.</div>';
+      return;
+    }
+    let html = '';
+    data.communities.forEach((c, i) => {
+      const hue = (i * 47) % 360;
+      html += `<div class="community-card">
+        <div class="community-label" style="color:hsl(${hue},65%,65%);">${c.label}</div>
+        <div class="community-meta">${c.size} members · density: ${(c.density * 100).toFixed(0)}% · ${c.shared_documents} shared docs</div>
+        <div class="community-members">`;
+      c.members.forEach(m => {
+        const cls = m.type || 'person';
+        html += `<span class="entity-tag ${cls}" style="cursor:pointer;font-size:11px;" onclick="showEntityView(${m.entity_id})">${m.name}</span>`;
+      });
+      html += '</div></div>';
+    });
+    el.innerHTML = html;
+  } catch (err) {
+    console.error('Communities load failed:', err);
+    el.innerHTML = '<div style="color:#e05555;padding:20px;">Failed to load communities</div>';
+  }
+}
+
+
+// ─── REPORT GENERATOR ───
+
+async function generateReport() {
+  try {
+    const data = await api('/api/export/report?min_risk=0.3');
+    const win = window.open('', '_blank');
+    win.document.write(data.html);
+    win.document.close();
+  } catch (err) {
+    console.error('Report generation failed:', err);
+    alert('Failed to generate report');
   }
 }
 
