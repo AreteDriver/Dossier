@@ -14,9 +14,12 @@ Endpoints:
   POST /api/ingest-directory
 """
 
+import json
 import logging
 import os
 import re
+import urllib.error
+import urllib.request
 from pathlib import Path
 from typing import Optional
 from uuid import uuid4
@@ -1224,6 +1227,482 @@ def forensics_document(doc_id: int):
         "financial_indicators": [dict(r) for r in indicators],
         "phrases": [dict(r) for r in phrases],
     }
+
+
+# ═══════════════════════════════════════════
+# AI SUMMARIZER (Ollama)
+# ═══════════════════════════════════════════
+
+OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://localhost:11434")
+
+
+def _ollama_generate(prompt: str, model: str = "qwen2.5:14b", max_tokens: int = 1024) -> str:
+    """Call Ollama API to generate text. Raises HTTPException 503 if unavailable."""
+    payload = json.dumps({
+        "model": model,
+        "prompt": prompt,
+        "stream": False,
+        "options": {"num_predict": max_tokens, "temperature": 0.3},
+    }).encode()
+    req = urllib.request.Request(
+        f"{OLLAMA_URL}/api/generate",
+        data=payload,
+        headers={"Content-Type": "application/json"},
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=180) as resp:
+            result = json.loads(resp.read())
+            return result.get("response", "")
+    except (urllib.error.URLError, TimeoutError, OSError) as e:
+        raise HTTPException(503, f"Ollama unavailable: {e}")
+
+
+@app.post("/api/ai/summarize")
+async def ai_summarize(request: Request):
+    """Summarize a document using local LLM."""
+    body = await request.json()
+    doc_id = body.get("doc_id")
+    if not doc_id:
+        raise HTTPException(400, "doc_id required")
+
+    with get_db() as conn:
+        row = conn.execute(
+            "SELECT title, raw_text FROM documents WHERE id = ?", (doc_id,)
+        ).fetchone()
+        if not row:
+            raise HTTPException(404, "Document not found")
+        text = (row["raw_text"] or "")[:8000]
+
+    prompt = (
+        "Summarize the following document concisely. Focus on key facts, names, "
+        "dates, locations, and significant findings.\n\n"
+        f"Document: {row['title'] or 'Untitled'}\n\n{text}\n\nSummary:"
+    )
+    summary = _ollama_generate(prompt)
+    return {"doc_id": doc_id, "summary": summary.strip(), "model": "qwen2.5:14b"}
+
+
+@app.post("/api/ai/ask")
+async def ai_ask(request: Request):
+    """Answer a question about the corpus using local LLM."""
+    body = await request.json()
+    question = body.get("question", "").strip()
+    if not question:
+        raise HTTPException(400, "question required")
+
+    with get_db() as conn:
+        fts_query = re.sub(r'["\*\(\)\{\}\[\]:^~]', " ", question).strip()
+        rows = []
+        if fts_query:
+            rows = conn.execute("""
+                SELECT d.id, d.title,
+                       snippet(documents_fts, 1, '', '', '...', 80) as excerpt
+                FROM documents_fts
+                JOIN documents d ON d.id = documents_fts.rowid
+                WHERE documents_fts MATCH ?
+                ORDER BY rank LIMIT 5
+            """, [f'"{fts_query}"']).fetchall()
+
+    context = "\n\n".join(f"[{r['title']}]: {r['excerpt']}" for r in rows)
+    prompt = (
+        "You are analyzing a corpus of legal documents. Answer the question "
+        "based on the document context provided. Be specific and cite document "
+        "titles when possible.\n\n"
+        f"Context:\n{context[:6000]}\n\nQuestion: {question}\n\nAnswer:"
+    )
+    answer = _ollama_generate(prompt, max_tokens=1500)
+    sources = [{"id": r["id"], "title": r["title"]} for r in rows]
+    return {"question": question, "answer": answer.strip(), "sources": sources, "model": "qwen2.5:14b"}
+
+
+# ═══════════════════════════════════════════
+# RELATIONSHIP MATRIX
+# ═══════════════════════════════════════════
+
+
+@app.get("/api/matrix/relationships")
+def relationship_matrix(limit: int = Query(30, ge=5, le=100)):
+    """Person-to-person relationship strength matrix."""
+    with get_db() as conn:
+        top_persons = conn.execute("""
+            SELECT e.id, e.name, SUM(de.count) as total_mentions
+            FROM entities e
+            JOIN document_entities de ON de.entity_id = e.id
+            WHERE e.type = 'person'
+            GROUP BY e.id
+            ORDER BY total_mentions DESC
+            LIMIT ?
+        """, (limit,)).fetchall()
+
+        person_ids = [p["id"] for p in top_persons]
+        person_names = [p["name"] for p in top_persons]
+
+        if len(person_ids) < 2:
+            return {"entities": person_names, "matrix": [], "connections": []}
+
+        placeholders = ",".join("?" * len(person_ids))
+        connections = conn.execute(f"""
+            SELECT entity_a_id, entity_b_id, weight
+            FROM entity_connections
+            WHERE entity_a_id IN ({placeholders})
+              AND entity_b_id IN ({placeholders})
+        """, person_ids + person_ids).fetchall()
+
+    id_to_idx = {pid: i for i, pid in enumerate(person_ids)}
+    n = len(person_ids)
+    matrix = [[0] * n for _ in range(n)]
+    conn_list = []
+
+    for c in connections:
+        i = id_to_idx.get(c["entity_a_id"])
+        j = id_to_idx.get(c["entity_b_id"])
+        if i is not None and j is not None:
+            matrix[i][j] = c["weight"]
+            matrix[j][i] = c["weight"]
+            conn_list.append({
+                "source": person_names[i], "target": person_names[j],
+                "weight": c["weight"],
+            })
+
+    return {"entities": person_names, "matrix": matrix, "connections": conn_list}
+
+
+# ═══════════════════════════════════════════
+# GEOSPATIAL
+# ═══════════════════════════════════════════
+
+
+@app.get("/api/geo/locations")
+def geo_locations(limit: int = Query(50, ge=1, le=200)):
+    """Place entities with document counts for map visualization."""
+    with get_db() as conn:
+        rows = conn.execute("""
+            SELECT e.id, e.name,
+                   COUNT(DISTINCT de.document_id) as doc_count,
+                   SUM(de.count) as total_mentions
+            FROM entities e
+            JOIN document_entities de ON de.entity_id = e.id
+            WHERE e.type = 'place'
+            GROUP BY e.id
+            ORDER BY doc_count DESC, total_mentions DESC
+            LIMIT ?
+        """, (limit,)).fetchall()
+
+        locations = []
+        for r in rows:
+            loc = dict(r)
+            docs = conn.execute("""
+                SELECT d.id, d.title, d.category
+                FROM document_entities de
+                JOIN documents d ON d.id = de.document_id
+                WHERE de.entity_id = ?
+                ORDER BY de.count DESC LIMIT 3
+            """, (r["id"],)).fetchall()
+            loc["documents"] = [dict(d) for d in docs]
+            locations.append(loc)
+
+    return {"locations": locations}
+
+
+# ═══════════════════════════════════════════
+# ADVANCED SEARCH
+# ═══════════════════════════════════════════
+
+
+@app.get("/api/search/advanced")
+def advanced_search(
+    q: str = Query(""),
+    category: Optional[str] = Query(None),
+    source: Optional[str] = Query(None),
+    date_from: Optional[str] = Query(None),
+    date_to: Optional[str] = Query(None),
+    entity_name: Optional[str] = Query(None),
+    flagged_only: bool = Query(False),
+    min_risk: Optional[float] = Query(None),
+    sort_by: str = Query("relevance"),
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+):
+    """Advanced search with multiple filter combinations."""
+    with get_db() as conn:
+        conditions = ["1=1"]
+        params: list = []
+        joins: list[str] = []
+
+        if q.strip():
+            fts_query = re.sub(r'["\*\(\)\{\}\[\]:^~]', " ", q.strip()).strip()
+            joins.append("JOIN documents_fts ON documents_fts.rowid = d.id")
+            conditions.append("documents_fts MATCH ?")
+            params.append(f'"{fts_query}"')
+
+        if category:
+            conditions.append("d.category = ?")
+            params.append(category)
+        if source:
+            conditions.append("d.source = ?")
+            params.append(source)
+        if date_from:
+            conditions.append("d.date >= ?")
+            params.append(date_from)
+        if date_to:
+            conditions.append("d.date <= ?")
+            params.append(date_to)
+        if flagged_only:
+            conditions.append("d.flagged = 1")
+
+        if entity_name:
+            joins.append(
+                "JOIN document_entities de_f ON de_f.document_id = d.id "
+                "JOIN entities e_f ON e_f.id = de_f.entity_id"
+            )
+            conditions.append("LOWER(e_f.name) LIKE LOWER(?)")
+            params.append(f"%{entity_name}%")
+
+        if min_risk is not None:
+            joins.append(
+                "JOIN document_forensics df_r ON df_r.document_id = d.id "
+                "AND df_r.analysis_type = 'risk_score'"
+            )
+            conditions.append("df_r.score >= ?")
+            params.append(min_risk)
+
+        order = "d.ingested_at DESC"
+        if sort_by == "date":
+            order = "d.date DESC"
+        elif sort_by == "pages":
+            order = "d.pages DESC"
+        elif sort_by == "relevance" and q.strip():
+            order = "rank"
+
+        join_str = " ".join(joins)
+        where_str = " AND ".join(conditions)
+
+        sql = f"""
+            SELECT DISTINCT d.id, d.filename, d.title, d.category, d.source,
+                   d.date, d.pages, d.flagged, d.ingested_at
+            FROM documents d {join_str}
+            WHERE {where_str}
+            ORDER BY {order}
+            LIMIT ? OFFSET ?
+        """
+        params.extend([limit, offset])
+        rows = conn.execute(sql, params).fetchall()
+
+        results = []
+        for row in rows:
+            doc = dict(row)
+            doc["entities"] = _get_doc_entities(conn, doc["id"])
+            raw = conn.execute(
+                "SELECT raw_text FROM documents WHERE id = ?", (doc["id"],)
+            ).fetchone()
+            doc["excerpt"] = (
+                (raw["raw_text"][:300] + "...") if raw and raw["raw_text"] else ""
+            )
+            results.append(doc)
+
+        count_params = params[:-2]
+        total = conn.execute(
+            f"SELECT COUNT(DISTINCT d.id) FROM documents d {join_str} WHERE {where_str}",
+            count_params,
+        ).fetchone()[0]
+
+    return {"results": results, "total": total, "offset": offset, "limit": limit}
+
+
+# ═══════════════════════════════════════════
+# INVESTIGATION BOARD
+# ═══════════════════════════════════════════
+
+
+def _ensure_board_table(conn):
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS board_items (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            item_type TEXT NOT NULL,
+            ref_id INTEGER,
+            title TEXT NOT NULL,
+            content TEXT DEFAULT '',
+            color TEXT DEFAULT '',
+            x REAL DEFAULT 0,
+            y REAL DEFAULT 0,
+            created_at TEXT DEFAULT (datetime('now'))
+        )
+    """)
+
+
+@app.get("/api/board")
+def get_board():
+    """Get all investigation board items."""
+    with get_db() as conn:
+        _ensure_board_table(conn)
+        rows = conn.execute("SELECT * FROM board_items ORDER BY created_at").fetchall()
+    return {"items": [dict(r) for r in rows]}
+
+
+@app.post("/api/board")
+async def add_board_item(request: Request):
+    """Add an item to the investigation board."""
+    body = await request.json()
+    title = body.get("title", "")
+    if not title:
+        raise HTTPException(400, "title required")
+
+    with get_db() as conn:
+        _ensure_board_table(conn)
+        cursor = conn.execute(
+            "INSERT INTO board_items (item_type, ref_id, title, content, color, x, y) "
+            "VALUES (?,?,?,?,?,?,?)",
+            (
+                body.get("item_type", "note"),
+                body.get("ref_id"),
+                title,
+                body.get("content", ""),
+                body.get("color", ""),
+                body.get("x", 0),
+                body.get("y", 0),
+            ),
+        )
+        item_id = cursor.lastrowid
+
+    return {"id": item_id, "item_type": body.get("item_type", "note"), "title": title}
+
+
+@app.put("/api/board/{item_id}")
+async def update_board_item(item_id: int, request: Request):
+    """Update a board item."""
+    body = await request.json()
+    with get_db() as conn:
+        _ensure_board_table(conn)
+        row = conn.execute("SELECT id FROM board_items WHERE id = ?", (item_id,)).fetchone()
+        if not row:
+            raise HTTPException(404, "Board item not found")
+
+        updates, params = [], []
+        for field in ("title", "content", "color", "x", "y"):
+            if field in body:
+                updates.append(f"{field} = ?")
+                params.append(body[field])
+        if updates:
+            params.append(item_id)
+            conn.execute(
+                f"UPDATE board_items SET {', '.join(updates)} WHERE id = ?", params
+            )
+
+    return {"id": item_id, "updated": True}
+
+
+@app.delete("/api/board/{item_id}")
+def delete_board_item(item_id: int):
+    """Remove an item from the investigation board."""
+    with get_db() as conn:
+        _ensure_board_table(conn)
+        conn.execute("DELETE FROM board_items WHERE id = ?", (item_id,))
+    return {"deleted": True}
+
+
+# ═══════════════════════════════════════════
+# ANOMALY DETECTION
+# ═══════════════════════════════════════════
+
+
+@app.get("/api/anomalies")
+def detect_anomalies():
+    """Detect anomalous patterns in the corpus."""
+    anomalies: dict = {
+        "temporal_spikes": [],
+        "entity_anomalies": [],
+        "financial_clusters": [],
+        "isolated_entities": [],
+    }
+
+    with get_db() as conn:
+        # 1. Temporal spikes — dates with unusually high event counts
+        date_counts = conn.execute("""
+            SELECT event_date, COUNT(*) as count
+            FROM events
+            WHERE event_date IS NOT NULL AND length(event_date) >= 10
+              AND confidence >= 0.5
+            GROUP BY event_date ORDER BY count DESC
+        """).fetchall()
+
+        if date_counts:
+            counts = [r["count"] for r in date_counts]
+            avg_count = sum(counts) / len(counts)
+            threshold = max(avg_count * 3, 5)
+            for r in date_counts:
+                if r["count"] >= threshold:
+                    anomalies["temporal_spikes"].append({
+                        "date": r["event_date"][:10],
+                        "count": r["count"],
+                        "avg": round(avg_count, 1),
+                        "ratio": round(r["count"] / avg_count, 1) if avg_count > 0 else 0,
+                    })
+                if len(anomalies["temporal_spikes"]) >= 20:
+                    break
+
+        # 2. Entity co-occurrence anomalies — high co-occurrence relative to frequency
+        entity_anoms = conn.execute("""
+            SELECT ea.name as entity_a, eb.name as entity_b,
+                   ea.type as type_a, eb.type as type_b,
+                   ec.weight,
+                   (SELECT SUM(de.count) FROM document_entities de
+                    WHERE de.entity_id = ec.entity_a_id) as freq_a,
+                   (SELECT SUM(de.count) FROM document_entities de
+                    WHERE de.entity_id = ec.entity_b_id) as freq_b
+            FROM entity_connections ec
+            JOIN entities ea ON ea.id = ec.entity_a_id
+            JOIN entities eb ON eb.id = ec.entity_b_id
+            WHERE ea.type = 'person' AND eb.type IN ('person', 'org', 'place')
+              AND ec.weight >= 3
+            ORDER BY CAST(ec.weight AS REAL) / (
+                COALESCE((SELECT SUM(de.count) FROM document_entities de
+                          WHERE de.entity_id = ec.entity_a_id), 1) +
+                COALESCE((SELECT SUM(de.count) FROM document_entities de
+                          WHERE de.entity_id = ec.entity_b_id), 1)
+            ) DESC
+            LIMIT 20
+        """).fetchall()
+
+        for r in entity_anoms:
+            freq_sum = (r["freq_a"] or 1) + (r["freq_b"] or 1)
+            anomalies["entity_anomalies"].append({
+                "entity_a": r["entity_a"], "entity_b": r["entity_b"],
+                "type_a": r["type_a"], "type_b": r["type_b"],
+                "co_occurrences": r["weight"],
+                "ratio": round(r["weight"] / freq_sum * 100, 1),
+            })
+
+        # 3. Financial clusters — documents with many financial indicators
+        fin_clusters = conn.execute("""
+            SELECT d.id, d.title, d.filename, d.category, d.source,
+                   COUNT(*) as indicator_count,
+                   ROUND(AVG(fi.risk_score), 3) as avg_risk,
+                   GROUP_CONCAT(DISTINCT fi.indicator_type) as types
+            FROM financial_indicators fi
+            JOIN documents d ON d.id = fi.document_id
+            GROUP BY d.id
+            HAVING COUNT(*) >= 3
+            ORDER BY indicator_count DESC
+            LIMIT 15
+        """).fetchall()
+        anomalies["financial_clusters"] = [dict(r) for r in fin_clusters]
+
+        # 4. Isolated high-mention entities — many mentions but very few documents
+        isolated = conn.execute("""
+            SELECT e.name, e.type,
+                   SUM(de.count) as total_mentions,
+                   COUNT(DISTINCT de.document_id) as doc_count
+            FROM entities e
+            JOIN document_entities de ON de.entity_id = e.id
+            WHERE e.type IN ('person', 'org')
+            GROUP BY e.id
+            HAVING SUM(de.count) >= 10 AND COUNT(DISTINCT de.document_id) <= 2
+            ORDER BY total_mentions DESC
+            LIMIT 20
+        """).fetchall()
+        anomalies["isolated_entities"] = [dict(r) for r in isolated]
+
+    return anomalies
 
 
 # ═══════════════════════════════════════════

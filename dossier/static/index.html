@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>DOSSIER — Document Intelligence System</title>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
 :root {
   --bg-primary: #0a0b0d;
@@ -1484,6 +1486,142 @@ body::before {
   font-style: italic;
   padding: 4px 0 0 36px;
 }
+
+/* ─── AI SUMMARIZER ─── */
+.ai-view { display: none; flex-direction: column; gap: 16px; }
+.ai-view.active { display: flex; }
+.ai-chat { display: flex; flex-direction: column; gap: 12px; max-height: calc(100vh - 280px); overflow-y: auto; }
+.ai-message { padding: 14px 18px; border-radius: var(--radius-lg); font-size: 13px; line-height: 1.7; }
+.ai-message.user { background: var(--accent-glow); border: 1px solid var(--accent-dim); color: var(--text-primary); align-self: flex-end; max-width: 80%; }
+.ai-message.assistant { background: var(--bg-card); border: 1px solid var(--border); color: var(--text-secondary); }
+.ai-message .ai-sources { font-family: var(--font-mono); font-size: 10px; color: var(--text-muted); margin-top: 8px; }
+.ai-input-row { display: flex; gap: 8px; }
+.ai-input {
+  flex: 1; background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: var(--radius-lg);
+  padding: 12px 16px; font-family: var(--font-mono); font-size: 13px; color: var(--text-primary); outline: none;
+}
+.ai-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+.ai-send-btn {
+  background: var(--accent); border: none; border-radius: var(--radius-lg); padding: 12px 20px;
+  font-family: var(--font-mono); font-size: 12px; color: #fff; cursor: pointer; white-space: nowrap;
+}
+.ai-send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.ai-loading { display: inline-block; animation: spin 1s linear infinite; }
+
+/* ─── RELATIONSHIP MATRIX ─── */
+.matrix-view { display: none; flex-direction: column; gap: 16px; }
+.matrix-view.active { display: flex; }
+.matrix-container { overflow: auto; max-height: calc(100vh - 200px); }
+.matrix-table { border-collapse: collapse; font-family: var(--font-mono); font-size: 10px; }
+.matrix-table th {
+  padding: 4px 6px; color: var(--text-muted); font-weight: 400;
+  writing-mode: vertical-lr; text-orientation: mixed; white-space: nowrap; max-height: 120px;
+  overflow: hidden; text-overflow: ellipsis;
+}
+.matrix-table th.row-header { writing-mode: horizontal-tb; text-align: right; padding-right: 8px; max-width: 140px; }
+.matrix-table td {
+  width: 24px; height: 24px; min-width: 24px; text-align: center; cursor: default;
+  border: 1px solid var(--bg-primary); font-size: 9px; color: var(--text-muted);
+  transition: all var(--transition);
+}
+.matrix-table td:hover { outline: 1px solid var(--text-muted); z-index: 1; }
+.matrix-table td.self { background: var(--bg-primary); }
+
+/* ─── GEOSPATIAL MAP ─── */
+.geo-view { display: none; flex-direction: column; gap: 16px; }
+.geo-view.active { display: flex; }
+.geo-map-container {
+  flex: 1; min-height: 500px; border-radius: var(--radius-lg); overflow: hidden;
+  border: 1px solid var(--border);
+}
+.geo-map-container .leaflet-container { background: var(--bg-primary); }
+.geo-sidebar { display: flex; flex-direction: column; gap: 6px; max-height: 200px; overflow-y: auto; }
+.geo-place-row {
+  display: flex; align-items: center; gap: 10px; padding: 6px 10px; border-radius: var(--radius);
+  cursor: pointer; transition: background var(--transition); font-size: 12px; color: var(--text-secondary);
+}
+.geo-place-row:hover { background: var(--bg-hover); }
+
+/* ─── ADVANCED SEARCH ─── */
+.advsearch-view { display: none; flex-direction: column; gap: 16px; }
+.advsearch-view.active { display: flex; }
+.advsearch-filters {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px;
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 16px;
+}
+.advsearch-filters label { font-family: var(--font-mono); font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; display: flex; flex-direction: column; gap: 4px; }
+.advsearch-filters input, .advsearch-filters select {
+  background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 6px 10px; font-family: var(--font-mono); font-size: 11px; color: var(--text-primary); outline: none;
+}
+.advsearch-filters input:focus, .advsearch-filters select:focus { border-color: var(--accent); }
+.advsearch-btn-row { display: flex; gap: 8px; align-items: center; }
+.advsearch-btn {
+  background: var(--accent); border: none; border-radius: var(--radius); padding: 8px 18px;
+  font-family: var(--font-mono); font-size: 12px; color: #fff; cursor: pointer;
+}
+.advsearch-results-count { font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); }
+
+/* ─── INVESTIGATION BOARD ─── */
+.board-view { display: none; flex-direction: column; gap: 12px; }
+.board-view.active { display: flex; }
+.board-toolbar { display: flex; gap: 8px; align-items: center; }
+.board-toolbar button {
+  background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 6px 14px; font-family: var(--font-mono); font-size: 11px; color: var(--text-secondary);
+  cursor: pointer; transition: all var(--transition);
+}
+.board-toolbar button:hover { border-color: var(--accent); color: var(--accent); }
+.board-canvas {
+  flex: 1; min-height: 500px; background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); position: relative; overflow: auto;
+  background-image: radial-gradient(circle, var(--border) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+.board-item {
+  position: absolute; min-width: 180px; max-width: 280px; background: var(--bg-tertiary);
+  border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 12px; cursor: grab;
+  transition: box-shadow var(--transition);
+}
+.board-item:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.3); }
+.board-item.dragging { cursor: grabbing; box-shadow: 0 8px 24px rgba(0,0,0,0.4); z-index: 100; }
+.board-item-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; }
+.board-item-title { font-weight: 600; font-size: 12px; color: var(--text-primary); }
+.board-item-type { font-family: var(--font-mono); font-size: 9px; padding: 2px 6px; border-radius: 3px; text-transform: uppercase; }
+.board-item-type.document { background: rgba(196,71,58,0.15); color: var(--accent); }
+.board-item-type.entity { background: rgba(224,124,74,0.15); color: var(--entity-person); }
+.board-item-type.note { background: rgba(155,109,224,0.15); color: var(--entity-org); }
+.board-item-content { font-size: 11px; color: var(--text-muted); line-height: 1.5; }
+.board-item-close {
+  position: absolute; top: 4px; right: 6px; font-size: 14px; color: var(--text-muted);
+  cursor: pointer; opacity: 0; transition: opacity var(--transition);
+}
+.board-item:hover .board-item-close { opacity: 1; }
+
+/* ─── ANOMALY DETECTION ─── */
+.anomaly-view { display: none; flex-direction: column; gap: 16px; }
+.anomaly-view.active { display: flex; }
+.anomaly-section {
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 18px;
+}
+.anomaly-section-title {
+  font-family: var(--font-mono); font-size: 10px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: 2px; color: var(--text-muted); margin-bottom: 14px;
+  display: flex; align-items: center; gap: 8px;
+}
+.anomaly-row {
+  display: flex; align-items: center; gap: 12px; padding: 8px 10px; border-radius: var(--radius);
+  border-bottom: 1px solid var(--border); font-size: 12px; color: var(--text-secondary);
+}
+.anomaly-row:last-child { border-bottom: none; }
+.anomaly-badge {
+  font-family: var(--font-mono); font-size: 10px; padding: 3px 8px; border-radius: var(--radius);
+  white-space: nowrap;
+}
+.anomaly-badge.spike { background: rgba(224,85,85,0.15); color: #e05555; }
+.anomaly-badge.cooccurrence { background: rgba(224,168,74,0.15); color: #e0a84a; }
+.anomaly-badge.financial { background: rgba(74,157,224,0.15); color: var(--entity-place); }
+.anomaly-badge.isolated { background: rgba(155,109,224,0.15); color: var(--entity-org); }
 </style>
 </head>
 <body>
@@ -1568,6 +1706,30 @@ body::before {
       <div class="sidebar-item" data-view="connmap" id="connmapNav">
         <div class="sidebar-dot" style="background:var(--entity-place)"></div>
         Connection Map
+      </div>
+      <div class="sidebar-item" data-view="matrix" id="matrixNav">
+        <div class="sidebar-dot" style="background:var(--entity-org)"></div>
+        Relationship Matrix
+      </div>
+      <div class="sidebar-item" data-view="geo" id="geoNav">
+        <div class="sidebar-dot" style="background:var(--entity-place)"></div>
+        Geospatial Map
+      </div>
+      <div class="sidebar-item" data-view="advsearch" id="advsearchNav">
+        <div class="sidebar-dot" style="background:var(--entity-date)"></div>
+        Advanced Search
+      </div>
+      <div class="sidebar-item" data-view="board" id="boardNav">
+        <div class="sidebar-dot" style="background:var(--entity-thing)"></div>
+        Investigation Board
+      </div>
+      <div class="sidebar-item" data-view="anomalies" id="anomaliesNav">
+        <div class="sidebar-dot" style="background:#e05555"></div>
+        Anomaly Detection
+      </div>
+      <div class="sidebar-item" data-view="ai" id="aiNav">
+        <div class="sidebar-dot" style="background:#4ae0a8"></div>
+        AI Analyst
       </div>
     </div>
 
@@ -1945,6 +2107,97 @@ body::before {
         </div>
         <div id="cwKeywordList"></div>
       </div>
+    </div>
+
+    <!-- AI ANALYST VIEW -->
+    <div class="ai-view" id="aiView">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">AI Analyst</div>
+        <span style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted);padding:3px 8px;background:rgba(74,224,168,0.12);border-radius:var(--radius);">Ollama / qwen2.5:14b</span>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="export-btn" onclick="aiSummarizePrompt()">Summarize a Document</button>
+        <button class="export-btn" onclick="aiQuickQ('Who are the key persons mentioned across all documents?')">Key Persons</button>
+        <button class="export-btn" onclick="aiQuickQ('What financial transactions or amounts are mentioned?')">Financial Activity</button>
+        <button class="export-btn" onclick="aiQuickQ('What locations and properties are referenced?')">Locations</button>
+      </div>
+      <div class="ai-chat" id="aiChat"></div>
+      <div class="ai-input-row">
+        <input type="text" class="ai-input" id="aiInput" placeholder="Ask a question about the corpus..." onkeydown="if(event.key==='Enter')aiAsk()">
+        <button class="ai-send-btn" id="aiSendBtn" onclick="aiAsk()">Ask</button>
+      </div>
+    </div>
+
+    <!-- RELATIONSHIP MATRIX VIEW -->
+    <div class="matrix-view" id="matrixView">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Relationship Matrix</div>
+        <label style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted);margin-left:auto;">
+          Top:
+          <select id="matrixLimit" style="background:var(--bg-tertiary);border:1px solid var(--border);border-radius:var(--radius);padding:4px 8px;font-family:var(--font-mono);font-size:11px;color:var(--text-primary);">
+            <option value="15">15</option>
+            <option value="25" selected>25</option>
+            <option value="40">40</option>
+          </select>
+        </label>
+      </div>
+      <div class="matrix-container" id="matrixContainer">Loading matrix...</div>
+    </div>
+
+    <!-- GEOSPATIAL MAP VIEW -->
+    <div class="geo-view" id="geoView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Geospatial Map</div>
+      <div id="geoMap" class="geo-map-container"></div>
+      <div class="geo-sidebar" id="geoSidebar"></div>
+    </div>
+
+    <!-- ADVANCED SEARCH VIEW -->
+    <div class="advsearch-view" id="advsearchView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Advanced Search</div>
+      <div class="advsearch-filters">
+        <label>Query <input type="text" id="advQ" placeholder="Full-text search..."></label>
+        <label>Category <select id="advCategory"><option value="">All</option>
+          <option value="deposition">Deposition</option><option value="flight">Flight</option>
+          <option value="correspondence">Correspondence</option><option value="report">Report</option>
+          <option value="legal">Legal</option></select></label>
+        <label>Source <select id="advSource"><option value="">All Sources</option></select></label>
+        <label>Date From <input type="date" id="advDateFrom"></label>
+        <label>Date To <input type="date" id="advDateTo"></label>
+        <label>Entity Name <input type="text" id="advEntity" placeholder="e.g. Jeffrey Epstein"></label>
+        <label>Min Risk <input type="number" id="advMinRisk" min="0" max="100" step="5" placeholder="e.g. 50"></label>
+        <label>Sort By <select id="advSort">
+          <option value="relevance">Relevance</option><option value="date">Date</option>
+          <option value="pages">Pages</option></select></label>
+        <label style="align-self:flex-end;">
+          <label style="flex-direction:row;gap:6px;align-items:center;cursor:pointer;">
+            <input type="checkbox" id="advFlagged"> Flagged Only
+          </label>
+        </label>
+      </div>
+      <div class="advsearch-btn-row">
+        <button class="advsearch-btn" onclick="runAdvancedSearch()">Search</button>
+        <span class="advsearch-results-count" id="advResultsCount"></span>
+      </div>
+      <div class="document-list" id="advResultsList"></div>
+    </div>
+
+    <!-- INVESTIGATION BOARD VIEW -->
+    <div class="board-view" id="boardView">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Investigation Board</div>
+        <div class="board-toolbar">
+          <button onclick="addBoardNote()">+ Note</button>
+          <button onclick="addBoardFromSearch()">+ Pin Document</button>
+          <button onclick="clearBoard()">Clear All</button>
+        </div>
+      </div>
+      <div class="board-canvas" id="boardCanvas"></div>
+    </div>
+
+    <!-- ANOMALY DETECTION VIEW -->
+    <div class="anomaly-view" id="anomalyView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Anomaly Detection</div>
+      <div id="anomalyContent">Loading anomalies...</div>
     </div>
   </main>
 
@@ -2545,6 +2798,12 @@ function hideAllViews() {
   document.getElementById('timelineView').classList.remove('active');
   document.getElementById('readerView').classList.remove('active');
   document.getElementById('connmapView').classList.remove('active');
+  document.getElementById('aiView').classList.remove('active');
+  document.getElementById('matrixView').classList.remove('active');
+  document.getElementById('geoView').classList.remove('active');
+  document.getElementById('advsearchView').classList.remove('active');
+  document.getElementById('boardView').classList.remove('active');
+  document.getElementById('anomalyView').classList.remove('active');
 }
 
 function showDocumentView() {
@@ -2598,6 +2857,12 @@ document.querySelectorAll('.sidebar-item[data-view]').forEach(item => {
     else if (view === 'harvest') showHarvestView();
     else if (view === 'timeline') showTimelineView();
     else if (view === 'connmap') showConnmapView();
+    else if (view === 'ai') showAIView();
+    else if (view === 'matrix') showMatrixView();
+    else if (view === 'geo') showGeoView();
+    else if (view === 'advsearch') showAdvSearchView();
+    else if (view === 'board') showBoardView();
+    else if (view === 'anomalies') showAnomalyView();
   });
 });
 
@@ -3661,6 +3926,9 @@ function goBackFromReader() {
   if (readerPreviousView === 'forensics') showForensicsView();
   else if (readerPreviousView === 'timeline') showTimelineView();
   else if (readerPreviousView === 'harvest') showHarvestView();
+  else if (readerPreviousView === 'advsearch') showAdvSearchView();
+  else if (readerPreviousView === 'anomalies') showAnomalyView();
+  else if (readerPreviousView === 'dashboard') showDashboardView();
   else showDocumentView();
 }
 
@@ -3886,6 +4154,601 @@ async function exportBrief() {
   } catch (e) {
     console.error('Export failed:', e);
     alert('Export failed. Check console for details.');
+  }
+}
+
+
+// ─── AI ANALYST ───
+
+function showAIView() {
+  currentView = 'ai';
+  hideAllViews();
+  document.getElementById('aiView').classList.add('active');
+}
+
+let aiConversation = [];
+
+function aiAppendMessage(role, content, sources) {
+  aiConversation.push({ role, content, sources });
+  const chat = document.getElementById('aiChat');
+  let html = '';
+  aiConversation.forEach(msg => {
+    html += `<div class="ai-message ${msg.role}">
+      ${msg.content.replace(/\n/g, '<br>')}
+      ${msg.sources?.length ? `<div class="ai-sources">Sources: ${msg.sources.map(s =>
+        `<span style="cursor:pointer;text-decoration:underline;" onclick="openReader(${s.id})">${s.title}</span>`
+      ).join(', ')}</div>` : ''}
+    </div>`;
+  });
+  chat.innerHTML = html;
+  chat.scrollTop = chat.scrollHeight;
+}
+
+async function aiAsk() {
+  const input = document.getElementById('aiInput');
+  const question = input.value.trim();
+  if (!question) return;
+
+  input.value = '';
+  aiAppendMessage('user', question);
+
+  const btn = document.getElementById('aiSendBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="ai-loading">⟳</span>';
+
+  try {
+    const resp = await fetch('/api/ai/ask', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ question }),
+    });
+    if (!resp.ok) {
+      const err = await resp.json();
+      aiAppendMessage('assistant', `Error: ${err.detail || 'Request failed'}`);
+    } else {
+      const data = await resp.json();
+      aiAppendMessage('assistant', data.answer, data.sources);
+    }
+  } catch (e) {
+    aiAppendMessage('assistant', `Connection error: ${e.message}. Is Ollama running?`);
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Ask';
+}
+
+function aiQuickQ(question) {
+  document.getElementById('aiInput').value = question;
+  aiAsk();
+}
+
+async function aiSummarizePrompt() {
+  const docId = prompt('Enter document ID to summarize:');
+  if (!docId || isNaN(docId)) return;
+
+  aiAppendMessage('user', `Summarize document #${docId}`);
+  const btn = document.getElementById('aiSendBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="ai-loading">⟳</span>';
+
+  try {
+    const resp = await fetch('/api/ai/summarize', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ doc_id: parseInt(docId) }),
+    });
+    if (!resp.ok) {
+      const err = await resp.json();
+      aiAppendMessage('assistant', `Error: ${err.detail || 'Request failed'}`);
+    } else {
+      const data = await resp.json();
+      aiAppendMessage('assistant', data.summary, [{ id: data.doc_id, title: `Document #${data.doc_id}` }]);
+    }
+  } catch (e) {
+    aiAppendMessage('assistant', `Connection error: ${e.message}. Is Ollama running?`);
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Ask';
+}
+
+
+// ─── RELATIONSHIP MATRIX ───
+
+function showMatrixView() {
+  currentView = 'matrix';
+  hideAllViews();
+  document.getElementById('matrixView').classList.add('active');
+  loadMatrix();
+}
+
+document.getElementById('matrixLimit').addEventListener('change', () => {
+  if (currentView === 'matrix') loadMatrix();
+});
+
+async function loadMatrix() {
+  const limit = document.getElementById('matrixLimit').value;
+  const container = document.getElementById('matrixContainer');
+  container.innerHTML = '<div style="color:var(--text-muted);padding:20px;">Loading relationship matrix...</div>';
+
+  try {
+    const data = await api(`/api/matrix/relationships?limit=${limit}`);
+    if (!data.entities.length || !data.matrix.length) {
+      container.innerHTML = '<div style="color:var(--text-muted);padding:20px;">Not enough person entities for matrix</div>';
+      return;
+    }
+    renderMatrix(data.entities, data.matrix);
+  } catch (e) {
+    console.error('Matrix load failed:', e);
+    container.innerHTML = '<div style="color:#e05555;padding:20px;">Failed to load matrix</div>';
+  }
+}
+
+function renderMatrix(entities, matrix) {
+  const container = document.getElementById('matrixContainer');
+  const n = entities.length;
+
+  // Find max weight for color scaling
+  let maxW = 1;
+  matrix.forEach(row => row.forEach(v => { if (v > maxW) maxW = v; }));
+
+  let html = '<table class="matrix-table"><thead><tr><th></th>';
+  entities.forEach(name => {
+    const short = name.length > 14 ? name.substring(0, 12) + '..' : name;
+    html += `<th title="${name}">${short}</th>`;
+  });
+  html += '</tr></thead><tbody>';
+
+  for (let i = 0; i < n; i++) {
+    const short = entities[i].length > 18 ? entities[i].substring(0, 16) + '..' : entities[i];
+    html += `<tr><th class="row-header" title="${entities[i]}">${short}</th>`;
+    for (let j = 0; j < n; j++) {
+      if (i === j) {
+        html += '<td class="self"></td>';
+      } else {
+        const w = matrix[i][j];
+        const intensity = w > 0 ? Math.min(0.9, 0.1 + (w / maxW) * 0.8) : 0;
+        const bg = w > 0 ? `rgba(196,71,58,${intensity})` : 'transparent';
+        const txt = w > 0 ? w : '';
+        html += `<td style="background:${bg}" title="${entities[i]} ↔ ${entities[j]}: ${w}" onclick="searchFor('${entities[i].replace(/'/g, "\\'")}')">${txt}</td>`;
+      }
+    }
+    html += '</tr>';
+  }
+  html += '</tbody></table>';
+  container.innerHTML = html;
+}
+
+
+// ─── GEOSPATIAL MAP ───
+
+let geoMap = null;
+
+function showGeoView() {
+  currentView = 'geo';
+  hideAllViews();
+  document.getElementById('geoView').classList.add('active');
+  setTimeout(loadGeoMap, 100); // Delay for DOM render
+}
+
+// Known location coordinates for common Epstein case locations
+const GEO_COORDS = {
+  'new york': [40.7128, -74.0060], 'manhattan': [40.7831, -73.9712],
+  'palm beach': [26.7056, -80.0364], 'west palm beach': [26.7153, -80.0534],
+  'florida': [27.9944, -81.7603], 'miami': [25.7617, -80.1918],
+  'us virgin islands': [18.3358, -64.8963], 'st. thomas': [18.3381, -64.8941],
+  'virgin islands': [18.3358, -64.8963], 'little st. james': [18.3003, -64.8255],
+  'new mexico': [34.5199, -105.8701], 'santa fe': [35.6870, -105.9378],
+  'paris': [48.8566, 2.3522], 'london': [51.5074, -0.1278],
+  'washington': [38.9072, -77.0369], 'washington d.c.': [38.9072, -77.0369],
+  'los angeles': [34.0522, -118.2437], 'california': [36.7783, -119.4179],
+  'ohio': [40.4173, -82.9071], 'texas': [31.9686, -99.9018],
+  'arkansas': [34.7465, -92.2896], 'chicago': [41.8781, -87.6298],
+  'connecticut': [41.6032, -73.0877], 'boston': [42.3601, -71.0589],
+  'massachusetts': [42.4072, -71.3824], 'harvard': [42.3770, -71.1167],
+  'israel': [31.0461, 34.8516], 'united kingdom': [55.3781, -3.4360],
+  'france': [46.2276, 2.2137], 'mexico': [23.6345, -102.5528],
+  'japan': [36.2048, 138.2529], 'bahamas': [25.0343, -77.3963],
+  'nassau': [25.0480, -77.3554], 'arizona': [34.0489, -111.0937],
+  'colorado': [39.5501, -105.7821], 'michigan': [44.3148, -85.6024],
+  'pennsylvania': [41.2033, -77.1945], 'georgia': [32.1656, -82.9001],
+  'atlanta': [33.7490, -84.3880], 'virginia': [37.4316, -78.6569],
+  'new jersey': [40.0583, -74.4057], 'harvard university': [42.3770, -71.1167],
+  'epstein island': [18.3003, -64.8255], 'zorro ranch': [34.89, -105.74],
+};
+
+async function loadGeoMap() {
+  // Initialize map if not done
+  if (!geoMap) {
+    geoMap = L.map('geoMap', {
+      zoomControl: true,
+    }).setView([30, -40], 3);
+
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+      subdomains: 'abcd',
+      maxZoom: 19,
+    }).addTo(geoMap);
+  } else {
+    geoMap.invalidateSize();
+  }
+
+  try {
+    const data = await api('/api/geo/locations');
+    const locations = data.locations || [];
+
+    // Clear existing markers
+    geoMap.eachLayer(layer => { if (layer instanceof L.CircleMarker) geoMap.removeLayer(layer); });
+
+    const sidebar = document.getElementById('geoSidebar');
+    let sidebarHtml = '';
+    let plotted = 0;
+
+    locations.forEach(loc => {
+      const nameLower = loc.name.toLowerCase().trim();
+      const coords = GEO_COORDS[nameLower];
+
+      sidebarHtml += `<div class="geo-place-row" onclick="${coords ? `geoMap.setView([${coords[0]},${coords[1]}], 8)` : ''}">
+        <span style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted);width:30px;text-align:right;">${loc.doc_count}</span>
+        <span style="flex:1;">${loc.name}</span>
+        ${coords ? '<span style="color:#4ae0a8;font-size:10px;">mapped</span>' : '<span style="color:var(--text-muted);font-size:10px;">no coords</span>'}
+      </div>`;
+
+      if (coords) {
+        const radius = Math.min(20, 5 + loc.doc_count * 1.5);
+        const marker = L.circleMarker(coords, {
+          radius: radius,
+          fillColor: '#c4473a',
+          color: '#c4473a',
+          weight: 1,
+          opacity: 0.8,
+          fillOpacity: 0.4,
+        }).addTo(geoMap);
+
+        const docList = (loc.documents || []).map(d =>
+          `<span style="cursor:pointer;text-decoration:underline;" onclick="openReader(${d.id})">${d.title || 'Doc'}</span>`
+        ).join('<br>');
+
+        marker.bindPopup(`<div style="font-family:monospace;font-size:12px;">
+          <b>${loc.name}</b><br>
+          ${loc.doc_count} documents, ${loc.total_mentions} mentions<br>
+          ${docList}
+        </div>`);
+        plotted++;
+      }
+    });
+
+    sidebar.innerHTML = `<div style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted);margin-bottom:4px;">${plotted} plotted / ${locations.length} total places</div>` + sidebarHtml;
+  } catch (e) {
+    console.error('Geo map failed:', e);
+  }
+}
+
+
+// ─── ADVANCED SEARCH ───
+
+function showAdvSearchView() {
+  currentView = 'advsearch';
+  hideAllViews();
+  document.getElementById('advsearchView').classList.add('active');
+  // Populate source dropdown
+  loadAdvSources();
+}
+
+async function loadAdvSources() {
+  try {
+    const data = await api('/api/sources');
+    const sel = document.getElementById('advSource');
+    const current = sel.value;
+    sel.innerHTML = '<option value="">All Sources</option>';
+    (data.sources || []).forEach(s => {
+      const opt = document.createElement('option');
+      opt.value = s.source;
+      opt.textContent = `${s.source} (${s.count})`;
+      sel.appendChild(opt);
+    });
+    sel.value = current;
+  } catch (e) {}
+}
+
+async function runAdvancedSearch() {
+  const qs = new URLSearchParams();
+  const q = document.getElementById('advQ').value.trim();
+  if (q) qs.set('q', q);
+
+  const category = document.getElementById('advCategory').value;
+  if (category) qs.set('category', category);
+
+  const source = document.getElementById('advSource').value;
+  if (source) qs.set('source', source);
+
+  const dateFrom = document.getElementById('advDateFrom').value;
+  if (dateFrom) qs.set('date_from', dateFrom);
+
+  const dateTo = document.getElementById('advDateTo').value;
+  if (dateTo) qs.set('date_to', dateTo);
+
+  const entity = document.getElementById('advEntity').value.trim();
+  if (entity) qs.set('entity_name', entity);
+
+  const minRisk = document.getElementById('advMinRisk').value;
+  if (minRisk) qs.set('min_risk', (parseInt(minRisk) / 100).toString());
+
+  if (document.getElementById('advFlagged').checked) qs.set('flagged_only', 'true');
+
+  qs.set('sort_by', document.getElementById('advSort').value);
+  qs.set('limit', '50');
+
+  document.getElementById('advResultsCount').textContent = 'Searching...';
+
+  try {
+    const data = await api(`/api/search/advanced?${qs}`);
+    document.getElementById('advResultsCount').textContent =
+      `${data.total} result${data.total !== 1 ? 's' : ''} found`;
+
+    const list = document.getElementById('advResultsList');
+    if (!data.results.length) {
+      list.innerHTML = '<div class="empty-state"><div class="empty-state-icon">⊘</div><div class="empty-state-title">No results</div></div>';
+      return;
+    }
+
+    list.innerHTML = data.results.map(raw => {
+      const doc = normalizeDoc(raw);
+      const allEntities = [
+        ...doc.entities.people.map(e => ({ name: e, type: 'person' })),
+        ...doc.entities.places.map(e => ({ name: e, type: 'place' })),
+        ...doc.entities.orgs.map(e => ({ name: e, type: 'org' })),
+      ].slice(0, 6);
+
+      return `
+        <div class="document-card cat-${doc.category}" onclick="openReader(${doc.id})">
+          <div class="doc-header">
+            <div class="doc-title">${doc.title}</div>
+            <div class="doc-badge ${doc.category}">${doc.category}</div>
+          </div>
+          ${doc.excerpt ? `<div class="doc-excerpt">${doc.excerpt}</div>` : ''}
+          ${allEntities.length ? `<div class="doc-entities">${allEntities.map(e =>
+            `<span class="entity-tag ${e.type}">${e.name}</span>`).join('')}</div>` : ''}
+          <div class="doc-meta">
+            ${doc.date ? `<span>${doc.date}</span>` : ''}
+            <span>${doc.pages} pages</span>
+            ${doc.source ? `<span>${doc.source}</span>` : ''}
+          </div>
+        </div>`;
+    }).join('');
+  } catch (e) {
+    console.error('Advanced search failed:', e);
+    document.getElementById('advResultsCount').textContent = 'Search failed';
+  }
+}
+
+
+// ─── INVESTIGATION BOARD ───
+
+let boardItems = [];
+
+function showBoardView() {
+  currentView = 'board';
+  hideAllViews();
+  document.getElementById('boardView').classList.add('active');
+  loadBoard();
+}
+
+async function loadBoard() {
+  try {
+    const data = await api('/api/board');
+    boardItems = data.items || [];
+    renderBoard();
+  } catch (e) {
+    console.error('Board load failed:', e);
+  }
+}
+
+function renderBoard() {
+  const canvas = document.getElementById('boardCanvas');
+  canvas.innerHTML = '';
+
+  boardItems.forEach(item => {
+    const el = document.createElement('div');
+    el.className = 'board-item';
+    el.style.left = (item.x || Math.random() * 600) + 'px';
+    el.style.top = (item.y || Math.random() * 400) + 'px';
+    if (item.color) el.style.borderColor = item.color;
+    el.dataset.id = item.id;
+
+    el.innerHTML = `
+      <div class="board-item-close" onclick="deleteBoardItem(${item.id})">&times;</div>
+      <div class="board-item-header">
+        <div class="board-item-title">${item.title}</div>
+        <span class="board-item-type ${item.item_type}">${item.item_type}</span>
+      </div>
+      ${item.content ? `<div class="board-item-content">${item.content}</div>` : ''}
+      ${item.ref_id && item.item_type === 'document' ? `<div style="margin-top:6px;"><span style="font-family:var(--font-mono);font-size:10px;color:var(--accent);cursor:pointer;" onclick="openReader(${item.ref_id})">Open Reader</span></div>` : ''}
+    `;
+
+    // Drag behavior
+    let isDrag = false, startX, startY, origX, origY;
+    el.addEventListener('mousedown', (e) => {
+      if (e.target.classList.contains('board-item-close')) return;
+      isDrag = true;
+      el.classList.add('dragging');
+      startX = e.clientX;
+      startY = e.clientY;
+      origX = parseInt(el.style.left) || 0;
+      origY = parseInt(el.style.top) || 0;
+      e.preventDefault();
+    });
+    window.addEventListener('mousemove', (e) => {
+      if (!isDrag) return;
+      el.style.left = (origX + e.clientX - startX) + 'px';
+      el.style.top = (origY + e.clientY - startY) + 'px';
+    });
+    window.addEventListener('mouseup', () => {
+      if (!isDrag) return;
+      isDrag = false;
+      el.classList.remove('dragging');
+      // Save position
+      fetch(`/api/board/${item.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ x: parseInt(el.style.left), y: parseInt(el.style.top) }),
+      }).catch(() => {});
+    });
+
+    canvas.appendChild(el);
+  });
+}
+
+async function addBoardNote() {
+  const title = prompt('Note title:');
+  if (!title) return;
+  const content = prompt('Note content (optional):') || '';
+
+  try {
+    await fetch('/api/board', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        item_type: 'note', title, content,
+        x: 50 + Math.random() * 400, y: 50 + Math.random() * 300,
+      }),
+    });
+    loadBoard();
+  } catch (e) {
+    console.error('Failed to add note:', e);
+  }
+}
+
+async function addBoardFromSearch() {
+  const docId = prompt('Enter document ID to pin:');
+  if (!docId || isNaN(docId)) return;
+
+  try {
+    const doc = await api(`/api/documents/${docId}`);
+    await fetch('/api/board', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        item_type: 'document', ref_id: parseInt(docId),
+        title: doc.title || doc.filename,
+        content: `${doc.category} | ${doc.pages} pages | ${doc.source || ''}`,
+        x: 50 + Math.random() * 400, y: 50 + Math.random() * 300,
+      }),
+    });
+    loadBoard();
+  } catch (e) {
+    console.error('Failed to pin document:', e);
+  }
+}
+
+async function deleteBoardItem(itemId) {
+  try {
+    await fetch(`/api/board/${itemId}`, { method: 'DELETE' });
+    loadBoard();
+  } catch (e) {
+    console.error('Failed to delete board item:', e);
+  }
+}
+
+async function clearBoard() {
+  if (!confirm('Clear all board items?')) return;
+  for (const item of boardItems) {
+    await fetch(`/api/board/${item.id}`, { method: 'DELETE' }).catch(() => {});
+  }
+  loadBoard();
+}
+
+
+// ─── ANOMALY DETECTION ───
+
+function showAnomalyView() {
+  currentView = 'anomalies';
+  hideAllViews();
+  document.getElementById('anomalyView').classList.add('active');
+  loadAnomalies();
+}
+
+async function loadAnomalies() {
+  const el = document.getElementById('anomalyContent');
+  el.innerHTML = '<div style="color:var(--text-muted);padding:20px;">Scanning for anomalies...</div>';
+
+  try {
+    const data = await api('/api/anomalies');
+    let html = '';
+
+    // Temporal spikes
+    html += `<div class="anomaly-section">
+      <div class="anomaly-section-title"><span class="dot" style="background:#e05555;width:6px;height:6px;border-radius:50%;"></span>Temporal Spikes (${data.temporal_spikes.length})</div>`;
+    if (data.temporal_spikes.length) {
+      data.temporal_spikes.forEach(s => {
+        html += `<div class="anomaly-row">
+          <span class="anomaly-badge spike">${s.ratio}x avg</span>
+          <span style="font-family:var(--font-mono);font-size:12px;color:var(--accent);width:100px;">${s.date}</span>
+          <span style="flex:1;">${s.count} events (avg: ${s.avg})</span>
+        </div>`;
+      });
+    } else {
+      html += '<div style="color:var(--text-muted);font-size:12px;padding:8px 0;">No temporal spikes detected</div>';
+    }
+    html += '</div>';
+
+    // Entity co-occurrence anomalies
+    html += `<div class="anomaly-section">
+      <div class="anomaly-section-title"><span class="dot" style="background:#e0a84a;width:6px;height:6px;border-radius:50%;"></span>Unusual Entity Pairings (${data.entity_anomalies.length})</div>`;
+    if (data.entity_anomalies.length) {
+      data.entity_anomalies.forEach(a => {
+        html += `<div class="anomaly-row" style="cursor:pointer;" onclick="document.getElementById('connmapSource').value='${a.entity_a.replace(/'/g,"\\'")}';document.getElementById('connmapTarget').value='${a.entity_b.replace(/'/g,"\\'")}';showConnmapView();findConnection();">
+          <span class="anomaly-badge cooccurrence">${a.co_occurrences}x</span>
+          <span style="flex:1;">
+            <span class="entity-tag ${a.type_a}">${a.entity_a}</span>
+            <span style="color:var(--text-muted);margin:0 4px;">↔</span>
+            <span class="entity-tag ${a.type_b}">${a.entity_b}</span>
+          </span>
+          <span style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted);">${a.ratio}% co-occ ratio</span>
+        </div>`;
+      });
+    } else {
+      html += '<div style="color:var(--text-muted);font-size:12px;padding:8px 0;">No anomalous pairings detected</div>';
+    }
+    html += '</div>';
+
+    // Financial clusters
+    html += `<div class="anomaly-section">
+      <div class="anomaly-section-title"><span class="dot" style="background:var(--entity-place);width:6px;height:6px;border-radius:50%;"></span>Financial Clusters (${data.financial_clusters.length})</div>`;
+    if (data.financial_clusters.length) {
+      data.financial_clusters.forEach(c => {
+        html += `<div class="anomaly-row" style="cursor:pointer;" onclick="openReader(${c.id})">
+          <span class="anomaly-badge financial">${c.indicator_count} indicators</span>
+          <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${c.title || c.filename}</span>
+          <span style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted);">avg risk: ${(c.avg_risk * 100).toFixed(0)}%</span>
+        </div>`;
+      });
+    } else {
+      html += '<div style="color:var(--text-muted);font-size:12px;padding:8px 0;">No financial clusters detected</div>';
+    }
+    html += '</div>';
+
+    // Isolated entities
+    html += `<div class="anomaly-section">
+      <div class="anomaly-section-title"><span class="dot" style="background:var(--entity-org);width:6px;height:6px;border-radius:50%;"></span>Isolated High-Mention Entities (${data.isolated_entities.length})</div>`;
+    if (data.isolated_entities.length) {
+      data.isolated_entities.forEach(e => {
+        html += `<div class="anomaly-row" style="cursor:pointer;" onclick="searchFor('${e.name.replace(/'/g,"\\'")}')">
+          <span class="anomaly-badge isolated">${e.doc_count} doc${e.doc_count !== 1 ? 's' : ''}</span>
+          <span class="entity-tag ${e.type}">${e.name}</span>
+          <span style="flex:1;"></span>
+          <span style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted);">${e.total_mentions} mentions</span>
+        </div>`;
+      });
+    } else {
+      html += '<div style="color:var(--text-muted);font-size:12px;padding:8px 0;">No isolated entities detected</div>';
+    }
+    html += '</div>';
+
+    el.innerHTML = html;
+  } catch (e) {
+    console.error('Anomaly detection failed:', e);
+    el.innerHTML = '<div style="color:#e05555;padding:20px;">Failed to load anomalies</div>';
   }
 }
 
