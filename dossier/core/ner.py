@@ -260,6 +260,22 @@ KNOWN_ORGS = {
     "wells fargo",
 }
 
+# ═══════════════════════════════════════════
+# PRECOMPILED GAZETTEER REGEX (single-pass matching)
+# Sort by length descending so longer matches take priority
+# ═══════════════════════════════════════════
+
+def _compile_gazetteer(names: set) -> re.Pattern:
+    """Compile a set of names into a single alternation regex, longest-first."""
+    sorted_names = sorted(names, key=len, reverse=True)
+    escaped = [re.escape(n) for n in sorted_names]
+    return re.compile("|".join(escaped))
+
+_PEOPLE_RE = _compile_gazetteer(KNOWN_PEOPLE)
+_PLACES_RE = _compile_gazetteer(KNOWN_PLACES)
+_ORGS_RE = _compile_gazetteer(KNOWN_ORGS)
+
+
 # Title patterns that precede names
 TITLE_PATTERNS = r"(?:Mr\.|Mrs\.|Ms\.|Dr\.|Judge|Det\.|Detective|Agent|Senator|Governor|President|Prince|Professor|Atty\.|Attorney)"
 
@@ -477,22 +493,18 @@ def extract_entities(text: str) -> dict:
     orgs = Counter()
     dates = Counter()
 
-    # ─── Layer 1: Gazetteer lookup ───
-    for name in KNOWN_PEOPLE:
-        count = text_lower.count(name)
-        if count > 0:
-            # Use the properly capitalized version
-            people[name.title()] += count
+    # ─── Layer 1: Gazetteer lookup (single-pass regex) ───
+    for match in _PEOPLE_RE.finditer(text_lower):
+        name = match.group()
+        people[name.title()] += 1
 
-    for name in KNOWN_PLACES:
-        count = text_lower.count(name)
-        if count > 0:
-            places[_capitalize_place(name)] += count
+    for match in _PLACES_RE.finditer(text_lower):
+        name = match.group()
+        places[_capitalize_place(name)] += 1
 
-    for name in KNOWN_ORGS:
-        count = text_lower.count(name)
-        if count > 0:
-            orgs[_capitalize_org(name)] += count
+    for match in _ORGS_RE.finditer(text_lower):
+        name = match.group()
+        orgs[_capitalize_org(name)] += 1
 
     # ─── Layer 2: Pattern-based extraction ───
     # Dates

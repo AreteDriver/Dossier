@@ -541,13 +541,17 @@ def analyze_document(text: str, filename: str = "") -> dict:
     if not text or len(text.strip()) < 50:
         return _empty_result()
 
+    # Cap text for analysis to avoid CPU blow-up on huge documents
+    # Full text used for financial/AML (needs exact amounts), truncated for n-gram/topic
+    MAX_ANALYSIS_LEN = 50_000
     text_lower = text.lower()
+    text_lower_capped = text_lower[:MAX_ANALYSIS_LEN]
 
-    intents = _classify_intent(text_lower)
-    topics = _classify_topics(text_lower)
+    intents = _classify_intent(text_lower_capped)
+    topics = _classify_topics(text_lower_capped)
     aml_flags = _detect_aml_flags(text, text_lower)
-    codewords = _detect_codewords(text, text_lower)
-    phrases = _extract_repeated_phrases(text_lower)
+    codewords = _detect_codewords(text, text_lower_capped)
+    phrases = _extract_repeated_phrases(text_lower_capped)
     financial = _extract_financial_indicators(text, text_lower)
 
     # Compute overall risk score

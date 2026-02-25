@@ -6,6 +6,8 @@ Usage:
     python -m dossier serve              # Start web server
     python -m dossier scan <path>        # Recursive scan (files, dirs, ZIPs)
                                           # --source NAME  --no-recursive
+    python -m dossier ingest-mbox <file> # Ingest emails from mbox file
+                                          # --source NAME  --limit N
     python -m dossier ingest <file>      # Ingest a single file
     python -m dossier ingest-dir <dir>   # Ingest all files in directory
     python -m dossier ingest-emails <dir># Ingest email files (eml, mbox, json, csv)
@@ -61,6 +63,11 @@ def main():
             print("Usage: python -m dossier scan <path> [--source NAME] [--no-recursive]")
             sys.exit(1)
         scan_cmd()
+    elif cmd == "ingest-mbox":
+        if len(sys.argv) < 3:
+            print("Usage: python -m dossier ingest-mbox <mbox-file> [--source NAME] [--limit N]")
+            sys.exit(1)
+        ingest_mbox_cmd()
     elif cmd == "ingest":
         if len(sys.argv) < 3:
             print("Usage: python -m dossier ingest <filepath> [--source NAME] [--date YYYY-MM-DD]")
@@ -117,6 +124,34 @@ def serve():
     print(f"  ║  API: http://localhost:{port}/docs      ║")
     print("  ╚══════════════════════════════════════╝\n")
     uvicorn.run("dossier.api.server:app", host="0.0.0.0", port=port, reload=True)
+
+
+def ingest_mbox_cmd():
+    from dossier.db.database import init_db
+    from dossier.ingestion.pipeline import ingest_mbox
+
+    init_db()
+    filepath = sys.argv[2]
+
+    source = ""
+    limit = 0
+    args = sys.argv[3:]
+    for i, arg in enumerate(args):
+        if arg == "--source" and i + 1 < len(args):
+            source = args[i + 1]
+        elif arg == "--limit" and i + 1 < len(args):
+            limit = int(args[i + 1])
+
+    result = ingest_mbox(filepath, source=source, limit=limit)
+
+    print(f"\n{'=' * 50}")
+    print(f"  MBOX INGEST COMPLETE")
+    print(f"  {'─' * 30}")
+    print(f"  Total emails:   {result['total']}")
+    print(f"  Ingested:       {result['ingested']}")
+    print(f"  Failed:         {result['failed']}")
+    print(f"  Skipped/Dupes:  {result['skipped']}")
+    print(f"{'=' * 50}\n")
 
 
 def scan_cmd():

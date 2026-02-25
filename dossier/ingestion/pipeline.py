@@ -445,6 +445,153 @@ def scan_path(path: str, source: str = "", recursive: bool = True) -> dict:
     return _summarize(results, skipped)
 
 
+def ingest_mbox(filepath: str, source: str = "", limit: int = 0) -> dict:
+    """
+    Ingest emails from an mbox file. Each email becomes a separate document.
+
+    Returns summary dict with ingested/failed/skipped counts.
+    """
+    import mailbox
+    import hashlib
+    import re as _re
+
+    mbox_path = Path(filepath)
+    if not mbox_path.exists():
+        return {"total": 0, "ingested": 0, "failed": 0, "skipped": 0}
+
+    mbox = mailbox.mbox(str(mbox_path))
+    results = []
+    skipped = 0
+    total_msgs = len(mbox)
+
+    if limit:
+        total_msgs = min(total_msgs, limit)
+
+    print(f"[MBOX] Processing {total_msgs} emails from {mbox_path.name}...")
+
+    for i, message in enumerate(mbox):
+        if limit and i >= limit:
+            break
+
+        if (i + 1) % 50 == 0:
+            ingested_so_far = sum(1 for r in results if r.get("success"))
+            print(f"[MBOX] ({i + 1}/{total_msgs}) {ingested_so_far} ingested...")
+
+        # Extract email text
+        parts = []
+        subject = message.get("Subject", "(no subject)")
+        from_addr = message.get("From", "")
+        to_addr = message.get("To", "")
+        cc_addr = message.get("Cc", "")
+        date_str = message.get("Date", "")
+
+        # Headers
+        if from_addr:
+            parts.append(f"From: {from_addr}")
+        if to_addr:
+            parts.append(f"To: {to_addr}")
+        if cc_addr:
+            parts.append(f"Cc: {cc_addr}")
+        if subject:
+            parts.append(f"Subject: {subject}")
+        if date_str:
+            parts.append(f"Date: {date_str}")
+        parts.append("")
+
+        # Body
+        if message.is_multipart():
+            for part in message.walk():
+                content_type = part.get_content_type()
+                if content_type == "text/plain":
+                    payload = part.get_payload(decode=True)
+                    if payload:
+                        charset = part.get_content_charset() or "utf-8"
+                        parts.append(payload.decode(charset, errors="replace"))
+                elif content_type == "text/html":
+                    payload = part.get_payload(decode=True)
+                    if payload:
+                        charset = part.get_content_charset() or "utf-8"
+                        html_text = payload.decode(charset, errors="replace")
+                        clean = _re.sub(r"<[^>]+>", " ", html_text)
+                        clean = _re.sub(r"\s+", " ", clean).strip()
+                        parts.append(clean)
+        else:
+            payload = message.get_payload(decode=True)
+            if payload:
+                charset = message.get_content_charset() or "utf-8"
+                parts.append(payload.decode(charset, errors="replace"))
+
+        raw_text = "\n".join(parts)
+
+        if len(raw_text.strip()) < 20:
+            skipped += 1
+            continue
+
+        # Dedup by content hash
+        content_hash = hashlib.sha256(raw_text.encode()).hexdigest()
+
+        with get_db() as conn:
+            existing = conn.execute(
+                "SELECT id FROM documents WHERE file_hash = ?", (content_hash,)
+            ).fetchone()
+            if existing:
+                results.append({"success": False, "message": "duplicate"})
+                continue
+
+        # Write to temp file and ingest through normal pipeline
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".txt", prefix=f"mbox_email_{i}_", delete=False
+        ) as tmp:
+            tmp.write(raw_text)
+            tmp_path = tmp.name
+
+        try:
+            # Use the subject as a hint for the filename
+            safe_subject = _re.sub(r"[^\w\s-]", "", subject or "email")[:60].strip()
+            result = ingest_file(
+                tmp_path,
+                source=source or f"MBOX:{mbox_path.name}",
+                date=_parse_email_date(date_str),
+            )
+            results.append(result)
+            if result["success"] and (i + 1) % 50 == 0:
+                stats = result.get("stats", {})
+                risk = stats.get("risk_score", 0)
+                if risk > 0.3:
+                    print(f"    HIGH RISK: {subject[:60]} (risk={risk:.3f})")
+        except Exception as e:
+            results.append({"success": False, "message": str(e)})
+        finally:
+            Path(tmp_path).unlink(missing_ok=True)
+
+    mbox.close()
+
+    ingested = sum(1 for r in results if r.get("success"))
+    failed = sum(1 for r in results if not r.get("success") and r.get("message") != "duplicate")
+    dupes = sum(1 for r in results if r.get("message") == "duplicate")
+
+    return {
+        "total": total_msgs,
+        "ingested": ingested,
+        "failed": failed,
+        "skipped": skipped + dupes,
+        "results": results,
+    }
+
+
+def _parse_email_date(date_str: str) -> str:
+    """Try to parse an email Date header into YYYY-MM-DD."""
+    if not date_str:
+        return ""
+    try:
+        from email.utils import parsedate_to_datetime
+
+        dt = parsedate_to_datetime(date_str)
+        return dt.strftime("%Y-%m-%d")
+    except Exception:
+        return ""
+
+
 def _summarize(results: list[dict], skipped: int) -> dict:
     """Summarize scan results."""
     ingested = sum(1 for r in results if r.get("success"))
