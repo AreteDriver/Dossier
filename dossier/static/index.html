@@ -1338,6 +1338,10 @@ body::before {
         <div class="sidebar-dot" style="background:#e07c4a"></div>
         Codewords & Language
       </div>
+      <div class="sidebar-item" data-view="harvest" id="harvestNav">
+        <div class="sidebar-dot" style="background:#ff4444"></div>
+        Intelligence Harvest
+      </div>
     </div>
 
     <div class="sidebar-section">
@@ -1553,6 +1557,53 @@ body::before {
       </div>
       <div class="network-full-canvas">
         <canvas id="networkFullCanvas"></canvas>
+      </div>
+    </div>
+
+    <!-- INTELLIGENCE HARVEST VIEW -->
+    <div class="codewords-view" id="harvestView">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:4px;">
+        <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Intelligence Harvest</div>
+        <label style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted);margin-left:auto;">
+          Min Risk:
+          <select id="harvestRiskFilter" style="background:var(--bg-tertiary);border:1px solid var(--border);border-radius:var(--radius);padding:4px 8px;font-family:var(--font-mono);font-size:11px;color:var(--text-primary);">
+            <option value="0.7">Critical (70%+)</option>
+            <option value="0.5" selected>High (50%+)</option>
+            <option value="0.3">Medium (30%+)</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="cw-section">
+        <div class="cw-section-title">
+          <span class="dot" style="background:#ff4444;width:6px;height:6px;border-radius:50%;"></span>
+          Key Persons in High-Risk Documents
+        </div>
+        <div id="harvestPersons"></div>
+      </div>
+
+      <div class="cw-section">
+        <div class="cw-section-title">
+          <span class="dot" style="background:#e05555;width:6px;height:6px;border-radius:50%;"></span>
+          High-Severity AML Flags
+        </div>
+        <div id="harvestAmlFlags"></div>
+      </div>
+
+      <div class="cw-section">
+        <div class="cw-section-title">
+          <span class="dot" style="background:var(--entity-place);width:6px;height:6px;border-radius:50%;"></span>
+          Top Financial Amounts
+        </div>
+        <div id="harvestFinancial"></div>
+      </div>
+
+      <div class="cw-section">
+        <div class="cw-section-title">
+          <span class="dot" style="background:#e05555;width:6px;height:6px;border-radius:50%;"></span>
+          Flagged Documents (by risk score)
+        </div>
+        <div id="harvestDocuments"></div>
       </div>
     </div>
 
@@ -2174,6 +2225,7 @@ function hideAllViews() {
   document.getElementById('docForensicDetail').classList.remove('active');
   document.getElementById('networkView').classList.remove('active');
   document.getElementById('codewordsView').classList.remove('active');
+  document.getElementById('harvestView').classList.remove('active');
 }
 
 function showDocumentView() {
@@ -2223,6 +2275,7 @@ document.querySelectorAll('.sidebar-item[data-view]').forEach(item => {
     if (view === 'forensics') showForensicsView();
     else if (view === 'network') showNetworkView();
     else if (view === 'codewords') showCodewordsView();
+    else if (view === 'harvest') showHarvestView();
   });
 });
 
@@ -2804,6 +2857,122 @@ function renderKeywordList(keywords) {
       <div class="cw-count">${kw.doc_count} docs / ${kw.total_count.toLocaleString()}x</div>
     </div>
   `).join('');
+}
+
+
+// ─── INTELLIGENCE HARVEST ───
+
+function showHarvestView() {
+  currentView = 'harvest';
+  hideAllViews();
+  document.getElementById('harvestView').classList.add('active');
+  loadHarvestView();
+}
+
+document.getElementById('harvestRiskFilter').addEventListener('change', () => {
+  if (currentView === 'harvest') loadHarvestView();
+});
+
+async function loadHarvestView() {
+  const minRisk = document.getElementById('harvestRiskFilter').value;
+  try {
+    const data = await api(`/api/forensics/harvest?min_risk=${minRisk}`);
+    renderHarvestPersons(data.key_persons_in_high_risk_docs);
+    renderHarvestAmlFlags(data.high_severity_aml_flags);
+    renderHarvestFinancial(data.top_financial_amounts);
+    renderHarvestDocuments(data.documents);
+  } catch (e) {
+    console.error('Failed to load harvest:', e);
+  }
+}
+
+function renderHarvestPersons(persons) {
+  const el = document.getElementById('harvestPersons');
+  if (!persons || !persons.length) {
+    el.innerHTML = '<div style="color:var(--text-muted);font-size:12px;">No persons found</div>';
+    return;
+  }
+  const maxDocs = Math.max(...persons.map(p => p.doc_count));
+  el.innerHTML = persons.map((p, i) => `
+    <div class="cw-word-row" style="cursor:pointer;" onclick="searchFor('${p.name.replace(/'/g, "\\'")}')">
+      <div class="cw-rank">${i + 1}</div>
+      <div class="cw-word">${p.name}</div>
+      <div class="cw-bar-track">
+        <div class="cw-bar-fill" style="width:${(p.doc_count / maxDocs * 100).toFixed(1)}%;background:var(--entity-person);"></div>
+      </div>
+      <div class="cw-count">${p.doc_count} docs / ${p.total_mentions}x</div>
+    </div>
+  `).join('');
+}
+
+function renderHarvestAmlFlags(flags) {
+  const el = document.getElementById('harvestAmlFlags');
+  if (!flags || !flags.length) {
+    el.innerHTML = '<div style="color:var(--text-muted);font-size:12px;">No high-severity AML flags</div>';
+    return;
+  }
+  el.innerHTML = `<table class="fin-table">
+    <thead><tr><th>Flag Type</th><th>Document</th><th>Evidence</th></tr></thead>
+    <tbody>${flags.map(f => {
+      let evidence = f.evidence || '';
+      try { evidence = JSON.parse(evidence).slice(0, 2).join(' | '); } catch(e) {}
+      if (evidence.length > 120) evidence = evidence.substring(0, 120) + '...';
+      return `<tr onclick="showDocForensicDetail(${f.document_id})" style="cursor:pointer;">
+        <td><span class="severity-badge high" style="padding:3px 8px;font-size:10px;">${f.label.replace(/_/g, ' ')}</span></td>
+        <td style="font-size:11px;color:var(--text-secondary);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${f.title || f.filename}</td>
+        <td class="fin-context" style="max-width:300px;">${evidence}</td>
+      </tr>`;
+    }).join('')}</tbody>
+  </table>`;
+}
+
+function renderHarvestFinancial(amounts) {
+  const el = document.getElementById('harvestFinancial');
+  if (!amounts || !amounts.length) {
+    el.innerHTML = '<div style="color:var(--text-muted);font-size:12px;">No financial amounts found</div>';
+    return;
+  }
+  el.innerHTML = `<table class="fin-table">
+    <thead><tr><th>Amount</th><th>Document</th><th>Context</th><th>Risk</th></tr></thead>
+    <tbody>${amounts.map(fi => `
+      <tr onclick="showDocForensicDetail(${fi.document_id})" style="cursor:pointer;">
+        <td class="fin-value">${fi.value}</td>
+        <td style="font-size:11px;color:var(--text-muted);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${fi.title || fi.filename}</td>
+        <td class="fin-context">${fi.context || ''}</td>
+        <td><span class="risk-doc-score ${riskLevel(fi.risk_score)}" style="font-size:11px;padding:2px 6px;">${(fi.risk_score * 100).toFixed(0)}</span></td>
+      </tr>
+    `).join('')}</tbody>
+  </table>`;
+}
+
+function renderHarvestDocuments(docs) {
+  const el = document.getElementById('harvestDocuments');
+  if (!docs || !docs.length) {
+    el.innerHTML = '<div style="color:var(--text-muted);font-size:12px;">No documents above threshold</div>';
+    return;
+  }
+  el.innerHTML = docs.map(doc => {
+    const level = riskLevel(doc.risk_score);
+    const score = (doc.risk_score * 100).toFixed(0);
+    const flagTags = (doc.aml_flags || []).slice(0, 3).map(f =>
+      `<span class="risk-doc-tag">${f.label.replace(/_/g, ' ')}</span>`
+    ).join('');
+    const topicTags = (doc.topics || []).slice(0, 2).map(t =>
+      `<span style="font-family:var(--font-mono);font-size:9px;padding:2px 6px;border-radius:3px;background:rgba(74,157,224,0.12);color:var(--entity-place);">${t.label}</span>`
+    ).join('');
+    const entityNames = (doc.entities || []).filter(e => e.type === 'person').slice(0, 4).map(e => e.name).join(', ');
+
+    return `
+      <div class="risk-doc-row" onclick="showDocForensicDetail(${doc.document_id})">
+        <div class="risk-doc-score ${level}">${score}</div>
+        <div class="risk-doc-info">
+          <div class="risk-doc-title">${doc.title || doc.filename}</div>
+          <div class="risk-doc-meta">${doc.category} ${doc.source ? '/ ' + doc.source : ''} ${doc.date ? '/ ' + doc.date : ''}</div>
+          ${entityNames ? `<div style="font-size:10px;color:var(--entity-person);margin-top:3px;">${entityNames}</div>` : ''}
+        </div>
+        <div class="risk-doc-tags">${flagTags}${topicTags}</div>
+      </div>`;
+  }).join('');
 }
 
 

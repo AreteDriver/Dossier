@@ -719,6 +719,129 @@ def forensics_codewords(limit: int = Query(30, ge=1, le=100)):
     return {"codewords": [dict(r) for r in rows]}
 
 
+@app.get("/api/forensics/harvest")
+def forensics_harvest(min_risk: float = Query(0.5, ge=0, le=1)):
+    """Harvest critical and high-risk intelligence for review.
+
+    Returns a structured report of the most significant findings:
+    - High-risk documents with their full forensic profiles
+    - All high-severity AML flags with evidence
+    - Large financial transactions
+    - Suspicious codewords in context
+    - Key entities appearing in high-risk documents
+    """
+    with get_db() as conn:
+        # High-risk documents with details
+        risk_docs = conn.execute("""
+            SELECT df.document_id, df.score as risk_score,
+                   d.filename, d.title, d.category, d.source, d.date
+            FROM document_forensics df
+            JOIN documents d ON d.id = df.document_id
+            WHERE df.analysis_type = 'risk_score' AND df.score >= ?
+            ORDER BY df.score DESC
+        """, (min_risk,)).fetchall()
+
+        documents = []
+        for row in risk_docs:
+            doc = dict(row)
+
+            # AML flags
+            flags = conn.execute("""
+                SELECT label, severity, evidence
+                FROM document_forensics
+                WHERE document_id = ? AND analysis_type = 'aml_flag'
+                ORDER BY CASE severity WHEN 'high' THEN 0 WHEN 'medium' THEN 1 ELSE 2 END
+            """, (doc["document_id"],)).fetchall()
+            doc["aml_flags"] = [dict(f) for f in flags]
+
+            # Topics and intents
+            topics = conn.execute("""
+                SELECT label, score FROM document_forensics
+                WHERE document_id = ? AND analysis_type = 'topic'
+                ORDER BY score DESC
+            """, (doc["document_id"],)).fetchall()
+            doc["topics"] = [dict(t) for t in topics]
+
+            intents = conn.execute("""
+                SELECT label, score FROM document_forensics
+                WHERE document_id = ? AND analysis_type = 'intent'
+                ORDER BY score DESC
+            """, (doc["document_id"],)).fetchall()
+            doc["intents"] = [dict(i) for i in intents]
+
+            # Financial indicators
+            indicators = conn.execute("""
+                SELECT indicator_type, value, context, risk_score
+                FROM financial_indicators
+                WHERE document_id = ?
+                ORDER BY risk_score DESC
+            """, (doc["document_id"],)).fetchall()
+            doc["financial_indicators"] = [dict(fi) for fi in indicators]
+
+            # Codewords
+            codewords = conn.execute("""
+                SELECT label, evidence FROM document_forensics
+                WHERE document_id = ? AND analysis_type = 'codeword'
+            """, (doc["document_id"],)).fetchall()
+            doc["codewords"] = [dict(c) for c in codewords]
+
+            # Key entities
+            entities = conn.execute("""
+                SELECT e.name, e.type, de.count
+                FROM document_entities de
+                JOIN entities e ON e.id = de.entity_id
+                WHERE de.document_id = ?
+                ORDER BY de.count DESC LIMIT 20
+            """, (doc["document_id"],)).fetchall()
+            doc["entities"] = [dict(e) for e in entities]
+
+            documents.append(doc)
+
+        # All high-severity AML flags across corpus
+        high_severity_flags = conn.execute("""
+            SELECT df.label, df.severity, df.evidence, df.document_id,
+                   d.title, d.filename
+            FROM document_forensics df
+            JOIN documents d ON d.id = df.document_id
+            WHERE df.analysis_type = 'aml_flag' AND df.severity = 'high'
+            ORDER BY df.label, d.title
+        """).fetchall()
+
+        # Largest financial amounts
+        top_financial = conn.execute("""
+            SELECT fi.indicator_type, fi.value, fi.context, fi.risk_score,
+                   fi.document_id, d.title, d.filename
+            FROM financial_indicators fi
+            JOIN documents d ON d.id = fi.document_id
+            WHERE fi.indicator_type = 'currency_amount'
+            ORDER BY fi.risk_score DESC, fi.value DESC
+            LIMIT 50
+        """).fetchall()
+
+        # Entities most connected to high-risk documents
+        key_persons = conn.execute("""
+            SELECT e.name, COUNT(DISTINCT de.document_id) as doc_count,
+                   SUM(de.count) as total_mentions
+            FROM entities e
+            JOIN document_entities de ON de.entity_id = e.id
+            JOIN document_forensics df ON df.document_id = de.document_id
+            WHERE e.type = 'person'
+              AND df.analysis_type = 'risk_score' AND df.score >= ?
+            GROUP BY e.id
+            ORDER BY doc_count DESC, total_mentions DESC
+            LIMIT 30
+        """, (min_risk,)).fetchall()
+
+    return {
+        "min_risk_threshold": min_risk,
+        "total_flagged_documents": len(documents),
+        "documents": documents,
+        "high_severity_aml_flags": [dict(f) for f in high_severity_flags],
+        "top_financial_amounts": [dict(f) for f in top_financial],
+        "key_persons_in_high_risk_docs": [dict(p) for p in key_persons],
+    }
+
+
 @app.get("/api/forensics/phrases")
 def forensics_phrases(limit: int = Query(30, ge=1, le=100)):
     """Top repeated phrases (n-grams) across the corpus."""
