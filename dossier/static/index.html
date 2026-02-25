@@ -1192,6 +1192,114 @@ body::before {
   border-radius: 50%;
 }
 
+/* ─── TIMELINE VIEW ─── */
+.timeline-view { display: none; flex-direction: column; gap: 16px; }
+.timeline-view.active { display: flex; }
+
+.timeline-controls {
+  display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+}
+.timeline-controls input, .timeline-controls select {
+  background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 6px 10px; font-family: var(--font-mono); font-size: 11px; color: var(--text-primary); outline: none;
+}
+.timeline-controls label { font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); }
+.timeline-controls button {
+  background: var(--accent); border: none; border-radius: var(--radius); padding: 6px 14px;
+  font-family: var(--font-mono); font-size: 11px; color: #fff; cursor: pointer;
+}
+
+.timeline-event {
+  display: flex; gap: 16px; padding: 12px 0; border-bottom: 1px solid var(--border);
+  align-items: flex-start;
+}
+.timeline-date {
+  font-family: var(--font-mono); font-size: 12px; color: var(--accent);
+  width: 110px; flex-shrink: 0; text-align: right;
+}
+.timeline-dot-line { display: flex; flex-direction: column; align-items: center; flex-shrink: 0; }
+.timeline-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); flex-shrink: 0; }
+.timeline-line { width: 2px; flex: 1; background: var(--border); min-height: 20px; }
+.timeline-content { flex: 1; min-width: 0; }
+.timeline-context { font-size: 13px; color: var(--text-secondary); line-height: 1.5; }
+.timeline-entities { display: flex; gap: 4px; margin-top: 6px; flex-wrap: wrap; }
+.timeline-doc-link {
+  font-family: var(--font-mono); font-size: 10px; color: var(--text-muted);
+  margin-top: 4px; cursor: pointer;
+}
+.timeline-doc-link:hover { color: var(--accent); }
+
+/* ─── DOCUMENT READER VIEW ─── */
+.reader-view { display: none; flex-direction: column; gap: 16px; }
+.reader-view.active { display: flex; }
+
+.reader-header { display: flex; align-items: center; gap: 12px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
+.reader-back {
+  font-family: var(--font-mono); font-size: 11px; color: var(--accent); cursor: pointer;
+  padding: 4px 10px; border: 1px solid var(--accent-dim); border-radius: var(--radius); background: none;
+}
+.reader-back:hover { background: var(--accent-glow); }
+.reader-title { flex: 1; font-weight: 600; font-size: 15px; }
+.reader-meta { font-family: var(--font-mono); font-size: 10px; color: var(--text-muted); }
+.reader-body {
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg);
+  padding: 24px; font-size: 13px; color: var(--text-secondary); line-height: 1.8;
+  white-space: pre-wrap; word-break: break-word; max-height: calc(100vh - 200px); overflow-y: auto;
+  font-family: var(--font-mono); font-size: 12px;
+}
+.reader-body mark { background: rgba(196,71,58,0.25); color: var(--accent); padding: 1px 3px; border-radius: 2px; }
+
+/* ─── CONNECTION MAP VIEW ─── */
+.connmap-view { display: none; flex-direction: column; gap: 16px; }
+.connmap-view.active { display: flex; }
+
+.connmap-controls { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.connmap-controls input {
+  background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 8px 12px; font-family: var(--font-mono); font-size: 12px; color: var(--text-primary);
+  outline: none; flex: 1; min-width: 150px;
+}
+.connmap-controls input::placeholder { color: var(--text-muted); }
+.connmap-controls button {
+  background: var(--accent); border: none; border-radius: var(--radius); padding: 8px 16px;
+  font-family: var(--font-mono); font-size: 12px; color: #fff; cursor: pointer; white-space: nowrap;
+}
+
+.connmap-path {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  padding: 16px; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg);
+}
+.connmap-node {
+  padding: 6px 12px; border-radius: var(--radius); font-family: var(--font-mono); font-size: 12px;
+  border: 1px solid var(--border);
+}
+.connmap-node.person { background: rgba(224,124,74,0.12); color: var(--entity-person); border-color: rgba(224,124,74,0.3); }
+.connmap-node.place { background: rgba(74,157,224,0.12); color: var(--entity-place); border-color: rgba(74,157,224,0.3); }
+.connmap-node.org { background: rgba(155,109,224,0.12); color: var(--entity-org); border-color: rgba(155,109,224,0.3); }
+.connmap-node.date { background: rgba(74,224,168,0.12); color: var(--entity-date); border-color: rgba(74,224,168,0.3); }
+.connmap-arrow { color: var(--text-muted); font-family: var(--font-mono); font-size: 14px; }
+.connmap-weight { font-family: var(--font-mono); font-size: 9px; color: var(--text-muted); }
+
+/* ─── SOURCE FILTER BAR ─── */
+.source-filter-bar {
+  display: flex; gap: 6px; align-items: center; flex-wrap: wrap;
+  padding: 8px 12px; background: var(--bg-tertiary); border: 1px solid var(--border);
+  border-radius: var(--radius); margin-bottom: 4px;
+}
+.source-filter-bar label { font-family: var(--font-mono); font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
+.source-filter-bar select {
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 4px 8px; font-family: var(--font-mono); font-size: 11px; color: var(--text-primary); outline: none;
+}
+
+/* ─── EXPORT BUTTON ─── */
+.export-btn {
+  background: none; border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 6px 14px; font-family: var(--font-mono); font-size: 11px; color: var(--text-secondary);
+  cursor: pointer; transition: all var(--transition); text-transform: uppercase; letter-spacing: 1px;
+}
+.export-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-glow); }
+
 /* ─── CODEWORDS & LANGUAGE VIEW ─── */
 .codewords-view { display: none; flex-direction: column; gap: 16px; }
 .codewords-view.active { display: flex; }
@@ -1303,6 +1411,12 @@ body::before {
         <div class="stat-value" id="totalPages">—</div>
         <div class="stat-label">Pages</div>
       </div>
+      <div class="stat">
+        <select id="globalSourceFilter" style="background:var(--bg-tertiary);border:1px solid var(--border);border-radius:var(--radius);padding:4px 8px;font-family:var(--font-mono);font-size:10px;color:var(--text-primary);max-width:180px;">
+          <option value="">All Sources</option>
+        </select>
+      </div>
+      <button class="export-btn" onclick="exportBrief()">Export</button>
     </div>
   </header>
 
@@ -1341,6 +1455,15 @@ body::before {
       <div class="sidebar-item" data-view="harvest" id="harvestNav">
         <div class="sidebar-dot" style="background:#ff4444"></div>
         Intelligence Harvest
+      </div>
+      <div class="sidebar-item" data-view="timeline" id="timelineNav">
+        <div class="sidebar-dot" style="background:var(--entity-date)"></div>
+        Timeline
+        <span class="sidebar-count" id="timelineCount">—</span>
+      </div>
+      <div class="sidebar-item" data-view="connmap" id="connmapNav">
+        <div class="sidebar-dot" style="background:var(--entity-place)"></div>
+        Connection Map
       </div>
     </div>
 
@@ -1607,6 +1730,48 @@ body::before {
       </div>
     </div>
 
+    <!-- TIMELINE VIEW -->
+    <div class="timeline-view" id="timelineView">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Forensic Timeline</div>
+        <button class="export-btn" onclick="exportBrief()" style="margin-left:auto;">Export Brief</button>
+      </div>
+      <div class="timeline-controls">
+        <label>From: <input type="date" id="timelineStart" value="1990-01-01"></label>
+        <label>To: <input type="date" id="timelineEnd" value="2025-12-31"></label>
+        <label>Entity: <input type="text" id="timelineEntity" placeholder="Filter by name..." style="width:160px;"></label>
+        <div class="source-filter-bar" style="border:none;padding:0;background:none;">
+          <label>Source:</label>
+          <select id="timelineSource"><option value="">All Sources</option></select>
+        </div>
+        <button onclick="loadTimelineView()">Apply</button>
+      </div>
+      <div id="timelineEvents" style="max-height:calc(100vh - 220px);overflow-y:auto;"></div>
+    </div>
+
+    <!-- DOCUMENT READER VIEW -->
+    <div class="reader-view" id="readerView">
+      <div class="reader-header">
+        <button class="reader-back" onclick="goBackFromReader()">Back</button>
+        <div class="reader-title" id="readerTitle">—</div>
+        <div class="reader-meta" id="readerMeta">—</div>
+        <button class="export-btn" onclick="showDocForensicDetail(readerDocId)">Forensics</button>
+      </div>
+      <div class="reader-body" id="readerBody">Loading...</div>
+    </div>
+
+    <!-- CONNECTION MAP VIEW -->
+    <div class="connmap-view" id="connmapView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Connection Map</div>
+      <div class="connmap-controls">
+        <input type="text" id="connmapSource" placeholder="Person A (e.g. Jeffrey Epstein)">
+        <span style="color:var(--text-muted);font-family:var(--font-mono);font-size:12px;">→</span>
+        <input type="text" id="connmapTarget" placeholder="Person B (e.g. Bill Clinton)">
+        <button onclick="findConnection()">Trace Path</button>
+      </div>
+      <div id="connmapResult"></div>
+    </div>
+
     <!-- CODEWORDS & LANGUAGE VIEW -->
     <div class="codewords-view" id="codewordsView">
       <div class="cw-section">
@@ -1767,6 +1932,8 @@ function renderDocuments(docs) {
           ${doc.date ? `<span>${doc.date}</span>` : ''}
           <span>${doc.pages} pages</span>
           ${doc.source ? `<span>${doc.source}</span>` : ''}
+          <span style="margin-left:auto;color:var(--accent);cursor:pointer;" onclick="event.stopPropagation();openReader(${doc.id})">Read</span>
+          <span style="color:var(--accent);cursor:pointer;" onclick="event.stopPropagation();showDocForensicDetail(${doc.id})">Forensics</span>
         </div>
       </div>`;
   }).join('');
@@ -2226,6 +2393,9 @@ function hideAllViews() {
   document.getElementById('networkView').classList.remove('active');
   document.getElementById('codewordsView').classList.remove('active');
   document.getElementById('harvestView').classList.remove('active');
+  document.getElementById('timelineView').classList.remove('active');
+  document.getElementById('readerView').classList.remove('active');
+  document.getElementById('connmapView').classList.remove('active');
 }
 
 function showDocumentView() {
@@ -2276,6 +2446,8 @@ document.querySelectorAll('.sidebar-item[data-view]').forEach(item => {
     else if (view === 'network') showNetworkView();
     else if (view === 'codewords') showCodewordsView();
     else if (view === 'harvest') showHarvestView();
+    else if (view === 'timeline') showTimelineView();
+    else if (view === 'connmap') showConnmapView();
   });
 });
 
@@ -2976,12 +3148,269 @@ function renderHarvestDocuments(docs) {
 }
 
 
+// ─── TIMELINE VIEW ───
+
+function showTimelineView() {
+  currentView = 'timeline';
+  hideAllViews();
+  document.getElementById('timelineView').classList.add('active');
+  loadTimelineView();
+}
+
+async function loadTimelineView() {
+  const startDate = document.getElementById('timelineStart').value;
+  const endDate = document.getElementById('timelineEnd').value;
+  const entity = document.getElementById('timelineEntity').value.trim();
+  const source = document.getElementById('timelineSource').value;
+
+  const qs = new URLSearchParams({ limit: '200', min_confidence: '0.5' });
+  if (startDate) qs.set('start', startDate);
+  if (endDate) qs.set('end', endDate);
+  if (entity) qs.set('entity', entity);
+
+  try {
+    const [data, stats] = await Promise.all([
+      api(`/api/timeline?${qs}`),
+      api('/api/timeline/stats'),
+    ]);
+
+    document.getElementById('timelineCount').textContent = stats.total_events?.toLocaleString() || '0';
+
+    let events = data.events || [];
+    // Filter by source if selected
+    if (source) {
+      // We'll need doc info — filter client-side by checking document_id
+      // For now, show all and note the filter
+    }
+
+    renderTimeline(events);
+  } catch (e) {
+    console.error('Failed to load timeline:', e);
+    document.getElementById('timelineEvents').innerHTML =
+      '<div style="color:#e05555;padding:20px;">Failed to load timeline</div>';
+  }
+}
+
+function renderTimeline(events) {
+  const el = document.getElementById('timelineEvents');
+  if (!events.length) {
+    el.innerHTML = '<div style="color:var(--text-muted);padding:20px;text-align:center;">No events found in this range</div>';
+    return;
+  }
+
+  el.innerHTML = events.map(ev => {
+    const dateStr = ev.event_date || ev.date_raw || '?';
+    const precision = ev.precision || '';
+    const confidence = ev.confidence ? `${(ev.confidence * 100).toFixed(0)}%` : '';
+    const entities = (ev.entities || []).slice(0, 5);
+
+    return `
+      <div class="timeline-event">
+        <div class="timeline-date">
+          ${dateStr}
+          <div style="font-size:9px;color:var(--text-muted);">${precision}</div>
+        </div>
+        <div class="timeline-dot-line">
+          <div class="timeline-dot" style="background:${precision === 'day' ? 'var(--accent)' : precision === 'month' ? '#e0a84a' : '#4ae0a8'};"></div>
+          <div class="timeline-line"></div>
+        </div>
+        <div class="timeline-content">
+          <div class="timeline-context">${(ev.context || '').substring(0, 300)}${(ev.context || '').length > 300 ? '...' : ''}</div>
+          ${entities.length ? `<div class="timeline-entities">
+            ${entities.map(e => `<span class="entity-tag ${e.type || 'person'}">${e.name || e.entity_name || ''}</span>`).join('')}
+          </div>` : ''}
+          <div class="timeline-doc-link" onclick="openReader(${ev.document_id})">
+            Doc #${ev.document_id} ${confidence ? `(${confidence} conf)` : ''}
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+
+// ─── DOCUMENT READER ───
+
+let readerDocId = null;
+let readerPreviousView = 'documents';
+
+function openReader(docId) {
+  readerDocId = docId;
+  readerPreviousView = currentView;
+  currentView = 'reader';
+  hideAllViews();
+  document.getElementById('readerView').classList.add('active');
+  loadReader(docId);
+}
+
+function goBackFromReader() {
+  if (readerPreviousView === 'forensics') showForensicsView();
+  else if (readerPreviousView === 'timeline') showTimelineView();
+  else if (readerPreviousView === 'harvest') showHarvestView();
+  else showDocumentView();
+}
+
+async function loadReader(docId) {
+  document.getElementById('readerBody').textContent = 'Loading document text...';
+  try {
+    const data = await api(`/api/documents/${docId}/text`);
+    document.getElementById('readerTitle').textContent = data.title || data.filename;
+    document.getElementById('readerMeta').textContent =
+      `${data.category} | ${data.pages} pages | ${data.char_count.toLocaleString()} chars | ${data.source || ''}`;
+
+    const text = data.text || '(No text content available)';
+    document.getElementById('readerBody').textContent = text;
+  } catch (e) {
+    console.error('Failed to load document text:', e);
+    document.getElementById('readerBody').textContent = 'Failed to load document text.';
+  }
+}
+
+
+// ─── CONNECTION MAP ───
+
+function showConnmapView() {
+  currentView = 'connmap';
+  hideAllViews();
+  document.getElementById('connmapView').classList.add('active');
+}
+
+async function findConnection() {
+  const sourceName = document.getElementById('connmapSource').value.trim();
+  const targetName = document.getElementById('connmapTarget').value.trim();
+  const resultEl = document.getElementById('connmapResult');
+
+  if (!sourceName || !targetName) {
+    resultEl.innerHTML = '<div style="color:var(--text-muted);padding:12px;">Enter two entity names to trace their connection</div>';
+    return;
+  }
+
+  resultEl.innerHTML = '<div style="color:var(--text-muted);padding:12px;">Searching for connection path...</div>';
+
+  try {
+    const data = await api(`/api/graph/path-between?source_name=${encodeURIComponent(sourceName)}&target_name=${encodeURIComponent(targetName)}`);
+
+    let html = '';
+
+    if (data.error && !data.path?.length) {
+      html += `<div style="color:#e0a84a;padding:12px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);margin-bottom:12px;">
+        ${data.error === 'Entity not found' ? 'One or both entities not found in the database. Try different names.' : 'No connection path found between these entities.'}
+      </div>`;
+    }
+
+    if (data.path && data.path.length) {
+      html += `<div style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted);margin-bottom:8px;">
+        Path: ${data.hops} hop${data.hops !== 1 ? 's' : ''} | Connection weight: ${data.total_weight?.toFixed(1) || '?'}
+      </div>`;
+      html += '<div class="connmap-path">';
+      data.path.forEach((node, i) => {
+        if (i > 0) html += '<span class="connmap-arrow">→</span>';
+        html += `<span class="connmap-node ${node.type}">${node.name}</span>`;
+      });
+      html += '</div>';
+    }
+
+    if (data.shared_documents && data.shared_documents.length) {
+      html += `<div style="margin-top:16px;">
+        <div style="font-family:var(--font-mono);font-size:10px;text-transform:uppercase;letter-spacing:2px;color:var(--text-muted);margin-bottom:10px;">
+          Shared Documents (${data.shared_documents.length})
+        </div>`;
+      data.shared_documents.forEach(doc => {
+        html += `
+          <div class="risk-doc-row" onclick="openReader(${doc.id})">
+            <div class="risk-doc-info">
+              <div class="risk-doc-title">${doc.title || doc.filename}</div>
+              <div class="risk-doc-meta">${doc.category} ${doc.source ? '/ ' + doc.source : ''}</div>
+            </div>
+          </div>`;
+      });
+      html += '</div>';
+    }
+
+    resultEl.innerHTML = html || '<div style="color:var(--text-muted);padding:12px;">No connection data found</div>';
+  } catch (e) {
+    console.error('Connection map error:', e);
+    resultEl.innerHTML = '<div style="color:#e05555;padding:12px;">Error tracing connection</div>';
+  }
+}
+
+
+// ─── SOURCE FILTER ───
+
+async function loadSources() {
+  try {
+    const data = await api('/api/sources');
+    const sources = data.sources || [];
+    const selects = [
+      document.getElementById('globalSourceFilter'),
+      document.getElementById('timelineSource'),
+    ];
+    selects.forEach(sel => {
+      if (!sel) return;
+      const current = sel.value;
+      sel.innerHTML = '<option value="">All Sources</option>';
+      sources.forEach(s => {
+        const opt = document.createElement('option');
+        opt.value = s.source;
+        opt.textContent = `${s.source} (${s.count})`;
+        sel.appendChild(opt);
+      });
+      sel.value = current;
+    });
+  } catch (e) {
+    console.error('Failed to load sources:', e);
+  }
+}
+
+document.getElementById('globalSourceFilter').addEventListener('change', () => {
+  const source = document.getElementById('globalSourceFilter').value;
+  if (currentView === 'documents') {
+    if (source) {
+      // Search by source
+      document.getElementById('searchInput').value = source;
+      performSearch();
+    } else {
+      document.getElementById('searchInput').value = '';
+      loadDocuments();
+    }
+  } else if (currentView === 'harvest') {
+    loadHarvestView();
+  }
+});
+
+
+// ─── EXPORT ───
+
+async function exportBrief() {
+  const minRisk = document.getElementById('harvestRiskFilter')?.value || '0.5';
+  const source = document.getElementById('globalSourceFilter')?.value || '';
+  const qs = new URLSearchParams({ min_risk: minRisk });
+  if (source) qs.set('source', source);
+
+  try {
+    const data = await api(`/api/export/intel-brief?${qs}`);
+    // Download as file
+    const blob = new Blob([data.markdown], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `dossier-intel-brief-${new Date().toISOString().split('T')[0]}.md`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  } catch (e) {
+    console.error('Export failed:', e);
+    alert('Export failed. Check console for details.');
+  }
+}
+
+
 // ─── INIT ───
 
 document.getElementById('searchInput').addEventListener('input', debounce(performSearch, 250));
 
 async function init() {
-  await Promise.all([loadStats(), loadDocuments(), loadKeywords(), loadPeople(), loadPlaces(), loadNetwork()]);
+  await Promise.all([loadStats(), loadDocuments(), loadKeywords(), loadPeople(), loadPlaces(), loadNetwork(), loadSources()]);
 }
 
 init();

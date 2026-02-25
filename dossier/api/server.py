@@ -842,6 +842,185 @@ def forensics_harvest(min_risk: float = Query(0.5, ge=0, le=1)):
     }
 
 
+@app.get("/api/sources")
+def list_sources():
+    """List all document sources with counts."""
+    with get_db() as conn:
+        rows = conn.execute("""
+            SELECT source, COUNT(*) as count, SUM(pages) as pages
+            FROM documents
+            WHERE source IS NOT NULL AND source != ''
+            GROUP BY source ORDER BY count DESC
+        """).fetchall()
+    return {"sources": [dict(r) for r in rows]}
+
+
+@app.get("/api/documents/{doc_id}/text")
+def get_document_text(doc_id: int):
+    """Get full raw text of a document for reading."""
+    with get_db() as conn:
+        row = conn.execute(
+            "SELECT id, filename, title, category, source, pages, raw_text FROM documents WHERE id = ?",
+            (doc_id,),
+        ).fetchone()
+        if not row:
+            raise HTTPException(404, "Document not found")
+    doc = dict(row)
+    doc["text"] = doc.pop("raw_text") or ""
+    doc["char_count"] = len(doc["text"])
+    return doc
+
+
+@app.get("/api/graph/path-between")
+def graph_path_between(
+    source_name: str = Query(...),
+    target_name: str = Query(...),
+):
+    """Find connection path between two named entities."""
+    with get_db() as conn:
+        # Find entity IDs by name
+        src = conn.execute(
+            "SELECT id FROM entities WHERE LOWER(name) = LOWER(?) LIMIT 1",
+            (source_name,),
+        ).fetchone()
+        tgt = conn.execute(
+            "SELECT id FROM entities WHERE LOWER(name) = LOWER(?) LIMIT 1",
+            (target_name,),
+        ).fetchone()
+        if not src or not tgt:
+            return {"error": "Entity not found", "path": [], "shared_documents": []}
+
+    from dossier.core.graph_analysis import GraphAnalyzer
+    with get_db() as conn:
+        try:
+            analyzer = GraphAnalyzer(conn)
+            result = analyzer.find_shortest_path(src["id"], tgt["id"])
+        except Exception as e:
+            logger.exception("Graph path error")
+            result = None
+
+        # Also find shared documents
+        shared = conn.execute("""
+            SELECT DISTINCT d.id, d.title, d.filename, d.category, d.source
+            FROM document_entities de1
+            JOIN document_entities de2 ON de1.document_id = de2.document_id
+            JOIN documents d ON d.id = de1.document_id
+            WHERE de1.entity_id = ? AND de2.entity_id = ?
+            ORDER BY d.title
+            LIMIT 20
+        """, (src["id"], tgt["id"])).fetchall()
+
+    if not result:
+        return {
+            "path": [], "edges": [], "hops": 0, "total_weight": 0,
+            "shared_documents": [dict(d) for d in shared],
+            "error": "No path found" if not shared else None,
+        }
+
+    return {
+        "path": result.nodes,
+        "edges": result.edges,
+        "hops": result.hops,
+        "total_weight": result.total_weight,
+        "shared_documents": [dict(d) for d in shared],
+    }
+
+
+@app.get("/api/export/intel-brief")
+def export_intel_brief(
+    min_risk: float = Query(0.5, ge=0, le=1),
+    source: Optional[str] = Query(None),
+):
+    """Generate a markdown intelligence brief."""
+    with get_db() as conn:
+        # High-risk docs
+        sql = """
+            SELECT df.document_id, df.score as risk_score,
+                   d.filename, d.title, d.category, d.source, d.date
+            FROM document_forensics df
+            JOIN documents d ON d.id = df.document_id
+            WHERE df.analysis_type = 'risk_score' AND df.score >= ?
+        """
+        params = [min_risk]
+        if source:
+            sql += " AND d.source = ?"
+            params.append(source)
+        sql += " ORDER BY df.score DESC"
+        risk_docs = conn.execute(sql, params).fetchall()
+
+        # Key persons
+        person_sql = """
+            SELECT e.name, COUNT(DISTINCT de.document_id) as doc_count,
+                   SUM(de.count) as total_mentions
+            FROM entities e
+            JOIN document_entities de ON de.entity_id = e.id
+            JOIN document_forensics df ON df.document_id = de.document_id
+            WHERE e.type = 'person'
+              AND df.analysis_type = 'risk_score' AND df.score >= ?
+        """
+        person_params = [min_risk]
+        if source:
+            person_sql += " AND de.document_id IN (SELECT id FROM documents WHERE source = ?)"
+            person_params.append(source)
+        person_sql += " GROUP BY e.id ORDER BY doc_count DESC, total_mentions DESC LIMIT 30"
+        persons = conn.execute(person_sql, person_params).fetchall()
+
+        # AML flags
+        aml_sql = """
+            SELECT df.label, df.severity, COUNT(*) as count
+            FROM document_forensics df
+            WHERE df.analysis_type = 'aml_flag'
+        """
+        aml_params = []
+        if source:
+            aml_sql += " AND df.document_id IN (SELECT id FROM documents WHERE source = ?)"
+            aml_params.append(source)
+        aml_sql += " GROUP BY df.label, df.severity ORDER BY count DESC"
+        aml_flags = conn.execute(aml_sql, aml_params).fetchall()
+
+        # Stats
+        doc_count = conn.execute("SELECT COUNT(*) FROM documents").fetchone()[0]
+        entity_count = conn.execute("SELECT COUNT(*) FROM entities").fetchone()[0]
+        page_count = conn.execute("SELECT COALESCE(SUM(pages),0) FROM documents").fetchone()[0]
+
+    # Build markdown
+    lines = [
+        "# DOSSIER — Intelligence Brief",
+        f"**Generated**: {__import__('datetime').datetime.now().strftime('%Y-%m-%d %H:%M')}",
+        f"**Risk Threshold**: {min_risk*100:.0f}%+",
+        f"**Source Filter**: {source or 'All Sources'}",
+        "",
+        "## Corpus Overview",
+        f"- **Documents**: {doc_count:,}",
+        f"- **Entities**: {entity_count:,}",
+        f"- **Pages**: {page_count:,}",
+        f"- **Flagged Documents**: {len(risk_docs)}",
+        "",
+        "## Key Persons",
+        "| Name | Documents | Mentions |",
+        "|------|-----------|----------|",
+    ]
+    for p in persons[:20]:
+        lines.append(f"| {p['name']} | {p['doc_count']} | {p['total_mentions']:,} |")
+
+    lines += ["", "## AML Flags", "| Flag | Severity | Count |", "|------|----------|-------|"]
+    for f in aml_flags:
+        lines.append(f"| {f['label'].replace('_',' ')} | {f['severity']} | {f['count']} |")
+
+    lines += ["", "## Highest Risk Documents", "| Risk | Document | Category | Source |", "|------|----------|----------|--------|"]
+    for d in risk_docs[:30]:
+        score = f"{d['risk_score']*100:.0f}%"
+        lines.append(f"| {score} | {d['title'] or d['filename']} | {d['category']} | {d['source'] or ''} |")
+
+    lines += ["", "---", "*Generated by DOSSIER Document Intelligence System*"]
+
+    return {"markdown": "\n".join(lines), "summary": {
+        "flagged_documents": len(risk_docs),
+        "key_persons": len(persons),
+        "aml_flags": len(aml_flags),
+    }}
+
+
 @app.get("/api/forensics/phrases")
 def forensics_phrases(limit: int = Query(30, ge=1, le=100)):
     """Top repeated phrases (n-grams) across the corpus."""
