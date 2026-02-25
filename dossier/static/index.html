@@ -710,6 +710,427 @@ body::before {
 
 .panel-tab:hover { color: var(--text-secondary); }
 .panel-tab.active { color: var(--text-primary); border-bottom-color: var(--accent); }
+
+/* ─── FORENSICS DASHBOARD ─── */
+.forensics-dashboard { display: none; flex-direction: column; gap: 20px; }
+.forensics-dashboard.active { display: flex; }
+
+.forensics-summary-cards {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+.summary-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 18px 16px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.summary-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+}
+
+.summary-card.risk::before { background: #e05555; }
+.summary-card.aml::before { background: #e0a84a; }
+.summary-card.financial::before { background: #4a9de0; }
+.summary-card.analyzed::before { background: #4ae0a8; }
+
+.summary-card-value {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 28px;
+  color: var(--text-primary);
+  line-height: 1.2;
+}
+
+.summary-card-label {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--text-muted);
+  margin-top: 6px;
+}
+
+.forensics-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.forensics-section {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 18px;
+}
+
+.forensics-section-title {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: var(--text-muted);
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.forensics-section-title .dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* Risk distribution bar */
+.risk-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.risk-bar-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-secondary);
+  width: 70px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.risk-bar-track {
+  flex: 1;
+  height: 20px;
+  background: var(--bg-primary);
+  border-radius: 4px;
+  overflow: hidden;
+  position: relative;
+}
+
+.risk-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 600ms cubic-bezier(0.22, 1, 0.36, 1);
+  display: flex;
+  align-items: center;
+  padding-left: 8px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: #fff;
+  white-space: nowrap;
+}
+
+.risk-bar-fill.minimal { background: #2d6a4f; }
+.risk-bar-fill.low { background: #40916c; }
+.risk-bar-fill.medium { background: #e0a84a; }
+.risk-bar-fill.high { background: #e07c4a; }
+.risk-bar-fill.critical { background: #e05555; }
+
+.risk-bar-count {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+  width: 36px;
+  flex-shrink: 0;
+}
+
+/* AML severity badges */
+.aml-severity-row {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.severity-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: var(--radius);
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.severity-badge.high { background: rgba(224,85,85,0.15); color: #e05555; }
+.severity-badge.medium { background: rgba(224,168,74,0.15); color: #e0a84a; }
+.severity-badge.low { background: rgba(74,224,168,0.15); color: #4ae0a8; }
+
+.severity-badge-count {
+  font-weight: 700;
+  font-size: 14px;
+}
+
+/* AML flag list */
+.aml-flag-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.aml-flag-item:last-child { border-bottom: none; }
+
+.aml-flag-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.aml-flag-dot.high { background: #e05555; }
+.aml-flag-dot.medium { background: #e0a84a; }
+.aml-flag-dot.low { background: #4ae0a8; }
+
+.aml-flag-label {
+  flex: 1;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.aml-flag-count {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* Horizontal bar chart */
+.h-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.h-bar-label {
+  font-size: 12px;
+  color: var(--text-secondary);
+  width: 100px;
+  text-align: right;
+  flex-shrink: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.h-bar-track {
+  flex: 1;
+  height: 14px;
+  background: var(--bg-primary);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.h-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 600ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.h-bar-fill.topic { background: var(--entity-place); }
+.h-bar-fill.intent { background: var(--entity-org); }
+
+.h-bar-value {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+  width: 40px;
+  flex-shrink: 0;
+}
+
+/* Risk document rows */
+.risk-doc-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: background var(--transition);
+}
+
+.risk-doc-row:hover { background: var(--bg-hover); }
+
+.risk-doc-score {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 14px;
+  width: 48px;
+  flex-shrink: 0;
+  text-align: center;
+  padding: 4px 8px;
+  border-radius: var(--radius);
+}
+
+.risk-doc-score.critical { background: rgba(224,85,85,0.2); color: #e05555; }
+.risk-doc-score.high { background: rgba(224,124,74,0.2); color: #e07c4a; }
+.risk-doc-score.medium { background: rgba(224,168,74,0.2); color: #e0a84a; }
+.risk-doc-score.low { background: rgba(74,224,168,0.2); color: #4ae0a8; }
+
+.risk-doc-info { flex: 1; min-width: 0; }
+
+.risk-doc-title {
+  font-size: 13px;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.risk-doc-meta {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-top: 3px;
+}
+
+.risk-doc-tags {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.risk-doc-tag {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  background: rgba(224,168,74,0.12);
+  color: #e0a84a;
+}
+
+/* Financial indicators table */
+.fin-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.fin-table th {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-muted);
+  text-align: left;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.fin-table td {
+  font-size: 12px;
+  color: var(--text-secondary);
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.fin-table tr:last-child td { border-bottom: none; }
+
+.fin-table tr:hover td { background: var(--bg-hover); }
+
+.fin-type-badge {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  background: rgba(74,157,224,0.12);
+  color: var(--entity-place);
+  text-transform: uppercase;
+}
+
+.fin-value {
+  font-family: var(--font-mono);
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.fin-context {
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+/* Codeword items */
+.codeword-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.codeword-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: rgba(224,85,85,0.08);
+  border: 1px solid rgba(224,85,85,0.2);
+  border-radius: 20px;
+  font-size: 12px;
+  color: #e07c4a;
+}
+
+.codeword-chip-count {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+/* Document forensic detail panel */
+.doc-forensic-detail {
+  display: none;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.doc-forensic-detail.active { display: flex; }
+
+.doc-forensic-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.doc-forensic-back {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--accent);
+  cursor: pointer;
+  padding: 4px 10px;
+  border: 1px solid var(--accent-dim);
+  border-radius: var(--radius);
+  background: none;
+  transition: all var(--transition);
+}
+
+.doc-forensic-back:hover { background: var(--accent-glow); }
+
+.doc-forensic-title {
+  flex: 1;
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.doc-forensic-risk {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 18px;
+  padding: 6px 14px;
+  border-radius: var(--radius);
+}
 </style>
 </head>
 <body>
@@ -758,6 +1179,11 @@ body::before {
         <div class="sidebar-dot"></div>
         Flagged
         <span class="sidebar-count">—</span>
+      </div>
+      <div class="sidebar-item" data-view="forensics" id="forensicsNav">
+        <div class="sidebar-dot" style="background:#e05555"></div>
+        Forensics
+        <span class="sidebar-count" id="forensicsCount">—</span>
       </div>
     </div>
 
@@ -855,6 +1281,96 @@ body::before {
     </div>
 
     <div class="document-list" id="documentList"></div>
+
+    <!-- FORENSICS DASHBOARD -->
+    <div class="forensics-dashboard" id="forensicsDashboard">
+      <!-- Summary Cards -->
+      <div class="forensics-summary-cards">
+        <div class="summary-card analyzed">
+          <div class="summary-card-value" id="fTotal">—</div>
+          <div class="summary-card-label">Analyzed</div>
+        </div>
+        <div class="summary-card aml">
+          <div class="summary-card-value" id="fAml">—</div>
+          <div class="summary-card-label">AML Flagged</div>
+        </div>
+        <div class="summary-card risk">
+          <div class="summary-card-value" id="fHighRisk">—</div>
+          <div class="summary-card-label">High Risk</div>
+        </div>
+        <div class="summary-card financial">
+          <div class="summary-card-value" id="fFinancial">—</div>
+          <div class="summary-card-label">Financial Indicators</div>
+        </div>
+      </div>
+
+      <!-- Risk Distribution + AML Flags -->
+      <div class="forensics-grid">
+        <div class="forensics-section">
+          <div class="forensics-section-title">
+            <span class="dot" style="background:#e05555"></span>
+            Risk Distribution
+          </div>
+          <div id="riskDistribution"></div>
+        </div>
+        <div class="forensics-section">
+          <div class="forensics-section-title">
+            <span class="dot" style="background:#e0a84a"></span>
+            AML Flags
+          </div>
+          <div id="amlSeverityBadges"></div>
+          <div id="amlFlagList"></div>
+        </div>
+      </div>
+
+      <!-- Topics + Intents -->
+      <div class="forensics-grid">
+        <div class="forensics-section">
+          <div class="forensics-section-title">
+            <span class="dot" style="background:var(--entity-place)"></span>
+            Topics
+          </div>
+          <div id="topicBars"></div>
+        </div>
+        <div class="forensics-section">
+          <div class="forensics-section-title">
+            <span class="dot" style="background:var(--entity-org)"></span>
+            Intents
+          </div>
+          <div id="intentBars"></div>
+        </div>
+      </div>
+
+      <!-- Codewords -->
+      <div class="forensics-section">
+        <div class="forensics-section-title">
+          <span class="dot" style="background:#e07c4a"></span>
+          Detected Codewords
+        </div>
+        <div class="codeword-grid" id="codewordGrid"></div>
+      </div>
+
+      <!-- Highest Risk Documents -->
+      <div class="forensics-section">
+        <div class="forensics-section-title">
+          <span class="dot" style="background:#e05555"></span>
+          Highest Risk Documents
+        </div>
+        <div id="riskDocList"></div>
+      </div>
+
+      <!-- Financial Indicators -->
+      <div class="forensics-section">
+        <div class="forensics-section-title">
+          <span class="dot" style="background:var(--entity-place)"></span>
+          Financial Indicators
+        </div>
+        <div id="financialTable"></div>
+      </div>
+    </div>
+
+    <!-- DOCUMENT FORENSIC DETAIL -->
+    <div class="doc-forensic-detail" id="docForensicDetail"></div>
   </main>
 
   <!-- RIGHT PANEL -->
@@ -1431,6 +1947,381 @@ function drawNetwork(connections) {
     ctx.textAlign = 'center';
     ctx.fillText(lbl, n.x * canvas.width, n.y * canvas.height + r + 10);
   });
+}
+
+
+// ─── VIEW SWITCHING ───
+
+let currentView = 'documents'; // 'documents' | 'forensics' | 'doc-forensic'
+
+function showDocumentView() {
+  currentView = 'documents';
+  document.getElementById('documentList').style.display = '';
+  document.querySelector('.search-container').style.display = '';
+  document.querySelector('.results-header').style.display = '';
+  document.getElementById('processingBar').style.display = '';
+  document.getElementById('forensicsDashboard').classList.remove('active');
+  document.getElementById('docForensicDetail').classList.remove('active');
+}
+
+function showForensicsView() {
+  currentView = 'forensics';
+  document.getElementById('documentList').style.display = 'none';
+  document.querySelector('.search-container').style.display = 'none';
+  document.querySelector('.results-header').style.display = 'none';
+  document.getElementById('processingBar').style.display = 'none';
+  document.getElementById('docForensicDetail').classList.remove('active');
+  document.getElementById('forensicsDashboard').classList.add('active');
+  loadForensicsDashboard();
+}
+
+function showDocForensicDetail(docId) {
+  currentView = 'doc-forensic';
+  document.getElementById('documentList').style.display = 'none';
+  document.querySelector('.search-container').style.display = 'none';
+  document.querySelector('.results-header').style.display = 'none';
+  document.getElementById('forensicsDashboard').classList.remove('active');
+  document.getElementById('docForensicDetail').classList.add('active');
+  loadDocForensicDetail(docId);
+}
+
+// Hook forensics nav
+document.getElementById('forensicsNav').addEventListener('click', () => {
+  document.querySelectorAll('.sidebar-item').forEach(i => i.classList.remove('active'));
+  document.getElementById('forensicsNav').classList.add('active');
+  document.getElementById('searchInput').value = '';
+  showForensicsView();
+});
+
+// Override sidebar clicks to return to document view
+document.querySelectorAll('.sidebar-item[data-filter]').forEach(item => {
+  item.addEventListener('click', () => {
+    if (currentView !== 'documents') showDocumentView();
+  });
+});
+document.querySelectorAll('.sidebar-item[data-entity]').forEach(item => {
+  item.addEventListener('click', () => {
+    if (currentView !== 'documents') showDocumentView();
+  });
+});
+
+
+// ─── FORENSICS DASHBOARD ───
+
+function riskLevel(score) {
+  if (score > 0.7) return 'critical';
+  if (score > 0.5) return 'high';
+  if (score > 0.3) return 'medium';
+  if (score > 0.1) return 'low';
+  return 'minimal';
+}
+
+async function loadForensicsDashboard() {
+  try {
+    const [summary, riskDocs, financial, codewords] = await Promise.all([
+      api('/api/forensics/summary'),
+      api('/api/forensics/risk-documents?limit=15'),
+      api('/api/forensics/financial?limit=30'),
+      api('/api/forensics/codewords?limit=20'),
+    ]);
+
+    // Summary cards
+    document.getElementById('fTotal').textContent = summary.total_analyzed.toLocaleString();
+    document.getElementById('fAml').textContent = summary.aml_flagged.toLocaleString();
+    document.getElementById('fHighRisk').textContent = summary.high_risk.toLocaleString();
+    document.getElementById('fFinancial').textContent = summary.financial_indicators.toLocaleString();
+    document.getElementById('forensicsCount').textContent = summary.aml_flagged || 0;
+
+    // Risk distribution
+    renderRiskDistribution(summary.risk_distribution);
+
+    // AML flags
+    renderAmlFlags(summary.aml_severity, summary.aml_types);
+
+    // Topics
+    renderHBars('topicBars', summary.topics, 'topic');
+
+    // Intents
+    renderHBars('intentBars', summary.intents, 'intent');
+
+    // Codewords
+    renderCodewords(codewords.codewords);
+
+    // Risk documents
+    renderRiskDocs(riskDocs.documents);
+
+    // Financial indicators
+    renderFinancialTable(financial.indicators);
+  } catch (e) {
+    console.error('Failed to load forensics dashboard:', e);
+  }
+}
+
+function renderRiskDistribution(dist) {
+  const el = document.getElementById('riskDistribution');
+  const levels = ['critical', 'high', 'medium', 'low', 'minimal'];
+  const total = Object.values(dist).reduce((a, b) => a + b, 0) || 1;
+
+  el.innerHTML = levels.map(level => {
+    const count = dist[level] || 0;
+    const pct = (count / total * 100).toFixed(1);
+    return `
+      <div class="risk-bar-row">
+        <div class="risk-bar-label">${level}</div>
+        <div class="risk-bar-track">
+          <div class="risk-bar-fill ${level}" style="width: ${pct}%">${pct > 8 ? count : ''}</div>
+        </div>
+        <div class="risk-bar-count">${count}</div>
+      </div>`;
+  }).join('');
+}
+
+function renderAmlFlags(severity, types) {
+  const badgesEl = document.getElementById('amlSeverityBadges');
+  const listEl = document.getElementById('amlFlagList');
+
+  const sev = severity || {};
+  badgesEl.innerHTML = `
+    <div class="aml-severity-row">
+      ${sev.high ? `<div class="severity-badge high"><span class="severity-badge-count">${sev.high}</span> High</div>` : ''}
+      ${sev.medium ? `<div class="severity-badge medium"><span class="severity-badge-count">${sev.medium}</span> Medium</div>` : ''}
+      ${sev.low ? `<div class="severity-badge low"><span class="severity-badge-count">${sev.low}</span> Low</div>` : ''}
+      ${!sev.high && !sev.medium && !sev.low ? '<div style="color:var(--text-muted);font-size:12px;">No AML flags detected</div>' : ''}
+    </div>`;
+
+  if (!types || !types.length) {
+    listEl.innerHTML = '';
+    return;
+  }
+
+  listEl.innerHTML = types.map(t => `
+    <div class="aml-flag-item">
+      <div class="aml-flag-dot ${t.severity || 'medium'}"></div>
+      <div class="aml-flag-label">${t.label.replace(/_/g, ' ')}</div>
+      <div class="aml-flag-count">${t.count}</div>
+    </div>
+  `).join('');
+}
+
+function renderHBars(containerId, items, type) {
+  const el = document.getElementById(containerId);
+  if (!items || !items.length) {
+    el.innerHTML = '<div style="color:var(--text-muted);font-size:12px;padding:8px 0;">No data</div>';
+    return;
+  }
+  const maxCount = Math.max(...items.map(i => i.doc_count));
+
+  el.innerHTML = items.map(item => {
+    const pct = (item.doc_count / maxCount * 100).toFixed(1);
+    return `
+      <div class="h-bar-row">
+        <div class="h-bar-label">${item.label}</div>
+        <div class="h-bar-track">
+          <div class="h-bar-fill ${type}" style="width: ${pct}%"></div>
+        </div>
+        <div class="h-bar-value">${item.doc_count}</div>
+      </div>`;
+  }).join('');
+}
+
+function renderCodewords(codewords) {
+  const el = document.getElementById('codewordGrid');
+  if (!codewords || !codewords.length) {
+    el.innerHTML = '<div style="color:var(--text-muted);font-size:12px;">No codewords detected</div>';
+    return;
+  }
+
+  el.innerHTML = codewords.map(cw => `
+    <div class="codeword-chip">
+      ${cw.word}
+      <span class="codeword-chip-count">${cw.doc_count} docs</span>
+    </div>
+  `).join('');
+}
+
+function renderRiskDocs(docs) {
+  const el = document.getElementById('riskDocList');
+  if (!docs || !docs.length) {
+    el.innerHTML = '<div style="color:var(--text-muted);font-size:12px;padding:8px 0;">No high-risk documents</div>';
+    return;
+  }
+
+  el.innerHTML = docs.map(doc => {
+    const level = riskLevel(doc.risk_score);
+    const score = (doc.risk_score * 100).toFixed(0);
+    const tags = (doc.aml_flags || []).slice(0, 3).map(f =>
+      `<span class="risk-doc-tag">${f.label.replace(/_/g, ' ')}</span>`
+    ).join('');
+
+    return `
+      <div class="risk-doc-row" onclick="showDocForensicDetail(${doc.document_id})">
+        <div class="risk-doc-score ${level}">${score}</div>
+        <div class="risk-doc-info">
+          <div class="risk-doc-title">${doc.title || doc.filename}</div>
+          <div class="risk-doc-meta">${doc.category} ${doc.source ? '/ ' + doc.source : ''}</div>
+        </div>
+        <div class="risk-doc-tags">${tags}</div>
+      </div>`;
+  }).join('');
+}
+
+function renderFinancialTable(indicators) {
+  const el = document.getElementById('financialTable');
+  if (!indicators || !indicators.length) {
+    el.innerHTML = '<div style="color:var(--text-muted);font-size:12px;padding:8px 0;">No financial indicators</div>';
+    return;
+  }
+
+  el.innerHTML = `
+    <table class="fin-table">
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Value</th>
+          <th>Document</th>
+          <th>Context</th>
+          <th>Risk</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${indicators.map(fi => `
+          <tr onclick="showDocForensicDetail(${fi.document_id})" style="cursor:pointer;">
+            <td><span class="fin-type-badge">${fi.indicator_type.replace(/_/g, ' ')}</span></td>
+            <td class="fin-value">${fi.value}</td>
+            <td style="font-size:11px;color:var(--text-muted);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${fi.title || fi.filename}</td>
+            <td class="fin-context">${fi.context || ''}</td>
+            <td><span class="risk-doc-score ${riskLevel(fi.risk_score)}" style="font-size:11px;padding:2px 6px;">${(fi.risk_score * 100).toFixed(0)}</span></td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>`;
+}
+
+
+// ─── DOCUMENT FORENSIC DETAIL ───
+
+async function loadDocForensicDetail(docId) {
+  const el = document.getElementById('docForensicDetail');
+  el.innerHTML = '<div style="color:var(--text-muted);padding:20px;">Loading forensic report...</div>';
+
+  try {
+    const data = await api(`/api/forensics/${docId}`);
+    const doc = data.document;
+    const level = riskLevel(data.risk_score);
+    const score = (data.risk_score * 100).toFixed(0);
+
+    let html = `
+      <div class="doc-forensic-header">
+        <button class="doc-forensic-back" onclick="showForensicsView()">Back</button>
+        <div class="doc-forensic-title">${doc.title || doc.filename}</div>
+        <div class="doc-forensic-risk risk-doc-score ${level}">${score}</div>
+      </div>`;
+
+    // AML Flags
+    if (data.aml_flags && data.aml_flags.length) {
+      html += `
+        <div class="forensics-section">
+          <div class="forensics-section-title"><span class="dot" style="background:#e0a84a"></span>AML Flags</div>
+          ${data.aml_flags.map(f => `
+            <div class="aml-flag-item">
+              <div class="aml-flag-dot ${f.severity || 'medium'}"></div>
+              <div class="aml-flag-label">${f.label.replace(/_/g, ' ')}</div>
+              <div style="font-size:11px;color:var(--text-muted);font-style:italic;">${f.evidence || ''}</div>
+            </div>
+          `).join('')}
+        </div>`;
+    }
+
+    // Topics + Intents side by side
+    html += '<div class="forensics-grid">';
+    if (data.topics && data.topics.length) {
+      const maxT = Math.max(...data.topics.map(t => t.score));
+      html += `
+        <div class="forensics-section">
+          <div class="forensics-section-title"><span class="dot" style="background:var(--entity-place)"></span>Topics</div>
+          ${data.topics.map(t => `
+            <div class="h-bar-row">
+              <div class="h-bar-label">${t.label}</div>
+              <div class="h-bar-track">
+                <div class="h-bar-fill topic" style="width: ${(t.score / maxT * 100).toFixed(1)}%"></div>
+              </div>
+              <div class="h-bar-value">${t.score.toFixed(2)}</div>
+            </div>
+          `).join('')}
+        </div>`;
+    }
+    if (data.intents && data.intents.length) {
+      const maxI = Math.max(...data.intents.map(i => i.score));
+      html += `
+        <div class="forensics-section">
+          <div class="forensics-section-title"><span class="dot" style="background:var(--entity-org)"></span>Intents</div>
+          ${data.intents.map(i => `
+            <div class="h-bar-row">
+              <div class="h-bar-label">${i.label}</div>
+              <div class="h-bar-track">
+                <div class="h-bar-fill intent" style="width: ${(i.score / maxI * 100).toFixed(1)}%"></div>
+              </div>
+              <div class="h-bar-value">${i.score.toFixed(2)}</div>
+            </div>
+          `).join('')}
+        </div>`;
+    }
+    html += '</div>';
+
+    // Financial indicators
+    if (data.financial_indicators && data.financial_indicators.length) {
+      html += `
+        <div class="forensics-section">
+          <div class="forensics-section-title"><span class="dot" style="background:var(--entity-place)"></span>Financial Indicators</div>
+          <table class="fin-table">
+            <thead><tr><th>Type</th><th>Value</th><th>Context</th><th>Risk</th></tr></thead>
+            <tbody>
+              ${data.financial_indicators.map(fi => `
+                <tr>
+                  <td><span class="fin-type-badge">${fi.indicator_type.replace(/_/g, ' ')}</span></td>
+                  <td class="fin-value">${fi.value}</td>
+                  <td class="fin-context">${fi.context || ''}</td>
+                  <td><span class="risk-doc-score ${riskLevel(fi.risk_score)}" style="font-size:11px;padding:2px 6px;">${(fi.risk_score * 100).toFixed(0)}</span></td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>`;
+    }
+
+    // Codewords
+    if (data.codewords && data.codewords.length) {
+      html += `
+        <div class="forensics-section">
+          <div class="forensics-section-title"><span class="dot" style="background:#e07c4a"></span>Detected Codewords</div>
+          <div class="codeword-grid">
+            ${data.codewords.map(cw => `
+              <div class="codeword-chip">${cw.label} <span class="codeword-chip-count">${cw.evidence || ''}</span></div>
+            `).join('')}
+          </div>
+        </div>`;
+    }
+
+    // Repeated phrases
+    if (data.phrases && data.phrases.length) {
+      html += `
+        <div class="forensics-section">
+          <div class="forensics-section-title"><span class="dot" style="background:var(--text-muted)"></span>Repeated Phrases</div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px;">
+            ${data.phrases.map(p => `
+              <span style="font-family:var(--font-mono);font-size:11px;padding:4px 10px;background:var(--bg-primary);border-radius:var(--radius);color:var(--text-secondary);">
+                "${p.phrase}" <span style="color:var(--text-muted);">x${p.count}</span>
+              </span>
+            `).join('')}
+          </div>
+        </div>`;
+    }
+
+    el.innerHTML = html;
+  } catch (e) {
+    console.error('Failed to load document forensics:', e);
+    el.innerHTML = '<div style="color:#e05555;padding:20px;">Failed to load forensic report</div>';
+  }
 }
 
 

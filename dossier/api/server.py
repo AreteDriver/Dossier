@@ -544,6 +544,244 @@ def generate_lobbying():
 
 
 # ═══════════════════════════════════════════
+# FORENSICS
+# ═══════════════════════════════════════════
+
+
+@app.get("/api/forensics/summary")
+def forensics_summary():
+    """Forensic analysis overview across the entire corpus."""
+    with get_db() as conn:
+        total_analyzed = conn.execute(
+            "SELECT COUNT(DISTINCT document_id) FROM document_forensics"
+        ).fetchone()[0]
+
+        aml_flagged = conn.execute(
+            "SELECT COUNT(DISTINCT document_id) FROM document_forensics WHERE analysis_type = 'aml_flag'"
+        ).fetchone()[0]
+
+        high_risk = conn.execute(
+            "SELECT COUNT(DISTINCT document_id) FROM document_forensics WHERE analysis_type = 'risk_score' AND score > 0.5"
+        ).fetchone()[0]
+
+        fin_count = conn.execute("SELECT COUNT(*) FROM financial_indicators").fetchone()[0]
+
+        # Topic breakdown
+        topics = conn.execute("""
+            SELECT label, COUNT(DISTINCT document_id) as doc_count,
+                   ROUND(AVG(score), 3) as avg_score
+            FROM document_forensics WHERE analysis_type = 'topic'
+            GROUP BY label ORDER BY doc_count DESC
+        """).fetchall()
+
+        # Intent breakdown
+        intents = conn.execute("""
+            SELECT label, COUNT(DISTINCT document_id) as doc_count,
+                   ROUND(AVG(score), 3) as avg_score
+            FROM document_forensics WHERE analysis_type = 'intent'
+            GROUP BY label ORDER BY doc_count DESC
+        """).fetchall()
+
+        # AML severity breakdown
+        aml_severity = conn.execute("""
+            SELECT severity, COUNT(*) as count
+            FROM document_forensics WHERE analysis_type = 'aml_flag'
+            GROUP BY severity ORDER BY count DESC
+        """).fetchall()
+
+        # AML flag type breakdown
+        aml_types = conn.execute("""
+            SELECT label, COUNT(*) as count, severity
+            FROM document_forensics WHERE analysis_type = 'aml_flag'
+            GROUP BY label ORDER BY count DESC
+        """).fetchall()
+
+        # Risk distribution buckets
+        risk_dist = conn.execute("""
+            SELECT
+                CASE
+                    WHEN score <= 0.1 THEN 'minimal'
+                    WHEN score <= 0.3 THEN 'low'
+                    WHEN score <= 0.5 THEN 'medium'
+                    WHEN score <= 0.7 THEN 'high'
+                    ELSE 'critical'
+                END as level,
+                COUNT(*) as count
+            FROM document_forensics WHERE analysis_type = 'risk_score'
+            GROUP BY level
+        """).fetchall()
+
+        # Codeword summary
+        codeword_count = conn.execute(
+            "SELECT COUNT(DISTINCT label) FROM document_forensics WHERE analysis_type = 'codeword'"
+        ).fetchone()[0]
+
+    # Ensure all risk levels present
+    risk_levels = {"minimal": 0, "low": 0, "medium": 0, "high": 0, "critical": 0}
+    for r in risk_dist:
+        risk_levels[r["level"]] = r["count"]
+
+    return {
+        "total_analyzed": total_analyzed,
+        "aml_flagged": aml_flagged,
+        "high_risk": high_risk,
+        "financial_indicators": fin_count,
+        "codewords_detected": codeword_count,
+        "topics": [dict(r) for r in topics],
+        "intents": [dict(r) for r in intents],
+        "aml_severity": {r["severity"]: r["count"] for r in aml_severity},
+        "aml_types": [dict(r) for r in aml_types],
+        "risk_distribution": risk_levels,
+    }
+
+
+@app.get("/api/forensics/risk-documents")
+def forensics_risk_documents(limit: int = Query(20, ge=1, le=100)):
+    """Documents ranked by risk score, highest first."""
+    with get_db() as conn:
+        rows = conn.execute("""
+            SELECT df.document_id, df.score as risk_score,
+                   d.filename, d.title, d.category, d.source
+            FROM document_forensics df
+            JOIN documents d ON d.id = df.document_id
+            WHERE df.analysis_type = 'risk_score' AND df.score > 0
+            ORDER BY df.score DESC
+            LIMIT ?
+        """, (limit,)).fetchall()
+
+        results = []
+        for row in rows:
+            doc = dict(row)
+            # Get AML flags for this doc
+            flags = conn.execute("""
+                SELECT label, severity, evidence
+                FROM document_forensics
+                WHERE document_id = ? AND analysis_type = 'aml_flag'
+                ORDER BY severity DESC
+            """, (doc["document_id"],)).fetchall()
+            doc["aml_flags"] = [dict(f) for f in flags]
+
+            # Get topics
+            topics = conn.execute("""
+                SELECT label, score
+                FROM document_forensics
+                WHERE document_id = ? AND analysis_type = 'topic'
+                ORDER BY score DESC LIMIT 3
+            """, (doc["document_id"],)).fetchall()
+            doc["topics"] = [dict(t) for t in topics]
+            results.append(doc)
+
+    return {"documents": results}
+
+
+@app.get("/api/forensics/financial")
+def forensics_financial(limit: int = Query(50, ge=1, le=200)):
+    """Financial indicators across the corpus."""
+    with get_db() as conn:
+        rows = conn.execute("""
+            SELECT fi.id, fi.document_id, fi.indicator_type, fi.value,
+                   fi.context, fi.risk_score,
+                   d.title, d.filename
+            FROM financial_indicators fi
+            JOIN documents d ON d.id = fi.document_id
+            ORDER BY fi.risk_score DESC, fi.id DESC
+            LIMIT ?
+        """, (limit,)).fetchall()
+
+        # Type breakdown
+        type_counts = conn.execute("""
+            SELECT indicator_type, COUNT(*) as count
+            FROM financial_indicators
+            GROUP BY indicator_type ORDER BY count DESC
+        """).fetchall()
+
+    return {
+        "indicators": [dict(r) for r in rows],
+        "type_counts": {r["indicator_type"]: r["count"] for r in type_counts},
+    }
+
+
+@app.get("/api/forensics/codewords")
+def forensics_codewords(limit: int = Query(30, ge=1, le=100)):
+    """Detected codewords/suspicious language across the corpus."""
+    with get_db() as conn:
+        rows = conn.execute("""
+            SELECT label as word,
+                   COUNT(DISTINCT document_id) as doc_count,
+                   GROUP_CONCAT(DISTINCT evidence) as contexts
+            FROM document_forensics
+            WHERE analysis_type = 'codeword'
+            GROUP BY label
+            ORDER BY doc_count DESC
+            LIMIT ?
+        """, (limit,)).fetchall()
+
+    return {"codewords": [dict(r) for r in rows]}
+
+
+@app.get("/api/forensics/{doc_id}")
+def forensics_document(doc_id: int):
+    """Full forensic report for a single document."""
+    with get_db() as conn:
+        doc = conn.execute(
+            "SELECT id, filename, title, category, source, date FROM documents WHERE id = ?",
+            (doc_id,),
+        ).fetchone()
+        if not doc:
+            raise HTTPException(404, "Document not found")
+
+        forensics = conn.execute("""
+            SELECT analysis_type, label, score, severity, evidence
+            FROM document_forensics
+            WHERE document_id = ?
+            ORDER BY analysis_type, score DESC
+        """, (doc_id,)).fetchall()
+
+        indicators = conn.execute("""
+            SELECT indicator_type, value, context, risk_score
+            FROM financial_indicators
+            WHERE document_id = ?
+            ORDER BY risk_score DESC
+        """, (doc_id,)).fetchall()
+
+        phrases = conn.execute("""
+            SELECT p.phrase, dp.count
+            FROM document_phrases dp
+            JOIN phrases p ON p.id = dp.phrase_id
+            WHERE dp.document_id = ?
+            ORDER BY dp.count DESC LIMIT 20
+        """, (doc_id,)).fetchall()
+
+    # Group forensics by type
+    grouped = {}
+    for row in forensics:
+        atype = row["analysis_type"]
+        if atype not in grouped:
+            grouped[atype] = []
+        grouped[atype].append({
+            "label": row["label"],
+            "score": row["score"],
+            "severity": row["severity"],
+            "evidence": row["evidence"],
+        })
+
+    risk_score = 0.0
+    if "risk_score" in grouped and grouped["risk_score"]:
+        risk_score = grouped["risk_score"][0]["score"]
+
+    return {
+        "document": dict(doc),
+        "risk_score": risk_score,
+        "topics": grouped.get("topic", []),
+        "intents": grouped.get("intent", []),
+        "aml_flags": grouped.get("aml_flag", []),
+        "codewords": grouped.get("codeword", []),
+        "financial_indicators": [dict(r) for r in indicators],
+        "phrases": [dict(r) for r in phrases],
+    }
+
+
+# ═══════════════════════════════════════════
 # HELPERS
 # ═══════════════════════════════════════════
 
