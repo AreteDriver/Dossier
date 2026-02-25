@@ -1131,6 +1131,151 @@ body::before {
   padding: 6px 14px;
   border-radius: var(--radius);
 }
+
+/* ─── FULL ENTITY NETWORK VIEW ─── */
+.network-view { display: none; flex-direction: column; gap: 16px; height: 100%; }
+.network-view.active { display: flex; }
+
+.network-full-canvas {
+  flex: 1;
+  min-height: 500px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  position: relative;
+  overflow: hidden;
+}
+
+.network-full-canvas canvas {
+  position: absolute;
+  inset: 0;
+  cursor: grab;
+}
+
+.network-full-canvas canvas:active { cursor: grabbing; }
+
+.network-controls {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.network-controls select, .network-controls input {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 6px 10px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-primary);
+  outline: none;
+}
+
+.network-legend {
+  display: flex;
+  gap: 14px;
+  margin-left: auto;
+}
+
+.network-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.network-legend-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+}
+
+/* ─── CODEWORDS & LANGUAGE VIEW ─── */
+.codewords-view { display: none; flex-direction: column; gap: 16px; }
+.codewords-view.active { display: flex; }
+
+.cw-section {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 18px;
+}
+
+.cw-section-title {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: var(--text-muted);
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cw-word-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.cw-word-row:last-child { border-bottom: none; }
+
+.cw-rank {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-muted);
+  width: 24px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.cw-word {
+  font-size: 13px;
+  color: var(--text-primary);
+  font-weight: 500;
+  width: 140px;
+  flex-shrink: 0;
+}
+
+.cw-bar-track {
+  flex: 1;
+  height: 10px;
+  background: var(--bg-primary);
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.cw-bar-fill {
+  height: 100%;
+  border-radius: 5px;
+  transition: width 600ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.cw-bar-fill.codeword { background: #e05555; }
+.cw-bar-fill.phrase { background: #e0a84a; }
+.cw-bar-fill.keyword { background: var(--accent); }
+
+.cw-count {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+  width: 60px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.cw-context {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-style: italic;
+  padding: 4px 0 0 36px;
+}
 </style>
 </head>
 <body>
@@ -1184,6 +1329,14 @@ body::before {
         <div class="sidebar-dot" style="background:#e05555"></div>
         Forensics
         <span class="sidebar-count" id="forensicsCount">—</span>
+      </div>
+      <div class="sidebar-item" data-view="network" id="networkNav">
+        <div class="sidebar-dot" style="background:var(--entity-org)"></div>
+        Entity Network
+      </div>
+      <div class="sidebar-item" data-view="codewords" id="codewordsNav">
+        <div class="sidebar-dot" style="background:#e07c4a"></div>
+        Codewords & Language
       </div>
     </div>
 
@@ -1371,6 +1524,64 @@ body::before {
 
     <!-- DOCUMENT FORENSIC DETAIL -->
     <div class="doc-forensic-detail" id="docForensicDetail"></div>
+
+    <!-- ENTITY NETWORK VIEW -->
+    <div class="network-view" id="networkView">
+      <div class="network-controls">
+        <select id="networkTypeFilter">
+          <option value="all">All Entity Types</option>
+          <option value="person">People</option>
+          <option value="place">Places</option>
+          <option value="org">Organizations</option>
+        </select>
+        <label style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted);">
+          Min Weight:
+          <input type="range" id="networkWeightFilter" min="1" max="20" value="2" style="width:80px;vertical-align:middle;">
+          <span id="networkWeightValue">2</span>
+        </label>
+        <label style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted);">
+          Nodes:
+          <input type="range" id="networkLimitFilter" min="20" max="200" value="60" step="10" style="width:80px;vertical-align:middle;">
+          <span id="networkLimitValue">60</span>
+        </label>
+        <div class="network-legend">
+          <div class="network-legend-item"><div class="network-legend-dot" style="background:#e07c4a"></div>Person</div>
+          <div class="network-legend-item"><div class="network-legend-dot" style="background:#4a9de0"></div>Place</div>
+          <div class="network-legend-item"><div class="network-legend-dot" style="background:#9b6de0"></div>Org</div>
+          <div class="network-legend-item"><div class="network-legend-dot" style="background:#4ae0a8"></div>Date</div>
+        </div>
+      </div>
+      <div class="network-full-canvas">
+        <canvas id="networkFullCanvas"></canvas>
+      </div>
+    </div>
+
+    <!-- CODEWORDS & LANGUAGE VIEW -->
+    <div class="codewords-view" id="codewordsView">
+      <div class="cw-section">
+        <div class="cw-section-title">
+          <span class="dot" style="background:#e05555;width:6px;height:6px;border-radius:50%;"></span>
+          Detected Codewords & Suspicious Language
+        </div>
+        <div id="cwCodewordList"></div>
+      </div>
+
+      <div class="cw-section">
+        <div class="cw-section-title">
+          <span class="dot" style="background:#e0a84a;width:6px;height:6px;border-radius:50%;"></span>
+          Most Repeated Phrases (3+ word n-grams)
+        </div>
+        <div id="cwPhraseList"></div>
+      </div>
+
+      <div class="cw-section">
+        <div class="cw-section-title">
+          <span class="dot" style="background:var(--accent);width:6px;height:6px;border-radius:50%;"></span>
+          Top Reused Words Across Corpus
+        </div>
+        <div id="cwKeywordList"></div>
+      </div>
+    </div>
   </main>
 
   <!-- RIGHT PANEL -->
@@ -1952,45 +2163,67 @@ function drawNetwork(connections) {
 
 // ─── VIEW SWITCHING ───
 
-let currentView = 'documents'; // 'documents' | 'forensics' | 'doc-forensic'
+let currentView = 'documents';
 
-function showDocumentView() {
-  currentView = 'documents';
-  document.getElementById('documentList').style.display = '';
-  document.querySelector('.search-container').style.display = '';
-  document.querySelector('.results-header').style.display = '';
-  document.getElementById('processingBar').style.display = '';
-  document.getElementById('forensicsDashboard').classList.remove('active');
-  document.getElementById('docForensicDetail').classList.remove('active');
-}
-
-function showForensicsView() {
-  currentView = 'forensics';
+function hideAllViews() {
   document.getElementById('documentList').style.display = 'none';
   document.querySelector('.search-container').style.display = 'none';
   document.querySelector('.results-header').style.display = 'none';
   document.getElementById('processingBar').style.display = 'none';
+  document.getElementById('forensicsDashboard').classList.remove('active');
   document.getElementById('docForensicDetail').classList.remove('active');
+  document.getElementById('networkView').classList.remove('active');
+  document.getElementById('codewordsView').classList.remove('active');
+}
+
+function showDocumentView() {
+  currentView = 'documents';
+  hideAllViews();
+  document.getElementById('documentList').style.display = '';
+  document.querySelector('.search-container').style.display = '';
+  document.querySelector('.results-header').style.display = '';
+  document.getElementById('processingBar').style.display = '';
+}
+
+function showForensicsView() {
+  currentView = 'forensics';
+  hideAllViews();
   document.getElementById('forensicsDashboard').classList.add('active');
   loadForensicsDashboard();
 }
 
 function showDocForensicDetail(docId) {
   currentView = 'doc-forensic';
-  document.getElementById('documentList').style.display = 'none';
-  document.querySelector('.search-container').style.display = 'none';
-  document.querySelector('.results-header').style.display = 'none';
-  document.getElementById('forensicsDashboard').classList.remove('active');
+  hideAllViews();
   document.getElementById('docForensicDetail').classList.add('active');
   loadDocForensicDetail(docId);
 }
 
-// Hook forensics nav
-document.getElementById('forensicsNav').addEventListener('click', () => {
-  document.querySelectorAll('.sidebar-item').forEach(i => i.classList.remove('active'));
-  document.getElementById('forensicsNav').classList.add('active');
-  document.getElementById('searchInput').value = '';
-  showForensicsView();
+function showNetworkView() {
+  currentView = 'network';
+  hideAllViews();
+  document.getElementById('networkView').classList.add('active');
+  loadFullNetwork();
+}
+
+function showCodewordsView() {
+  currentView = 'codewords';
+  hideAllViews();
+  document.getElementById('codewordsView').classList.add('active');
+  loadCodewordsView();
+}
+
+// Hook sidebar nav for special views
+document.querySelectorAll('.sidebar-item[data-view]').forEach(item => {
+  item.addEventListener('click', () => {
+    document.querySelectorAll('.sidebar-item').forEach(i => i.classList.remove('active'));
+    item.classList.add('active');
+    document.getElementById('searchInput').value = '';
+    const view = item.dataset.view;
+    if (view === 'forensics') showForensicsView();
+    else if (view === 'network') showNetworkView();
+    else if (view === 'codewords') showCodewordsView();
+  });
 });
 
 // Override sidebar clicks to return to document view
@@ -2325,6 +2558,255 @@ async function loadDocForensicDetail(docId) {
 }
 
 
+// ─── FULL ENTITY NETWORK ───
+
+let fullNetworkData = [];
+
+async function loadFullNetwork() {
+  const minWeight = document.getElementById('networkWeightFilter').value;
+  const limit = document.getElementById('networkLimitFilter').value;
+  try {
+    const data = await api(`/api/connections?min_weight=${minWeight}&limit=${limit}`);
+    fullNetworkData = data.connections || [];
+  } catch (e) {
+    console.error('Failed to load network:', e);
+    fullNetworkData = [];
+  }
+  drawFullNetwork();
+}
+
+document.getElementById('networkWeightFilter').addEventListener('input', (e) => {
+  document.getElementById('networkWeightValue').textContent = e.target.value;
+  if (currentView === 'network') loadFullNetwork();
+});
+document.getElementById('networkLimitFilter').addEventListener('input', (e) => {
+  document.getElementById('networkLimitValue').textContent = e.target.value;
+  if (currentView === 'network') loadFullNetwork();
+});
+document.getElementById('networkTypeFilter').addEventListener('change', () => {
+  if (currentView === 'network') drawFullNetwork();
+});
+
+function drawFullNetwork() {
+  const canvas = document.getElementById('networkFullCanvas');
+  const ctx = canvas.getContext('2d');
+  const container = canvas.parentElement;
+  canvas.width = container.clientWidth;
+  canvas.height = container.clientHeight;
+
+  const typeFilter = document.getElementById('networkTypeFilter').value;
+  let connections = fullNetworkData;
+  if (typeFilter !== 'all') {
+    connections = connections.filter(c =>
+      c.source_type === typeFilter || c.target_type === typeFilter
+    );
+  }
+
+  if (!connections.length) {
+    ctx.fillStyle = 'rgba(232,234,237,0.3)';
+    ctx.font = '12px JetBrains Mono';
+    ctx.textAlign = 'center';
+    ctx.fillText('No connections found — try lowering min weight', canvas.width / 2, canvas.height / 2);
+    return;
+  }
+
+  // Build nodes
+  const nodeMap = new Map();
+  connections.forEach(c => {
+    if (!nodeMap.has(c.source_name)) nodeMap.set(c.source_name, { name: c.source_name, type: c.source_type, weight: 0 });
+    if (!nodeMap.has(c.target_name)) nodeMap.set(c.target_name, { name: c.target_name, type: c.target_type, weight: 0 });
+    nodeMap.get(c.source_name).weight += c.weight;
+    nodeMap.get(c.target_name).weight += c.weight;
+  });
+
+  const nodes = Array.from(nodeMap.values());
+  const maxWeight = Math.max(...nodes.map(n => n.weight));
+  const nameToIdx = {};
+  nodes.forEach((n, i) => { nameToIdx[n.name] = i; });
+
+  // Initialize positions
+  nodes.forEach(n => {
+    n.x = 0.1 + Math.random() * 0.8;
+    n.y = 0.1 + Math.random() * 0.8;
+    n.vx = 0; n.vy = 0;
+  });
+
+  // Force-directed layout — more iterations for better layout
+  const iterations = Math.min(200, 50 + nodes.length);
+  for (let iter = 0; iter < iterations; iter++) {
+    const cooling = 1 - iter / iterations;
+    // Repulsion
+    for (let i = 0; i < nodes.length; i++) {
+      for (let j = i + 1; j < nodes.length; j++) {
+        let dx = nodes[i].x - nodes[j].x;
+        let dy = nodes[i].y - nodes[j].y;
+        let dist = Math.sqrt(dx * dx + dy * dy) || 0.01;
+        let force = 0.003 / (dist * dist) * cooling;
+        nodes[i].vx += dx * force; nodes[i].vy += dy * force;
+        nodes[j].vx -= dx * force; nodes[j].vy -= dy * force;
+      }
+    }
+    // Attraction
+    connections.forEach(c => {
+      const si = nameToIdx[c.source_name], ti = nameToIdx[c.target_name];
+      if (si === undefined || ti === undefined) return;
+      let dx = nodes[ti].x - nodes[si].x, dy = nodes[ti].y - nodes[si].y;
+      let force = Math.sqrt(dx * dx + dy * dy) * 0.04 * cooling;
+      nodes[si].vx += dx * force; nodes[si].vy += dy * force;
+      nodes[ti].vx -= dx * force; nodes[ti].vy -= dy * force;
+    });
+    // Centering + damping
+    nodes.forEach(n => {
+      n.vx += (0.5 - n.x) * 0.008; n.vy += (0.5 - n.y) * 0.008;
+      n.x += n.vx; n.y += n.vy;
+      n.vx *= 0.55; n.vy *= 0.55;
+      n.x = Math.max(0.06, Math.min(0.94, n.x));
+      n.y = Math.max(0.06, Math.min(0.94, n.y));
+    });
+  }
+
+  // Draw edges
+  connections.forEach(c => {
+    const si = nameToIdx[c.source_name], ti = nameToIdx[c.target_name];
+    if (si === undefined || ti === undefined) return;
+    const alpha = Math.min(0.5, 0.05 + c.weight * 0.03);
+    ctx.strokeStyle = `rgba(196,71,58,${alpha})`;
+    ctx.lineWidth = Math.min(3, 0.5 + c.weight * 0.2);
+    ctx.beginPath();
+    ctx.moveTo(nodes[si].x * canvas.width, nodes[si].y * canvas.height);
+    ctx.lineTo(nodes[ti].x * canvas.width, nodes[ti].y * canvas.height);
+    ctx.stroke();
+  });
+
+  // Draw nodes
+  nodes.forEach(n => {
+    const r = 4 + (n.weight / maxWeight) * 12;
+    const x = n.x * canvas.width, y = n.y * canvas.height;
+
+    // Glow
+    ctx.beginPath();
+    ctx.arc(x, y, r + 3, 0, Math.PI * 2);
+    ctx.fillStyle = (TYPE_COLORS[n.type] || '#c4473a') + '20';
+    ctx.fill();
+
+    // Node
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fillStyle = TYPE_COLORS[n.type] || '#c4473a';
+    ctx.fill();
+
+    // Label
+    const fontSize = Math.max(9, Math.min(12, 8 + (n.weight / maxWeight) * 5));
+    ctx.fillStyle = 'rgba(232,234,237,0.85)';
+    ctx.font = `${fontSize}px JetBrains Mono`;
+    ctx.textAlign = 'center';
+    const lbl = n.name.length > 18 ? n.name.substring(0, 16) + '..' : n.name;
+    ctx.fillText(lbl, x, y + r + fontSize + 2);
+  });
+}
+
+// Resize handler
+window.addEventListener('resize', () => {
+  if (currentView === 'network') drawFullNetwork();
+  drawNetwork(cachedConnections);
+});
+
+
+// ─── CODEWORDS & LANGUAGE VIEW ───
+
+async function loadCodewordsView() {
+  try {
+    const [codewords, keywords] = await Promise.all([
+      api('/api/forensics/codewords?limit=30'),
+      api('/api/keywords?limit=40'),
+    ]);
+
+    // Also get phrases from forensics summary
+    const summary = await api('/api/forensics/summary');
+
+    renderCodewordList(codewords.codewords);
+    renderKeywordList(keywords.keywords);
+
+    // Load top phrases via a dedicated query
+    loadPhrasesForView();
+  } catch (e) {
+    console.error('Failed to load codewords view:', e);
+  }
+}
+
+async function loadPhrasesForView() {
+  try {
+    const data = await api('/api/forensics/phrases?limit=30');
+    renderPhraseList(data.phrases);
+  } catch (e) {
+    // Fallback — endpoint may not exist yet
+    document.getElementById('cwPhraseList').innerHTML =
+      '<div style="color:var(--text-muted);font-size:12px;">No phrase data available</div>';
+  }
+}
+
+function renderCodewordList(codewords) {
+  const el = document.getElementById('cwCodewordList');
+  if (!codewords || !codewords.length) {
+    el.innerHTML = '<div style="color:var(--text-muted);font-size:12px;padding:8px 0;">No codewords detected</div>';
+    return;
+  }
+  const maxCount = Math.max(...codewords.map(c => c.doc_count));
+
+  el.innerHTML = codewords.map((cw, i) => `
+    <div class="cw-word-row">
+      <div class="cw-rank">${i + 1}</div>
+      <div class="cw-word">${cw.word}</div>
+      <div class="cw-bar-track">
+        <div class="cw-bar-fill codeword" style="width: ${(cw.doc_count / maxCount * 100).toFixed(1)}%"></div>
+      </div>
+      <div class="cw-count">${cw.doc_count} docs</div>
+    </div>
+    ${cw.contexts ? `<div class="cw-context">${cw.contexts.substring(0, 120)}...</div>` : ''}
+  `).join('');
+}
+
+function renderPhraseList(phrases) {
+  const el = document.getElementById('cwPhraseList');
+  if (!phrases || !phrases.length) {
+    el.innerHTML = '<div style="color:var(--text-muted);font-size:12px;padding:8px 0;">No repeated phrases detected</div>';
+    return;
+  }
+  const maxCount = Math.max(...phrases.map(p => p.total_count || p.count || 1));
+
+  el.innerHTML = phrases.map((p, i) => `
+    <div class="cw-word-row">
+      <div class="cw-rank">${i + 1}</div>
+      <div class="cw-word" style="width:200px;">"${p.phrase}"</div>
+      <div class="cw-bar-track">
+        <div class="cw-bar-fill phrase" style="width: ${((p.total_count || p.count || 1) / maxCount * 100).toFixed(1)}%"></div>
+      </div>
+      <div class="cw-count">${p.doc_count || ''} docs / ${p.total_count || p.count}x</div>
+    </div>
+  `).join('');
+}
+
+function renderKeywordList(keywords) {
+  const el = document.getElementById('cwKeywordList');
+  if (!keywords || !keywords.length) {
+    el.innerHTML = '<div style="color:var(--text-muted);font-size:12px;padding:8px 0;">No keywords</div>';
+    return;
+  }
+  const maxCount = Math.max(...keywords.map(k => k.total_count));
+
+  el.innerHTML = keywords.map((kw, i) => `
+    <div class="cw-word-row">
+      <div class="cw-rank">${i + 1}</div>
+      <div class="cw-word">${kw.word}</div>
+      <div class="cw-bar-track">
+        <div class="cw-bar-fill keyword" style="width: ${(kw.total_count / maxCount * 100).toFixed(1)}%"></div>
+      </div>
+      <div class="cw-count">${kw.doc_count} docs / ${kw.total_count.toLocaleString()}x</div>
+    </div>
+  `).join('');
+}
+
+
 // ─── INIT ───
 
 document.getElementById('searchInput').addEventListener('input', debounce(performSearch, 250));
@@ -2334,7 +2816,6 @@ async function init() {
 }
 
 init();
-window.addEventListener('resize', () => drawNetwork(cachedConnections));
 </script>
 
 </body>

@@ -719,6 +719,33 @@ def forensics_codewords(limit: int = Query(30, ge=1, le=100)):
     return {"codewords": [dict(r) for r in rows]}
 
 
+@app.get("/api/forensics/phrases")
+def forensics_phrases(limit: int = Query(30, ge=1, le=100)):
+    """Top repeated phrases (n-grams) across the corpus."""
+    # Filter out noise phrases (HTML artifacts, content-id fragments, etc.)
+    noise = {"cid", "nbsp", "amp", "quot", "http", "https", "www", "com", "org", "net"}
+    with get_db() as conn:
+        rows = conn.execute("""
+            SELECT p.phrase, p.doc_count, p.total_count
+            FROM phrases p
+            WHERE p.doc_count > 0
+            ORDER BY p.total_count DESC
+            LIMIT ?
+        """, (limit * 3,)).fetchall()
+
+    # Post-filter noise
+    filtered = []
+    for r in rows:
+        words = set(r["phrase"].split())
+        if words.issubset(noise) or len(words - noise) == 0:
+            continue
+        filtered.append(dict(r))
+        if len(filtered) >= limit:
+            break
+
+    return {"phrases": filtered}
+
+
 @app.get("/api/forensics/{doc_id}")
 def forensics_document(doc_id: int):
     """Full forensic report for a single document."""
