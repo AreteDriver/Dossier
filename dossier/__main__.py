@@ -4,6 +4,8 @@ DOSSIER — CLI Entry Point
 
 Usage:
     python -m dossier serve              # Start web server
+    python -m dossier scan <path>        # Recursive scan (files, dirs, ZIPs)
+                                          # --source NAME  --no-recursive
     python -m dossier ingest <file>      # Ingest a single file
     python -m dossier ingest-dir <dir>   # Ingest all files in directory
     python -m dossier ingest-emails <dir># Ingest email files (eml, mbox, json, csv)
@@ -11,6 +13,10 @@ Usage:
     python -m dossier stats              # Show collection stats
     python -m dossier entities [type]    # List top entities
     python -m dossier init               # Initialize database
+    python -m dossier forensics [doc_id] # Forensic analysis report
+                                          # --flagged       (show flagged docs)
+                                          # --aml           (AML flags only)
+                                          # --risk          (high-risk docs)
     python -m dossier timeline           # Show reconstructed timeline
                                           # --start 2003-01-01 --end 2009-12-31
                                           # --entity "Jane Doe"
@@ -50,6 +56,11 @@ def main():
         from dossier.db.database import init_db
 
         init_db()
+    elif cmd == "scan":
+        if len(sys.argv) < 3:
+            print("Usage: python -m dossier scan <path> [--source NAME] [--no-recursive]")
+            sys.exit(1)
+        scan_cmd()
     elif cmd == "ingest":
         if len(sys.argv) < 3:
             print("Usage: python -m dossier ingest <filepath> [--source NAME] [--date YYYY-MM-DD]")
@@ -76,6 +87,8 @@ def main():
         stats_cmd()
     elif cmd == "entities":
         entities_cmd()
+    elif cmd == "forensics":
+        forensics_cmd()
     elif cmd == "timeline":
         timeline_cmd()
     elif cmd == "resolve":
@@ -104,6 +117,54 @@ def serve():
     print(f"  ║  API: http://localhost:{port}/docs      ║")
     print("  ╚══════════════════════════════════════╝\n")
     uvicorn.run("dossier.api.server:app", host="0.0.0.0", port=port, reload=True)
+
+
+def scan_cmd():
+    from dossier.db.database import init_db
+    from dossier.ingestion.pipeline import scan_path
+
+    init_db()
+    target = sys.argv[2]
+
+    source = ""
+    recursive = True
+    args = sys.argv[3:]
+    for i, arg in enumerate(args):
+        if arg == "--source" and i + 1 < len(args):
+            source = args[i + 1]
+        elif arg == "--no-recursive":
+            recursive = False
+
+    print(f"\n  DOSSIER — Scanning: {target}")
+    print(f"  {'─' * 50}")
+    print(f"  Recursive: {recursive}")
+    if source:
+        print(f"  Source: {source}")
+    print()
+
+    result = scan_path(target, source=source, recursive=recursive)
+
+    print(f"\n{'=' * 50}")
+    print(f"  SCAN COMPLETE")
+    print(f"  {'─' * 30}")
+    print(f"  Total files found:  {result['total_files']}")
+    print(f"  Ingested:           {result['ingested']}")
+    print(f"  Failed:             {result['failed']}")
+    print(f"  Skipped:            {result['skipped']}")
+
+    # Show high-risk documents
+    high_risk = [
+        r for r in result["results"]
+        if r.get("success") and r.get("stats", {}).get("risk_score", 0) > 0.3
+    ]
+    if high_risk:
+        print(f"\n  HIGH-RISK DOCUMENTS ({len(high_risk)}):")
+        for r in high_risk:
+            stats = r["stats"]
+            print(f"    Doc #{r['document_id']}: risk={stats['risk_score']:.3f} "
+                  f"aml_flags={stats['aml_flags']} topics={stats['topics']}")
+
+    print(f"{'=' * 50}\n")
 
 
 def ingest_cmd():
@@ -238,6 +299,236 @@ def entities_cmd():
     print(f"  {'─' * 40}")
     for row in rows:
         print(f"  {row['total']:6d}  [{row['type']:6s}]  {row['name']}")
+    print()
+
+
+def forensics_cmd():
+    from dossier.db.database import init_db, get_db
+
+    init_db()
+    args = sys.argv[2:]
+
+    with get_db() as conn:
+        # Mode: specific document
+        if args and args[0].isdigit():
+            doc_id = int(args[0])
+            _show_doc_forensics(conn, doc_id)
+            return
+
+        # Mode: --flagged (all docs with AML flags)
+        if "--aml" in args or "--flagged" in args:
+            rows = conn.execute("""
+                SELECT DISTINCT d.id, d.title, d.filename, d.category,
+                       df.label, df.severity, df.evidence
+                FROM document_forensics df
+                JOIN documents d ON d.id = df.document_id
+                WHERE df.analysis_type = 'aml_flag'
+                ORDER BY df.severity DESC, d.id
+            """).fetchall()
+
+            if not rows:
+                print("\n  No AML flags detected in corpus.\n")
+                return
+
+            print(f"\n  DOSSIER — AML Flagged Documents ({len(rows)} flags)")
+            print(f"  {'─' * 60}")
+            current_doc = None
+            for row in rows:
+                if row["id"] != current_doc:
+                    current_doc = row["id"]
+                    print(f"\n  [{row['id']:3d}] {row['title']}")
+                    print(f"        {row['filename']} ({row['category']})")
+                severity_icon = {"high": "!!!", "medium": "!!", "low": "!"}
+                icon = severity_icon.get(row["severity"], "?")
+                print(f"        {icon} {row['label']} ({row['severity']})")
+                evidence = json.loads(row["evidence"]) if row["evidence"] else []
+                for ev in evidence[:2]:
+                    print(f"            {ev[:100]}")
+            print()
+            return
+
+        # Mode: --risk (high-risk documents sorted by score)
+        if "--risk" in args:
+            rows = conn.execute("""
+                SELECT d.id, d.title, d.filename, d.category, df.score
+                FROM document_forensics df
+                JOIN documents d ON d.id = df.document_id
+                WHERE df.analysis_type = 'risk_score' AND df.label = 'overall'
+                AND df.score > 0
+                ORDER BY df.score DESC
+                LIMIT 50
+            """).fetchall()
+
+            if not rows:
+                print("\n  No documents with elevated risk scores.\n")
+                return
+
+            print(f"\n  DOSSIER — High-Risk Documents")
+            print(f"  {'─' * 60}")
+            for row in rows:
+                bar = "█" * int(row["score"] * 20)
+                print(f"  [{row['id']:3d}] {row['score']:.3f} {bar:20s} {row['title'][:50]}")
+                print(f"        {row['filename']} ({row['category']})")
+            print()
+            return
+
+        # Default: overview
+        total_docs = conn.execute("SELECT COUNT(*) as c FROM documents").fetchone()["c"]
+        flagged = conn.execute(
+            "SELECT COUNT(DISTINCT document_id) as c FROM document_forensics WHERE analysis_type = 'aml_flag'"
+        ).fetchone()["c"]
+        high_risk = conn.execute(
+            "SELECT COUNT(*) as c FROM document_forensics WHERE analysis_type = 'risk_score' AND score > 0.5"
+        ).fetchone()["c"]
+        total_financial = conn.execute(
+            "SELECT COUNT(*) as c FROM financial_indicators"
+        ).fetchone()["c"]
+        top_phrases = conn.execute(
+            "SELECT phrase, doc_count, total_count FROM phrases ORDER BY doc_count DESC LIMIT 10"
+        ).fetchall()
+
+        # Top topics across corpus
+        top_topics = conn.execute("""
+            SELECT label, COUNT(*) as doc_count, AVG(score) as avg_score
+            FROM document_forensics
+            WHERE analysis_type = 'topic'
+            GROUP BY label
+            ORDER BY doc_count DESC
+            LIMIT 10
+        """).fetchall()
+
+        # Top intents
+        top_intents = conn.execute("""
+            SELECT label, COUNT(*) as doc_count, AVG(score) as avg_score
+            FROM document_forensics
+            WHERE analysis_type = 'intent'
+            GROUP BY label
+            ORDER BY doc_count DESC
+            LIMIT 10
+        """).fetchall()
+
+        print(f"\n  DOSSIER — Forensic Overview")
+        print(f"  {'─' * 50}")
+        print(f"  Documents analyzed:   {total_docs}")
+        print(f"  AML-flagged docs:     {flagged}")
+        print(f"  High-risk docs:       {high_risk}")
+        print(f"  Financial indicators:  {total_financial}")
+
+        if top_topics:
+            print(f"\n  Top Topics:")
+            for t in top_topics:
+                print(f"    {t['label']:20s}  {t['doc_count']:3d} docs  (avg score: {t['avg_score']:.3f})")
+
+        if top_intents:
+            print(f"\n  Top Intents:")
+            for t in top_intents:
+                print(f"    {t['label']:20s}  {t['doc_count']:3d} docs  (avg score: {t['avg_score']:.3f})")
+
+        if top_phrases:
+            print(f"\n  Top Repeated Phrases:")
+            for p in top_phrases:
+                print(f"    {p['doc_count']:3d} docs  {p['total_count']:5d}x  \"{p['phrase']}\"")
+
+        print()
+
+
+def _show_doc_forensics(conn, doc_id: int):
+    """Show detailed forensic analysis for a single document."""
+    doc = conn.execute(
+        "SELECT id, title, filename, category, source, date FROM documents WHERE id = ?",
+        (doc_id,),
+    ).fetchone()
+
+    if not doc:
+        print(f"Document {doc_id} not found.")
+        return
+
+    print(f"\n  DOSSIER — Forensic Report: Document #{doc_id}")
+    print(f"  {'─' * 60}")
+    print(f"  Title:    {doc['title']}")
+    print(f"  File:     {doc['filename']}")
+    print(f"  Category: {doc['category']}")
+    print(f"  Source:   {doc['source']}")
+    print(f"  Date:     {doc['date']}")
+
+    # Risk score
+    risk = conn.execute(
+        "SELECT score FROM document_forensics WHERE document_id = ? AND analysis_type = 'risk_score'",
+        (doc_id,),
+    ).fetchone()
+    if risk:
+        bar = "█" * int(risk["score"] * 20)
+        print(f"\n  Risk Score: {risk['score']:.3f} {bar}")
+
+    # Intents
+    intents = conn.execute(
+        "SELECT label, score, evidence FROM document_forensics WHERE document_id = ? AND analysis_type = 'intent' ORDER BY score DESC",
+        (doc_id,),
+    ).fetchall()
+    if intents:
+        print(f"\n  Intents:")
+        for i in intents:
+            print(f"    {i['label']:20s} score={i['score']:.3f}")
+
+    # Topics
+    topics = conn.execute(
+        "SELECT label, score FROM document_forensics WHERE document_id = ? AND analysis_type = 'topic' ORDER BY score DESC",
+        (doc_id,),
+    ).fetchall()
+    if topics:
+        print(f"\n  Topics:")
+        for t in topics:
+            print(f"    {t['label']:20s} score={t['score']:.3f}")
+
+    # AML Flags
+    aml = conn.execute(
+        "SELECT label, severity, evidence FROM document_forensics WHERE document_id = ? AND analysis_type = 'aml_flag'",
+        (doc_id,),
+    ).fetchall()
+    if aml:
+        print(f"\n  AML Flags:")
+        for a in aml:
+            print(f"    [{a['severity']:6s}] {a['label']}")
+            evidence = json.loads(a["evidence"]) if a["evidence"] else []
+            for ev in evidence[:3]:
+                print(f"             {ev[:120]}")
+
+    # Codewords
+    codewords = conn.execute(
+        "SELECT label, score, evidence FROM document_forensics WHERE document_id = ? AND analysis_type = 'codeword' ORDER BY score DESC",
+        (doc_id,),
+    ).fetchall()
+    if codewords:
+        print(f"\n  Potential Codewords ({len(codewords)}):")
+        for cw in codewords[:15]:
+            print(f"    {cw['label']:25s} ({int(cw['score'])}x)")
+
+    # Financial indicators
+    financial = conn.execute(
+        "SELECT indicator_type, value, context, risk_score FROM financial_indicators WHERE document_id = ? ORDER BY risk_score DESC",
+        (doc_id,),
+    ).fetchall()
+    if financial:
+        print(f"\n  Financial Indicators ({len(financial)}):")
+        for fi in financial[:10]:
+            print(f"    [{fi['indicator_type']:15s}] {fi['value']:20s} risk={fi['risk_score']:.2f}")
+            if fi["context"]:
+                print(f"      {fi['context'][:100]}")
+
+    # Phrases
+    phrases = conn.execute("""
+        SELECT p.phrase, dp.count
+        FROM document_phrases dp
+        JOIN phrases p ON p.id = dp.phrase_id
+        WHERE dp.document_id = ?
+        ORDER BY dp.count DESC
+        LIMIT 15
+    """, (doc_id,)).fetchall()
+    if phrases:
+        print(f"\n  Top Repeated Phrases:")
+        for p in phrases:
+            print(f"    {p['count']:4d}x  \"{p['phrase']}\"")
+
     print()
 
 

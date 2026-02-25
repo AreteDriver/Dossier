@@ -123,6 +123,45 @@ def init_db():
             PRIMARY KEY (entity_a_id, entity_b_id)
         );
 
+        -- ═══ FORENSIC ANALYSIS ═══
+        CREATE TABLE IF NOT EXISTS document_forensics (
+            id              INTEGER PRIMARY KEY AUTOINCREMENT,
+            document_id     INTEGER NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
+            analysis_type   TEXT NOT NULL,
+            label           TEXT NOT NULL,
+            score           REAL DEFAULT 0.0,
+            severity        TEXT,
+            evidence        TEXT,
+            created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(document_id, analysis_type, label)
+        );
+
+        -- ═══ REPEATED PHRASES ═══
+        CREATE TABLE IF NOT EXISTS phrases (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            phrase      TEXT NOT NULL UNIQUE,
+            doc_count   INTEGER DEFAULT 1,
+            total_count INTEGER DEFAULT 1
+        );
+
+        CREATE TABLE IF NOT EXISTS document_phrases (
+            document_id INTEGER NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
+            phrase_id   INTEGER NOT NULL REFERENCES phrases(id) ON DELETE CASCADE,
+            count       INTEGER DEFAULT 1,
+            PRIMARY KEY (document_id, phrase_id)
+        );
+
+        -- ═══ FINANCIAL INDICATORS ═══
+        CREATE TABLE IF NOT EXISTS financial_indicators (
+            id              INTEGER PRIMARY KEY AUTOINCREMENT,
+            document_id     INTEGER NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
+            indicator_type  TEXT NOT NULL,
+            value           TEXT NOT NULL,
+            context         TEXT,
+            risk_score      REAL DEFAULT 0.0,
+            UNIQUE(document_id, indicator_type, value)
+        );
+
         -- ═══ INDEXES ═══
         CREATE INDEX IF NOT EXISTS idx_entities_type ON entities(type);
         CREATE INDEX IF NOT EXISTS idx_entities_canonical ON entities(canonical);
@@ -132,6 +171,13 @@ def init_db():
         CREATE INDEX IF NOT EXISTS idx_documents_category ON documents(category);
         CREATE INDEX IF NOT EXISTS idx_documents_date ON documents(date);
         CREATE INDEX IF NOT EXISTS idx_keywords_total ON keywords(total_count DESC);
+        CREATE INDEX IF NOT EXISTS idx_forensics_doc ON document_forensics(document_id);
+        CREATE INDEX IF NOT EXISTS idx_forensics_type ON document_forensics(analysis_type);
+        CREATE INDEX IF NOT EXISTS idx_forensics_severity ON document_forensics(severity);
+        CREATE INDEX IF NOT EXISTS idx_financial_doc ON financial_indicators(document_id);
+        CREATE INDEX IF NOT EXISTS idx_financial_risk ON financial_indicators(risk_score DESC);
+        CREATE INDEX IF NOT EXISTS idx_phrases_count ON phrases(doc_count DESC);
+        CREATE INDEX IF NOT EXISTS idx_doc_phrases_doc ON document_phrases(document_id);
         """)
         # Initialize forensics tables
         from dossier.forensics.timeline import init_timeline_tables

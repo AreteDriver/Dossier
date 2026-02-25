@@ -1,0 +1,63 @@
+CONFIDENTIAL - ATTORNEY-CLIENT PRIVILEGE
+
+MEMORANDUM
+
+TO: File
+FROM: Legal Counsel
+DATE: September 3, 2008
+RE: Corporate Structure Review - JE Holdings
+
+This memorandum summarizes the corporate structure used for asset management
+and financial transactions related to the principal's holdings.
+
+CORPORATE ENTITIES:
+
+1. Financial Trust Company (U.S. Virgin Islands)
+   - Registered Agent: Marlin Trust Services, St. Thomas
+   - Nominee Director: James Wilson (local attorney)
+   - Purpose: Primary holding company for real estate assets
+   - Assets: 358 El Brillo Way, Palm Beach ($12,000,000)
+             9 East 71st Street, Manhattan ($56,000,000)
+             Great St. James island ($18,000,000)
+
+2. JEGE Inc. (New Mexico)
+   - Purpose: Aviation operations
+   - Assets: Aircraft N908JE (Boeing 727), Aircraft N212JL (Gulfstream)
+   - Annual operating costs: approximately $4,000,000
+
+3. Butterfly Trust (Cayman Islands)
+   - Ultimate beneficial owner: [REDACTED]
+   - Purpose: Investment vehicle for offshore holdings
+   - Account at Deutsche Bank, Zurich: $57,000,000
+   - Account at JPMorgan, Geneva: $23,000,000
+   - SWIFT code: DEUTCHZZ
+
+4. MC2 Model Management Holdings Ltd (British Virgin Islands)
+   - Bearer shares issued
+   - Nominee shareholder: Offshore Nominees Ltd, BVI
+   - Connected to Jean-Luc Brunel's Paris operations
+   - Annual payments from principal: approximately $1,000,000
+
+5. Gratitude America Ltd (Panama)
+   - Foundation structure
+   - Used for charitable contributions and consulting fees
+   - Payments to Harvard University: $6,500,000 (2003-2007)
+   - Payments to MIT Media Lab: $2,000,000 (2005-2008)
+
+BANKING RELATIONSHIPS:
+- JPMorgan Chase (New York) - Primary operational accounts
+- Deutsche Bank (Zurich) - Offshore investment accounts
+- Citibank (USVI) - Local operating account
+- Goldman Sachs - Brokerage services
+
+NOTE: Several transactions between entities 1-5 appear to involve
+round-tripping of funds. Recommend review of wire transfer patterns
+to ensure compliance with Bank Secrecy Act. Multiple $9,500 and
+$9,800 transfers between accounts may trigger structuring concerns.
+
+The nominee director arrangement for the BVI entity should be reviewed
+for FBAR filing compliance. The beneficial ownership structure uses
+a blind trust to shield the principal's identity.
+
+This document should be destroyed after review. Do not retain copies.
+Eyes only.

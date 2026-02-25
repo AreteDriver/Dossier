@@ -1,0 +1,48 @@
+{
+  "filing_type": "FARA Supplemental Statement",
+  "registrant": {
+    "name": "Podesta Group Inc.",
+    "address": "1001 G Street NW, Suite 1000, Washington D.C.",
+    "registration_number": "5926"
+  },
+  "foreign_principal": {
+    "name": "European Centre for a Modern Ukraine",
+    "country": "Ukraine",
+    "address": "Brussels, Belgium"
+  },
+  "filing_period": "January 1, 2013 - June 30, 2013",
+  "compensation": {
+    "amount": "$900,000.00",
+    "description": "Lobbying and government relations services"
+  },
+  "contacts": [
+    {
+      "name": "Tony Podesta",
+      "role": "Principal",
+      "activities": "Direct lobbying of Congressional offices"
+    },
+    {
+      "name": "Heather Podesta",
+      "role": "Partner",
+      "activities": "Engagement with State Department officials"
+    }
+  ],
+  "lobbying_activities": [
+    "Meetings with Senate Foreign Relations Committee staff",
+    "Communications with State Department regarding Ukraine policy",
+    "Coordination with Clinton Foundation on Ukraine initiatives",
+    "Engagement with DNC leadership on foreign policy messaging"
+  ],
+  "political_contributions": [
+    {"recipient": "Hillary Clinton Campaign", "amount": "$33,400.00", "date": "2013-03-15"},
+    {"recipient": "Democratic National Committee", "amount": "$25,000.00", "date": "2013-04-20"},
+    {"recipient": "Priorities USA (Super PAC)", "amount": "$50,000.00", "date": "2013-06-01"}
+  ],
+  "related_entities": [
+    "Sberbank of Russia",
+    "Troika Dialog",
+    "Joule Unlimited",
+    "Uranium One"
+  ],
+  "notes": "This filing covers the period during which the European Centre for a Modern Ukraine was actively seeking EU Association Agreement support. Payments routed through intermediary accounts in Cyprus."
+}

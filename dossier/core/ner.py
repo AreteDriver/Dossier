@@ -105,7 +105,9 @@ KNOWN_PLACES = {
     "new york",
     "manhattan",
     "little st. james",
+    "little st james",
     "great st. james",
+    "great st james",
     "u.s. virgin islands",
     "usvi",
     "paris",
@@ -114,6 +116,7 @@ KNOWN_PLACES = {
     "zorro ranch",
     "teterboro",
     "358 el brillo way",
+    "el brillo way",
     "9 east 71st street",
     "les wexner",
     "columbus ohio",
@@ -122,6 +125,7 @@ KNOWN_PLACES = {
     "le bourget",
     "miami",
     "washington d.c.",
+    "washington dc",
     # ─── Podesta / Political locations ───
     "capitol hill",
     "foggy bottom",
@@ -151,6 +155,37 @@ KNOWN_PLACES = {
     "charlotte",
     "cleveland",
     "milwaukee",
+    # ─── Offshore / Financial jurisdictions ───
+    "cayman islands",
+    "british virgin islands",
+    "bermuda",
+    "panama",
+    "liechtenstein",
+    "monaco",
+    "jersey",
+    "guernsey",
+    "isle of man",
+    "seychelles",
+    "bahamas",
+    "zurich",
+    "geneva",
+    "switzerland",
+    "luxembourg",
+    "cyprus",
+    "malta",
+    "dubai",
+    "singapore",
+    "hong kong",
+    "st. kitts",
+    "nevis",
+    "belize",
+    "vanuatu",
+    # ─── General ───
+    "florida",
+    "new jersey",
+    "connecticut",
+    "brussels",
+    "belgium",
 }
 
 KNOWN_ORGS = {
@@ -433,7 +468,9 @@ def extract_entities(text: str) -> dict:
     if not text:
         return {"people": [], "places": [], "orgs": [], "dates": [], "keywords": []}
 
-    text_lower = text.lower()
+    # Normalize whitespace for matching (collapse newlines/tabs to spaces)
+    text_normalized = re.sub(r"\s+", " ", text)
+    text_lower = text_normalized.lower()
 
     people = Counter()
     places = Counter()
@@ -466,8 +503,9 @@ def extract_entities(text: str) -> dict:
     # ─── Layer 3: Heuristic NER ───
     # Find capitalized multi-word sequences (likely proper nouns)
     # Pattern: 2-4 capitalized words in sequence, not at sentence start
+    # Uses text_normalized to avoid newline-spanning false matches
     for match in re.finditer(
-        r"(?<!\.\s)(?<!\n)(?<!^)\b([A-Z][a-z]{2,}(?:\s+[A-Z][a-z]{2,}){1,3})\b", text
+        r"(?<!\.\s)(?<!\n)(?<!^)\b([A-Z][a-z]{2,}(?:\s+[A-Z][a-z]{2,}){1,3})\b", text_normalized
     ):
         candidate = match.group().strip()
         candidate_lower = candidate.lower()
@@ -496,25 +534,112 @@ def extract_entities(text: str) -> dict:
             "flight log",
             "manifest records",
             "summary total",
+            # Legal/business terms that look like names
+            "legal counsel",
+            "registered agent",
+            "nominee director",
+            "nominee shareholder",
+            "beneficial owner",
+            "managing director",
+            "general counsel",
+            "chief executive",
+            "executive director",
+            "outside counsel",
+            "special counsel",
+            "independent counsel",
+            "corporate counsel",
+            "senior counsel",
+            "associate counsel",
+            "deputy counsel",
+            "foreign principal",
+            "political activity",
+            "government relations",
+            "public affairs",
+            "public relations",
+            # Document heading phrases
+            "investigation update",
+            "case summary",
+            "executive summary",
+            "supplemental report",
+            "witness statements",
+            "next steps",
+            "financial evidence",
+            "banking relationships",
+            "corporate entities",
+            "corporate structure",
+            "lobbying activities",
+            "political contributions",
+            "related entities",
+            # CSV/JSON header terms
+            "tail number",
+            "supplemental statement",
+            "filing type",
+            "indicator type",
+            "content type",
+            "message type",
         }
         if candidate_lower in false_positives:
             continue
         # Skip if it's a known place or contains common non-person words
         skip_words = {
+            # Geographic/address terms
             "international",
+            "island",
+            "islands",
+            "county",
+            "country",
+            "boulevard",
+            "avenue",
+            "street",
+            "route",
+            "way",
+            "drive",
+            "lane",
+            "road",
+            "place",
+            "airport",
+            "beach",
+            # Organization terms
             "management",
             "department",
             "district",
-            "airport",
-            "aircraft",
-            "avenue",
-            "street",
-            "boulevard",
-            "route",
+            "corporation",
+            "company",
+            "holdings",
+            "holding",
+            "limited",
+            "ltd",
+            "inc",
+            "llc",
+            "llp",
+            "corp",
+            "incorporated",
+            "foundation",
+            "stiftung",
+            "anstalt",
+            "institute",
+            "university",
+            "committee",
+            "commission",
+            "association",
+            "trust",
+            "group",
+            "partners",
+            "services",
+            "solutions",
+            "industries",
+            "enterprises",
+            "consulting",
+            "advisors",
+            "advisory",
+            "capital",
+            "ventures",
+            "media",
+            "labs",
+            # Document/record terms
             "records",
-            "bourget",
+            "aircraft",
             "transport",
-            "country",
             "period",
             "details",
             "compensation",
@@ -530,10 +655,35 @@ def extract_entities(text: str) -> dict:
             "status",
             "notes",
             "source",
+            "bourget",
+            # Miscellaneous false positive triggers
+            "modern",
+            "general",
+            "special",
+            "national",
+            "federal",
+            "regional",
+            "annual",
+            "total",
+            "summary",
+            "report",
+            "section",
+            "chapter",
+            "article",
+            "schedule",
+            "exhibit",
+            "appendix",
         }
         if any(w in candidate_lower for w in skip_words):
             continue
-        # Skip known countries/regions being misidentified as people
+        # Skip known countries/regions/places being misidentified as people
+        if candidate_lower in KNOWN_PLACES:
+            continue
+        # Skip if any individual word is a known single-word place
+        # (catches "Qatar Date", "Panama City" fragments, etc.)
+        candidate_words = candidate_lower.split()
+        if any(w in KNOWN_PLACES for w in candidate_words):
+            continue
         known_countries = {
             "ukraine",
             "russia",
@@ -550,12 +700,35 @@ def extract_entities(text: str) -> dict:
             "turkey",
             "canada",
             "india",
+            "cayman islands",
+            "british virgin islands",
+            "virgin islands",
+            "panama",
+            "liechtenstein",
+            "switzerland",
+            "bermuda",
+            "bahamas",
+            "belgium",
+            "brussels",
+            "zurich",
+            "geneva",
+            "cyprus",
+            "malta",
+            "dubai",
+            "singapore",
+            "hong kong",
+            "new jersey",
+            "new mexico",
+            "new york",
+            "florida",
+            "connecticut",
+            "palm beach",
         }
         if candidate_lower in known_countries:
             continue
 
         # Heuristic: if preceded by a title, it's a person
-        pre_context = text[max(0, match.start() - 15) : match.start()]
+        pre_context = text_normalized[max(0, match.start() - 15) : match.start()]
         if re.search(TITLE_PATTERNS, pre_context):
             people[candidate] += 1
             continue
@@ -563,13 +736,23 @@ def extract_entities(text: str) -> dict:
         # If 2 words and both capitalized, likely a person name
         words = candidate.split()
         if len(words) == 2 and all(w[0].isupper() for w in words):
-            people[candidate] += 1
+            # Skip if this is a substring of a known gazetteer person
+            if not _is_substring_of_known(candidate_lower, KNOWN_PEOPLE):
+                people[candidate] += 1
 
     # Titled names: "Mr. Smith", "Detective Recarey", etc.
-    titled_pattern = rf"(?:{TITLE_PATTERNS})\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)"
-    for match in re.finditer(titled_pattern, text):
-        name = match.group(1).strip()
-        if name.lower() not in STOP_WORDS:
+    titled_pattern = rf"({TITLE_PATTERNS})\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)"
+    for match in re.finditer(titled_pattern, text_normalized):
+        title_word = match.group(1).strip().rstrip(".").lower()
+        name = match.group(2).strip()
+        name_lower = name.lower()
+        if name_lower not in STOP_WORDS:
+            # Skip single-word fragments when title+name is already a known person
+            # e.g., "Prince Andrew" → "prince andrew" is in KNOWN_PEOPLE, skip "Andrew"
+            if len(name.split()) == 1:
+                full = f"{title_word} {name_lower}"
+                if full in KNOWN_PEOPLE:
+                    continue
             people[name] += 1
 
     # ─── Layer 4: Keyword extraction ───
@@ -582,6 +765,18 @@ def extract_entities(text: str) -> dict:
         "dates": [{"name": k, "count": v} for k, v in dates.most_common(50)],
         "keywords": keywords,
     }
+
+
+def _is_substring_of_known(candidate: str, known_set: set) -> bool:
+    """Check if candidate is a substring of any entry in the known set.
+
+    Catches fragments like 'Luc Brunel' (substring of 'jean-luc brunel')
+    or 'Andrew' (substring of 'prince andrew').
+    """
+    for known in known_set:
+        if candidate != known and candidate in known:
+            return True
+    return False
 
 
 def _extract_keywords(text: str, top_n: int = 50) -> list[dict]:
