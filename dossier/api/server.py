@@ -1021,6 +1021,122 @@ def export_intel_brief(
     }}
 
 
+@app.get("/api/documents/{doc_id}/notes")
+def get_document_notes(doc_id: int):
+    """Get notes for a document."""
+    with get_db() as conn:
+        row = conn.execute(
+            "SELECT notes, flagged FROM documents WHERE id = ?", (doc_id,)
+        ).fetchone()
+        if not row:
+            raise HTTPException(404, "Document not found")
+    return {"document_id": doc_id, "notes": row["notes"] or "", "flagged": bool(row["flagged"])}
+
+
+@app.post("/api/documents/{doc_id}/notes")
+async def save_document_notes(doc_id: int, request: Request):
+    """Save investigation notes for a document."""
+    body = await request.json()
+    notes_text = body.get("notes", "")
+    with get_db() as conn:
+        row = conn.execute("SELECT id FROM documents WHERE id = ?", (doc_id,)).fetchone()
+        if not row:
+            raise HTTPException(404, "Document not found")
+        conn.execute("UPDATE documents SET notes = ? WHERE id = ?", (notes_text, doc_id))
+    return {"document_id": doc_id, "notes": notes_text, "saved": True}
+
+
+@app.get("/api/timeline/heatmap")
+def timeline_heatmap():
+    """Get event counts by date for heatmap visualization."""
+    with get_db() as conn:
+        rows = conn.execute("""
+            SELECT event_date, COUNT(*) as count
+            FROM events
+            WHERE event_date IS NOT NULL
+              AND length(event_date) >= 10
+              AND event_date >= '1980-01-01'
+              AND event_date <= '2026-12-31'
+              AND confidence >= 0.5
+            GROUP BY event_date
+            ORDER BY event_date
+        """).fetchall()
+    return {"dates": [{"date": r["event_date"][:10], "count": r["count"]} for r in rows]}
+
+
+@app.get("/api/dashboard")
+def dashboard_summary():
+    """Comprehensive dashboard data in one call."""
+    with get_db() as conn:
+        doc_count = conn.execute("SELECT COUNT(*) FROM documents").fetchone()[0]
+        entity_count = conn.execute("SELECT COUNT(*) FROM entities").fetchone()[0]
+        page_count = conn.execute("SELECT COALESCE(SUM(pages),0) FROM documents").fetchone()[0]
+        flagged_count = conn.execute("SELECT COUNT(*) FROM documents WHERE flagged = 1").fetchone()[0]
+
+        # Recent documents
+        recent = conn.execute("""
+            SELECT id, filename, title, category, source, date, pages, ingested_at
+            FROM documents ORDER BY ingested_at DESC LIMIT 8
+        """).fetchall()
+
+        # Top risk alerts
+        risk_alerts = conn.execute("""
+            SELECT df.document_id, df.score as risk_score, d.title, d.filename, d.category, d.source
+            FROM document_forensics df
+            JOIN documents d ON d.id = df.document_id
+            WHERE df.analysis_type = 'risk_score' AND df.score >= 0.7
+            ORDER BY df.score DESC LIMIT 8
+        """).fetchall()
+
+        # Source breakdown
+        sources = conn.execute("""
+            SELECT source, COUNT(*) as count, SUM(pages) as pages
+            FROM documents WHERE source IS NOT NULL AND source != ''
+            GROUP BY source ORDER BY count DESC
+        """).fetchall()
+
+        # Entity resolution stats
+        resolved_count = conn.execute(
+            "SELECT COUNT(*) FROM entity_resolutions"
+        ).fetchone()[0]
+
+        # AML summary
+        aml_count = conn.execute(
+            "SELECT COUNT(DISTINCT document_id) FROM document_forensics WHERE analysis_type = 'aml_flag'"
+        ).fetchone()[0]
+
+        # Timeline event count
+        try:
+            event_count = conn.execute("SELECT COUNT(*) FROM events").fetchone()[0]
+        except Exception:
+            event_count = 0
+
+        # Category breakdown
+        categories = conn.execute("""
+            SELECT category, COUNT(*) as count FROM documents GROUP BY category ORDER BY count DESC
+        """).fetchall()
+
+        # Notes count
+        notes_count = conn.execute(
+            "SELECT COUNT(*) FROM documents WHERE notes IS NOT NULL AND notes != ''"
+        ).fetchone()[0]
+
+    return {
+        "documents": doc_count,
+        "entities": entity_count,
+        "pages": page_count,
+        "flagged": flagged_count,
+        "aml_flagged": aml_count,
+        "resolved_entities": resolved_count,
+        "timeline_events": event_count,
+        "notes_count": notes_count,
+        "recent_documents": [dict(r) for r in recent],
+        "risk_alerts": [dict(r) for r in risk_alerts],
+        "sources": [dict(r) for r in sources],
+        "categories": {r["category"]: r["count"] for r in categories},
+    }
+
+
 @app.get("/api/forensics/phrases")
 def forensics_phrases(limit: int = Query(30, ge=1, le=100)):
     """Top repeated phrases (n-grams) across the corpus."""

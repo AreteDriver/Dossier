@@ -1280,6 +1280,106 @@ body::before {
 .connmap-arrow { color: var(--text-muted); font-family: var(--font-mono); font-size: 14px; }
 .connmap-weight { font-family: var(--font-mono); font-size: 9px; color: var(--text-muted); }
 
+/* ─── DASHBOARD VIEW ─── */
+.dashboard-view { display: none; flex-direction: column; gap: 16px; }
+.dashboard-view.active { display: flex; }
+
+.dash-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.dash-card {
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg);
+  padding: 18px 16px; text-align: center; position: relative; overflow: hidden; cursor: pointer;
+  transition: all var(--transition);
+}
+.dash-card:hover { border-color: var(--border-active); transform: translateY(-1px); }
+.dash-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; }
+.dash-card.docs::before { background: var(--accent); }
+.dash-card.entities::before { background: var(--entity-person); }
+.dash-card.pages::before { background: var(--entity-place); }
+.dash-card.risk::before { background: #e05555; }
+.dash-card.aml::before { background: #e0a84a; }
+.dash-card.resolved::before { background: #4ae0a8; }
+.dash-card.events::before { background: var(--entity-date); }
+.dash-card.notes::before { background: var(--entity-org); }
+
+.dash-card-value { font-family: var(--font-mono); font-weight: 700; font-size: 28px; color: var(--text-primary); line-height: 1.2; }
+.dash-card-label { font-family: var(--font-mono); font-size: 9px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--text-muted); margin-top: 6px; }
+
+.dash-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.dash-section {
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 18px;
+}
+.dash-section-title {
+  font-family: var(--font-mono); font-size: 10px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: 2px; color: var(--text-muted); margin-bottom: 14px;
+  display: flex; align-items: center; gap: 8px;
+}
+.dash-section-title .dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+
+.dash-alert-row {
+  display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: var(--radius);
+  cursor: pointer; transition: background var(--transition);
+}
+.dash-alert-row:hover { background: var(--bg-hover); }
+
+.dash-source-row {
+  display: flex; align-items: center; gap: 10px; padding: 6px 0;
+  border-bottom: 1px solid var(--border); font-size: 12px;
+}
+.dash-source-row:last-child { border-bottom: none; }
+.dash-source-name { flex: 1; color: var(--text-secondary); }
+.dash-source-count { font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); }
+
+/* ─── HEATMAP ─── */
+.heatmap-container { overflow-x: auto; padding: 8px 0; }
+.heatmap-grid { display: flex; gap: 2px; }
+.heatmap-week { display: flex; flex-direction: column; gap: 2px; }
+.heatmap-cell {
+  width: 12px; height: 12px; border-radius: 2px; background: var(--bg-primary);
+  transition: background var(--transition);
+}
+.heatmap-cell:hover { outline: 1px solid var(--text-muted); }
+.heatmap-cell.l1 { background: rgba(196,71,58,0.2); }
+.heatmap-cell.l2 { background: rgba(196,71,58,0.4); }
+.heatmap-cell.l3 { background: rgba(196,71,58,0.6); }
+.heatmap-cell.l4 { background: rgba(196,71,58,0.85); }
+.heatmap-legend { display: flex; gap: 8px; align-items: center; margin-top: 8px; font-family: var(--font-mono); font-size: 9px; color: var(--text-muted); }
+
+/* ─── NOTES PANEL ─── */
+.notes-area {
+  width: 100%; background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 10px; font-family: var(--font-mono); font-size: 12px; color: var(--text-primary);
+  outline: none; resize: vertical; min-height: 80px; max-height: 300px;
+}
+.notes-area:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+.notes-save-btn {
+  background: var(--accent); border: none; border-radius: var(--radius); padding: 6px 14px;
+  font-family: var(--font-mono); font-size: 11px; color: #fff; cursor: pointer; margin-top: 6px;
+}
+.notes-saved { font-family: var(--font-mono); font-size: 10px; color: #4ae0a8; margin-left: 8px; }
+
+/* ─── READER SEARCH ─── */
+.reader-search-bar {
+  display: flex; gap: 8px; align-items: center;
+}
+.reader-search-input {
+  background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 6px 10px; font-family: var(--font-mono); font-size: 11px; color: var(--text-primary);
+  outline: none; width: 200px;
+}
+.reader-search-input:focus { border-color: var(--accent); }
+.reader-search-count { font-family: var(--font-mono); font-size: 10px; color: var(--text-muted); }
+
+/* ─── GRAPH TOOLTIP ─── */
+.graph-tooltip {
+  position: absolute; background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 8px 12px; pointer-events: none;
+  font-family: var(--font-mono); font-size: 11px; color: var(--text-primary);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4); z-index: 100; display: none;
+}
+.graph-tooltip.visible { display: block; }
+.graph-tooltip-name { font-weight: 600; margin-bottom: 2px; }
+.graph-tooltip-meta { font-size: 9px; color: var(--text-muted); }
+
 /* ─── SOURCE FILTER BAR ─── */
 .source-filter-bar {
   display: flex; gap: 6px; align-items: center; flex-wrap: wrap;
@@ -1424,7 +1524,11 @@ body::before {
   <nav class="sidebar">
     <div class="sidebar-section">
       <div class="sidebar-heading">Collections</div>
-      <div class="sidebar-item active" data-filter="all">
+      <div class="sidebar-item active" data-view="dashboard" id="dashboardNav">
+        <div class="sidebar-dot" style="background:var(--accent)"></div>
+        Dashboard
+      </div>
+      <div class="sidebar-item" data-filter="all">
         <div class="sidebar-dot"></div>
         All Documents
         <span class="sidebar-count">—</span>
@@ -1531,6 +1635,33 @@ body::before {
 
   <!-- MAIN CONTENT -->
   <main class="main">
+    <!-- DASHBOARD VIEW -->
+    <div class="dashboard-view" id="dashboardView">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Dashboard</div>
+        <button class="export-btn" onclick="exportBrief()" style="margin-left:auto;">Export Brief</button>
+      </div>
+      <div class="dash-cards" id="dashCards"></div>
+      <div class="dash-grid">
+        <div class="dash-section">
+          <div class="dash-section-title"><span class="dot" style="background:#e05555"></span>Risk Alerts</div>
+          <div id="dashAlerts"></div>
+        </div>
+        <div class="dash-section">
+          <div class="dash-section-title"><span class="dot" style="background:var(--accent)"></span>Sources</div>
+          <div id="dashSources"></div>
+        </div>
+      </div>
+      <div class="dash-section">
+        <div class="dash-section-title"><span class="dot" style="background:var(--entity-date)"></span>Event Heatmap (Timeline Activity)</div>
+        <div class="heatmap-container" id="heatmapContainer"></div>
+      </div>
+      <div class="dash-section">
+        <div class="dash-section-title"><span class="dot" style="background:var(--entity-person)"></span>Recently Added</div>
+        <div id="dashRecent"></div>
+      </div>
+    </div>
+
     <!-- Search -->
     <div class="search-container">
       <div class="search-icon">⌕</div>
@@ -1680,6 +1811,10 @@ body::before {
       </div>
       <div class="network-full-canvas">
         <canvas id="networkFullCanvas"></canvas>
+        <div class="graph-tooltip" id="graphTooltip">
+          <div class="graph-tooltip-name" id="tooltipName"></div>
+          <div class="graph-tooltip-meta" id="tooltipMeta"></div>
+        </div>
       </div>
     </div>
 
@@ -1755,9 +1890,22 @@ body::before {
         <button class="reader-back" onclick="goBackFromReader()">Back</button>
         <div class="reader-title" id="readerTitle">—</div>
         <div class="reader-meta" id="readerMeta">—</div>
+        <div class="reader-search-bar">
+          <input type="text" class="reader-search-input" id="readerSearchInput" placeholder="Search in doc..." oninput="searchInReader()">
+          <span class="reader-search-count" id="readerSearchCount"></span>
+        </div>
+        <button class="export-btn" onclick="toggleFlag(readerDocId)" id="readerFlagBtn">Flag</button>
         <button class="export-btn" onclick="showDocForensicDetail(readerDocId)">Forensics</button>
       </div>
       <div class="reader-body" id="readerBody">Loading...</div>
+      <div style="margin-top:12px;">
+        <div style="font-family:var(--font-mono);font-size:10px;text-transform:uppercase;letter-spacing:2px;color:var(--text-muted);margin-bottom:6px;">Investigation Notes</div>
+        <textarea class="notes-area" id="readerNotes" placeholder="Add investigation notes..."></textarea>
+        <div style="display:flex;align-items:center;">
+          <button class="notes-save-btn" onclick="saveReaderNotes()">Save Notes</button>
+          <span class="notes-saved" id="notesSavedMsg" style="display:none;">Saved</span>
+        </div>
+      </div>
     </div>
 
     <!-- CONNECTION MAP VIEW -->
@@ -2388,6 +2536,7 @@ function hideAllViews() {
   document.querySelector('.search-container').style.display = 'none';
   document.querySelector('.results-header').style.display = 'none';
   document.getElementById('processingBar').style.display = 'none';
+  document.getElementById('dashboardView').classList.remove('active');
   document.getElementById('forensicsDashboard').classList.remove('active');
   document.getElementById('docForensicDetail').classList.remove('active');
   document.getElementById('networkView').classList.remove('active');
@@ -2442,7 +2591,8 @@ document.querySelectorAll('.sidebar-item[data-view]').forEach(item => {
     item.classList.add('active');
     document.getElementById('searchInput').value = '';
     const view = item.dataset.view;
-    if (view === 'forensics') showForensicsView();
+    if (view === 'dashboard') showDashboardView();
+    else if (view === 'forensics') showForensicsView();
     else if (view === 'network') showNetworkView();
     else if (view === 'codewords') showCodewordsView();
     else if (view === 'harvest') showHarvestView();
@@ -2890,6 +3040,17 @@ function drawFullNetwork() {
     });
   }
 
+  // Store nodes for interactivity
+  graphNodes = nodes.map(n => ({
+    ...n,
+    radius: 4 + (n.weight / maxWeight) * 12,
+  }));
+
+  // Apply zoom/pan
+  ctx.save();
+  ctx.translate(graphPanX, graphPanY);
+  ctx.scale(graphZoom, graphZoom);
+
   // Draw edges
   connections.forEach(c => {
     const si = nameToIdx[c.source_name], ti = nameToIdx[c.target_name];
@@ -2906,6 +3067,7 @@ function drawFullNetwork() {
   // Draw nodes
   nodes.forEach(n => {
     const r = 4 + (n.weight / maxWeight) * 12;
+    n.radius = r;
     const x = n.x * canvas.width, y = n.y * canvas.height;
 
     // Glow
@@ -2928,7 +3090,94 @@ function drawFullNetwork() {
     const lbl = n.name.length > 18 ? n.name.substring(0, 16) + '..' : n.name;
     ctx.fillText(lbl, x, y + r + fontSize + 2);
   });
+
+  ctx.restore();
 }
+
+// ─── INTERACTIVE GRAPH ───
+
+let graphNodes = [];
+let graphZoom = 1;
+let graphPanX = 0, graphPanY = 0;
+let isDragging = false, dragStartX = 0, dragStartY = 0;
+
+// Mouse hover for tooltips
+document.getElementById('networkFullCanvas').addEventListener('mousemove', (e) => {
+  if (!graphNodes.length) return;
+  const canvas = e.target;
+  const rect = canvas.getBoundingClientRect();
+  const mx = (e.clientX - rect.left - graphPanX) / graphZoom;
+  const my = (e.clientY - rect.top - graphPanY) / graphZoom;
+
+  const tooltip = document.getElementById('graphTooltip');
+  let found = null;
+  for (const n of graphNodes) {
+    const nx = n.x * canvas.width, ny = n.y * canvas.height;
+    const dist = Math.sqrt((mx - nx) ** 2 + (my - ny) ** 2);
+    if (dist < n.radius + 4) { found = n; break; }
+  }
+
+  if (found) {
+    document.getElementById('tooltipName').textContent = found.name;
+    document.getElementById('tooltipMeta').textContent = `${found.type} | weight: ${found.weight}`;
+    tooltip.style.left = (e.clientX - rect.left + 12) + 'px';
+    tooltip.style.top = (e.clientY - rect.top - 20) + 'px';
+    tooltip.classList.add('visible');
+    canvas.style.cursor = 'pointer';
+  } else {
+    tooltip.classList.remove('visible');
+    canvas.style.cursor = 'grab';
+  }
+});
+
+document.getElementById('networkFullCanvas').addEventListener('mouseleave', () => {
+  document.getElementById('graphTooltip').classList.remove('visible');
+});
+
+// Click node to search
+document.getElementById('networkFullCanvas').addEventListener('click', (e) => {
+  if (!graphNodes.length) return;
+  const canvas = e.target;
+  const rect = canvas.getBoundingClientRect();
+  const mx = (e.clientX - rect.left - graphPanX) / graphZoom;
+  const my = (e.clientY - rect.top - graphPanY) / graphZoom;
+
+  for (const n of graphNodes) {
+    const nx = n.x * canvas.width, ny = n.y * canvas.height;
+    const dist = Math.sqrt((mx - nx) ** 2 + (my - ny) ** 2);
+    if (dist < n.radius + 4) {
+      // Switch to documents view and search for this entity
+      document.querySelectorAll('.sidebar-item').forEach(i => i.classList.remove('active'));
+      document.querySelector('[data-filter="all"]').classList.add('active');
+      showDocumentView();
+      document.getElementById('searchInput').value = n.name;
+      performSearch();
+      return;
+    }
+  }
+});
+
+// Zoom with mousewheel
+document.getElementById('networkFullCanvas').addEventListener('wheel', (e) => {
+  e.preventDefault();
+  const delta = e.deltaY > 0 ? 0.9 : 1.1;
+  graphZoom = Math.max(0.3, Math.min(5, graphZoom * delta));
+  drawFullNetwork();
+}, { passive: false });
+
+// Pan with drag
+document.getElementById('networkFullCanvas').addEventListener('mousedown', (e) => {
+  isDragging = true;
+  dragStartX = e.clientX - graphPanX;
+  dragStartY = e.clientY - graphPanY;
+});
+window.addEventListener('mousemove', (e) => {
+  if (!isDragging) return;
+  graphPanX = e.clientX - dragStartX;
+  graphPanY = e.clientY - dragStartY;
+  drawFullNetwork();
+});
+window.addEventListener('mouseup', () => { isDragging = false; });
 
 // Resize handler
 window.addEventListener('resize', () => {
@@ -3148,6 +3397,172 @@ function renderHarvestDocuments(docs) {
 }
 
 
+// ─── DASHBOARD VIEW ───
+
+function showDashboardView() {
+  currentView = 'dashboard';
+  hideAllViews();
+  document.getElementById('dashboardView').classList.add('active');
+  loadDashboard();
+}
+
+async function loadDashboard() {
+  try {
+    const data = await api('/api/dashboard');
+
+    // Stat cards
+    document.getElementById('dashCards').innerHTML = `
+      <div class="dash-card docs" onclick="showDocumentView()">
+        <div class="dash-card-value">${data.documents.toLocaleString()}</div>
+        <div class="dash-card-label">Documents</div>
+      </div>
+      <div class="dash-card entities">
+        <div class="dash-card-value">${data.entities.toLocaleString()}</div>
+        <div class="dash-card-label">Entities</div>
+      </div>
+      <div class="dash-card pages">
+        <div class="dash-card-value">${data.pages.toLocaleString()}</div>
+        <div class="dash-card-label">Pages</div>
+      </div>
+      <div class="dash-card risk" onclick="showForensicsView()">
+        <div class="dash-card-value">${data.aml_flagged}</div>
+        <div class="dash-card-label">AML Flagged</div>
+      </div>
+      <div class="dash-card resolved">
+        <div class="dash-card-value">${data.resolved_entities}</div>
+        <div class="dash-card-label">Resolved Entities</div>
+      </div>
+      <div class="dash-card events" onclick="showTimelineView()">
+        <div class="dash-card-value">${data.timeline_events.toLocaleString()}</div>
+        <div class="dash-card-label">Timeline Events</div>
+      </div>
+      <div class="dash-card aml" onclick="document.querySelectorAll('.sidebar-item').forEach(i=>i.classList.remove('active'));document.querySelector('[data-filter=flagged]').classList.add('active');showDocumentView();loadDocuments({flagged:true});">
+        <div class="dash-card-value">${data.flagged}</div>
+        <div class="dash-card-label">Flagged</div>
+      </div>
+      <div class="dash-card notes">
+        <div class="dash-card-value">${data.notes_count}</div>
+        <div class="dash-card-label">With Notes</div>
+      </div>`;
+
+    // Risk alerts
+    const alertsEl = document.getElementById('dashAlerts');
+    if (data.risk_alerts?.length) {
+      alertsEl.innerHTML = data.risk_alerts.map(a => {
+        const level = riskLevel(a.risk_score);
+        const score = (a.risk_score * 100).toFixed(0);
+        return `<div class="dash-alert-row" onclick="showDocForensicDetail(${a.document_id})">
+          <span class="risk-doc-score ${level}" style="font-size:12px;padding:3px 8px;">${score}</span>
+          <span style="flex:1;font-size:12px;color:var(--text-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${a.title || a.filename}</span>
+          <span style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted);">${a.source || ''}</span>
+        </div>`;
+      }).join('');
+    } else {
+      alertsEl.innerHTML = '<div style="color:var(--text-muted);font-size:12px;">No high-risk alerts</div>';
+    }
+
+    // Sources
+    const sourcesEl = document.getElementById('dashSources');
+    if (data.sources?.length) {
+      sourcesEl.innerHTML = data.sources.map(s =>
+        `<div class="dash-source-row">
+          <span class="dash-source-name">${s.source}</span>
+          <span class="dash-source-count">${s.count} docs / ${(s.pages||0).toLocaleString()} pg</span>
+        </div>`
+      ).join('');
+    }
+
+    // Recent docs
+    const recentEl = document.getElementById('dashRecent');
+    if (data.recent_documents?.length) {
+      recentEl.innerHTML = data.recent_documents.map(d =>
+        `<div class="dash-alert-row" onclick="openReader(${d.id})">
+          <span class="doc-badge ${d.category}" style="font-size:9px;">${d.category}</span>
+          <span style="flex:1;font-size:12px;color:var(--text-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${d.title || d.filename}</span>
+          <span style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted);">${d.pages} pg</span>
+        </div>`
+      ).join('');
+    }
+
+    // Load heatmap
+    loadHeatmap();
+  } catch (e) {
+    console.error('Dashboard load failed:', e);
+  }
+}
+
+async function loadHeatmap() {
+  try {
+    const data = await api('/api/timeline/heatmap');
+    const dates = data.dates || [];
+    if (!dates.length) {
+      document.getElementById('heatmapContainer').innerHTML =
+        '<div style="color:var(--text-muted);font-size:12px;">No timeline data for heatmap</div>';
+      return;
+    }
+
+    // Build date count map
+    const countMap = {};
+    let maxCount = 1;
+    dates.forEach(d => { countMap[d.date] = d.count; if (d.count > maxCount) maxCount = d.count; });
+
+    // Generate 52 weeks of cells (last year)
+    const today = new Date();
+    const startDate = new Date(today);
+    startDate.setDate(startDate.getDate() - 364);
+    // Align to Sunday
+    startDate.setDate(startDate.getDate() - startDate.getDay());
+
+    let html = '<div class="heatmap-grid">';
+    const months = [];
+    let lastMonth = -1;
+
+    for (let week = 0; week < 53; week++) {
+      html += '<div class="heatmap-week">';
+      for (let day = 0; day < 7; day++) {
+        const d = new Date(startDate);
+        d.setDate(d.getDate() + week * 7 + day);
+        const iso = d.toISOString().split('T')[0];
+        const count = countMap[iso] || 0;
+        let level = '';
+        if (count > 0) {
+          const ratio = count / maxCount;
+          if (ratio > 0.75) level = 'l4';
+          else if (ratio > 0.5) level = 'l3';
+          else if (ratio > 0.25) level = 'l2';
+          else level = 'l1';
+        }
+
+        if (d.getMonth() !== lastMonth && day === 0) {
+          months.push({ week, month: d.toLocaleString('default', { month: 'short' }) });
+          lastMonth = d.getMonth();
+        }
+
+        html += `<div class="heatmap-cell ${level}" title="${iso}: ${count} events"></div>`;
+      }
+      html += '</div>';
+    }
+    html += '</div>';
+    html += `<div class="heatmap-legend">
+      <span>Less</span>
+      <div class="heatmap-cell"></div>
+      <div class="heatmap-cell l1"></div>
+      <div class="heatmap-cell l2"></div>
+      <div class="heatmap-cell l3"></div>
+      <div class="heatmap-cell l4"></div>
+      <span>More</span>
+      <span style="margin-left:12px;">Max: ${maxCount} events/day</span>
+    </div>`;
+
+    document.getElementById('heatmapContainer').innerHTML = html;
+  } catch (e) {
+    console.error('Heatmap failed:', e);
+    document.getElementById('heatmapContainer').innerHTML =
+      '<div style="color:var(--text-muted);font-size:12px;">Heatmap unavailable</div>';
+  }
+}
+
+
 // ─── TIMELINE VIEW ───
 
 function showTimelineView() {
@@ -3249,19 +3664,89 @@ function goBackFromReader() {
   else showDocumentView();
 }
 
+let readerRawText = '';
+
 async function loadReader(docId) {
   document.getElementById('readerBody').textContent = 'Loading document text...';
-  try {
-    const data = await api(`/api/documents/${docId}/text`);
-    document.getElementById('readerTitle').textContent = data.title || data.filename;
-    document.getElementById('readerMeta').textContent =
-      `${data.category} | ${data.pages} pages | ${data.char_count.toLocaleString()} chars | ${data.source || ''}`;
+  document.getElementById('readerSearchInput').value = '';
+  document.getElementById('readerSearchCount').textContent = '';
 
-    const text = data.text || '(No text content available)';
-    document.getElementById('readerBody').textContent = text;
+  try {
+    const [textData, notesData] = await Promise.all([
+      api(`/api/documents/${docId}/text`),
+      api(`/api/documents/${docId}/notes`),
+    ]);
+
+    document.getElementById('readerTitle').textContent = textData.title || textData.filename;
+    document.getElementById('readerMeta').textContent =
+      `${textData.category} | ${textData.pages} pages | ${textData.char_count.toLocaleString()} chars | ${textData.source || ''}`;
+
+    readerRawText = textData.text || '(No text content available)';
+    document.getElementById('readerBody').textContent = readerRawText;
+
+    // Load notes
+    document.getElementById('readerNotes').value = notesData.notes || '';
+    document.getElementById('readerFlagBtn').textContent = notesData.flagged ? 'Unflag' : 'Flag';
+    document.getElementById('readerFlagBtn').style.borderColor = notesData.flagged ? '#e05555' : '';
   } catch (e) {
     console.error('Failed to load document text:', e);
     document.getElementById('readerBody').textContent = 'Failed to load document text.';
+    readerRawText = '';
+  }
+}
+
+function searchInReader() {
+  const query = document.getElementById('readerSearchInput').value.trim();
+  const body = document.getElementById('readerBody');
+
+  if (!query || !readerRawText) {
+    body.textContent = readerRawText;
+    document.getElementById('readerSearchCount').textContent = '';
+    return;
+  }
+
+  const regex = new RegExp(`(${escapeRegex(query)})`, 'gi');
+  const matches = readerRawText.match(regex);
+  const count = matches ? matches.length : 0;
+  document.getElementById('readerSearchCount').textContent = `${count} match${count !== 1 ? 'es' : ''}`;
+
+  // Highlight in the body
+  body.innerHTML = readerRawText.replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c])).replace(
+    new RegExp(`(${escapeRegex(query)})`, 'gi'),
+    '<mark>$1</mark>'
+  );
+
+  // Scroll to first match
+  const firstMark = body.querySelector('mark');
+  if (firstMark) firstMark.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+async function saveReaderNotes() {
+  if (!readerDocId) return;
+  const notes = document.getElementById('readerNotes').value;
+  try {
+    await fetch(`/api/documents/${readerDocId}/notes`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ notes }),
+    });
+    const msg = document.getElementById('notesSavedMsg');
+    msg.style.display = 'inline';
+    setTimeout(() => { msg.style.display = 'none'; }, 2000);
+  } catch (e) {
+    console.error('Failed to save notes:', e);
+  }
+}
+
+async function toggleFlag(docId) {
+  if (!docId) return;
+  try {
+    const result = await fetch(`/api/documents/${docId}/flag`, { method: 'POST' });
+    const data = await result.json();
+    document.getElementById('readerFlagBtn').textContent = data.flagged ? 'Unflag' : 'Flag';
+    document.getElementById('readerFlagBtn').style.borderColor = data.flagged ? '#e05555' : '';
+  } catch (e) {
+    console.error('Failed to toggle flag:', e);
   }
 }
 
@@ -3410,7 +3895,9 @@ async function exportBrief() {
 document.getElementById('searchInput').addEventListener('input', debounce(performSearch, 250));
 
 async function init() {
-  await Promise.all([loadStats(), loadDocuments(), loadKeywords(), loadPeople(), loadPlaces(), loadNetwork(), loadSources()]);
+  await Promise.all([loadStats(), loadKeywords(), loadPeople(), loadPlaces(), loadNetwork(), loadSources()]);
+  // Show dashboard as default landing
+  showDashboardView();
 }
 
 init();
