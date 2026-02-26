@@ -5504,6 +5504,472 @@ def depositions():
 
 
 # ═══════════════════════════════════════════
+# NARRATIVE BUILDER (auto-generate investigation summary)
+# ═══════════════════════════════════════════
+
+
+@app.get("/api/narrative")
+def narrative_builder(entity_id: Optional[int] = None, limit: int = Query(50)):
+    """Generate a structured investigation narrative from evidence chains, events, and key entities."""
+    with get_db() as conn:
+        # Key entities by document coverage
+        top_entities = conn.execute(
+            """SELECT e.id, e.name, e.type, COUNT(DISTINCT de.document_id) as doc_count,
+                      SUM(de.count) as total_mentions
+               FROM entities e
+               JOIN document_entities de ON de.entity_id = e.id
+               WHERE e.type = 'person'
+               GROUP BY e.id
+               ORDER BY doc_count DESC LIMIT 20"""
+        ).fetchall()
+
+        # Timeline anchors (high-confidence dated events)
+        event_filter = ""
+        params: list = []
+        if entity_id:
+            event_filter = "JOIN event_entities ee ON ee.event_id = e.id AND ee.entity_id = ?"
+            params.append(entity_id)
+
+        timeline = conn.execute(
+            f"""SELECT e.event_date, e.context, e.confidence, e.precision,
+                       d.title as doc_title, d.id as doc_id
+                FROM events e
+                {event_filter}
+                LEFT JOIN documents d ON d.id = e.document_id
+                WHERE e.event_date IS NOT NULL AND e.event_date != ''
+                  AND e.confidence >= 0.5
+                ORDER BY e.event_date
+                LIMIT ?""",
+            params + [limit],
+        ).fetchall()
+
+        # Evidence chains
+        chains = conn.execute(
+            """SELECT ec.id, ec.name, ec.description,
+                      COUNT(ecl.id) as link_count
+               FROM evidence_chains ec
+               LEFT JOIN evidence_chain_links ecl ON ecl.chain_id = ec.id
+               GROUP BY ec.id
+               ORDER BY link_count DESC LIMIT 10"""
+        ).fetchall()
+
+        # Financial indicators summary
+        fin_summary = conn.execute(
+            """SELECT indicator_type, COUNT(*) as count,
+                      AVG(risk_score) as avg_risk
+               FROM financial_indicators
+               GROUP BY indicator_type
+               ORDER BY avg_risk DESC"""
+        ).fetchall()
+
+        # Source distribution
+        sources = conn.execute(
+            """SELECT source, COUNT(*) as count
+               FROM documents
+               WHERE source IS NOT NULL AND source != ''
+               GROUP BY source
+               ORDER BY count DESC LIMIT 10"""
+        ).fetchall()
+
+    return {
+        "key_people": [dict(e) for e in top_entities],
+        "timeline_events": [dict(t) for t in timeline],
+        "evidence_chains": [dict(c) for c in chains],
+        "financial_summary": [dict(f) for f in fin_summary],
+        "sources": [dict(s) for s in sources],
+    }
+
+
+# ═══════════════════════════════════════════
+# CONTACT NETWORK (correspondence analysis)
+# ═══════════════════════════════════════════
+
+
+@app.get("/api/contact-network")
+def contact_network(limit: int = Query(50)):
+    """Analyze who-contacted-who from correspondence documents."""
+    with get_db() as conn:
+        # Find correspondence docs and extract person pairs
+        corr_docs = conn.execute(
+            """SELECT d.id, d.title, d.filename, d.date, d.source
+               FROM documents d
+               WHERE d.category = 'correspondence'
+                  OR LOWER(d.title) LIKE '%from:%'
+                  OR LOWER(d.title) LIKE '%to:%'
+                  OR LOWER(d.title) LIKE '%email%'
+                  OR d.category = 'email'
+               ORDER BY d.date
+               LIMIT 500"""
+        ).fetchall()
+
+        # For each correspondence doc, get the people involved
+        contacts = {}
+        doc_details = []
+        for doc in corr_docs:
+            people = conn.execute(
+                """SELECT e.id, e.name, de.count
+                   FROM entities e
+                   JOIN document_entities de ON de.entity_id = e.id
+                   WHERE de.document_id = ? AND e.type = 'person'
+                   ORDER BY de.count DESC LIMIT 5""",
+                (doc["id"],),
+            ).fetchall()
+
+            if len(people) >= 2:
+                names = [p["name"] for p in people]
+                doc_details.append(
+                    {
+                        "doc_id": doc["id"],
+                        "title": doc["title"] or doc["filename"],
+                        "date": doc["date"],
+                        "participants": names,
+                    }
+                )
+                # Track pair frequencies
+                for i in range(len(names)):
+                    for j in range(i + 1, len(names)):
+                        key = tuple(sorted([names[i], names[j]]))
+                        contacts[key] = contacts.get(key, 0) + 1
+
+        # Sort pairs by frequency
+        top_pairs = sorted(contacts.items(), key=lambda x: -x[1])[:limit]
+
+    return {
+        "pairs": [{"person_a": p[0][0], "person_b": p[0][1], "frequency": p[1]} for p in top_pairs],
+        "correspondence_docs": doc_details[:100],
+        "total_correspondence": len(corr_docs),
+    }
+
+
+# ═══════════════════════════════════════════
+# DOCUMENT PROVENANCE (chain of custody tracking)
+# ═══════════════════════════════════════════
+
+
+def _ensure_provenance_table(conn):
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS document_provenance (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            document_id INTEGER NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
+            event_type TEXT NOT NULL,
+            event_date TEXT,
+            description TEXT,
+            actor TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_provenance_doc ON document_provenance(document_id)"
+    )
+
+
+@app.get("/api/documents/{doc_id}/provenance")
+def get_doc_provenance(doc_id: int):
+    """Get provenance/chain-of-custody for a document."""
+    with get_db() as conn:
+        _ensure_provenance_table(conn)
+        doc = conn.execute(
+            "SELECT id, title, filename, category, source, date, ingested_at FROM documents WHERE id = ?",
+            (doc_id,),
+        ).fetchone()
+        if not doc:
+            raise HTTPException(404, "Document not found")
+
+        events = conn.execute(
+            """SELECT id, event_type, event_date, description, actor, created_at
+               FROM document_provenance
+               WHERE document_id = ?
+               ORDER BY event_date, created_at""",
+            (doc_id,),
+        ).fetchall()
+
+    return {"document": dict(doc), "provenance_events": [dict(e) for e in events]}
+
+
+@app.post("/api/documents/{doc_id}/provenance")
+async def add_doc_provenance(doc_id: int, request: Request):
+    """Add a provenance event to a document."""
+    body = await request.json()
+    event_type = body.get("event_type", "")
+    event_date = body.get("event_date", "")
+    description = body.get("description", "")
+    actor = body.get("actor", "")
+
+    if not event_type:
+        raise HTTPException(400, "event_type is required")
+
+    with get_db() as conn:
+        _ensure_provenance_table(conn)
+        doc = conn.execute("SELECT id FROM documents WHERE id = ?", (doc_id,)).fetchone()
+        if not doc:
+            raise HTTPException(404, "Document not found")
+
+        conn.execute(
+            """INSERT INTO document_provenance (document_id, event_type, event_date, description, actor)
+               VALUES (?, ?, ?, ?, ?)""",
+            (doc_id, event_type, event_date, description, actor),
+        )
+        conn.commit()
+
+    return {"status": "added", "document_id": doc_id}
+
+
+@app.get("/api/provenance-summary")
+def provenance_summary():
+    """Overview of document provenance tracking across the corpus."""
+    with get_db() as conn:
+        _ensure_provenance_table(conn)
+
+        total_docs = conn.execute("SELECT COUNT(*) FROM documents").fetchone()[0]
+        tracked = conn.execute(
+            "SELECT COUNT(DISTINCT document_id) FROM document_provenance"
+        ).fetchone()[0]
+
+        event_types = conn.execute(
+            """SELECT event_type, COUNT(*) as count
+               FROM document_provenance
+               GROUP BY event_type ORDER BY count DESC"""
+        ).fetchall()
+
+        recent = conn.execute(
+            """SELECT dp.event_type, dp.event_date, dp.description, dp.actor,
+                      d.title, d.id as doc_id
+               FROM document_provenance dp
+               JOIN documents d ON d.id = dp.document_id
+               ORDER BY dp.created_at DESC LIMIT 20"""
+        ).fetchall()
+
+    return {
+        "total_documents": total_docs,
+        "tracked_documents": tracked,
+        "untracked": total_docs - tracked,
+        "event_types": [dict(e) for e in event_types],
+        "recent_events": [dict(r) for r in recent],
+    }
+
+
+# ═══════════════════════════════════════════
+# KEY PHRASE TRENDS (phrase frequency over time)
+# ═══════════════════════════════════════════
+
+
+@app.get("/api/phrase-trends")
+def phrase_trends(top_n: int = Query(20)):
+    """Analyze key phrase frequency trends over time."""
+    with get_db() as conn:
+        # Top phrases overall
+        top_phrases = conn.execute(
+            """SELECT p.id, p.phrase, p.doc_count, p.total_count
+               FROM phrases p
+               ORDER BY p.doc_count DESC
+               LIMIT ?""",
+            (top_n,),
+        ).fetchall()
+
+        # For each top phrase, get temporal distribution
+        phrase_data = []
+        for phrase in top_phrases:
+            temporal = conn.execute(
+                """SELECT SUBSTR(d.date, 1, 4) as year, COUNT(*) as count
+                   FROM document_phrases dp
+                   JOIN documents d ON d.id = dp.document_id
+                   WHERE dp.phrase_id = ?
+                     AND d.date IS NOT NULL AND d.date != ''
+                   GROUP BY year
+                   ORDER BY year""",
+                (phrase["id"],),
+            ).fetchall()
+
+            phrase_data.append(
+                {
+                    "phrase": phrase["phrase"],
+                    "doc_count": phrase["doc_count"],
+                    "total_count": phrase["total_count"],
+                    "by_year": {t["year"]: t["count"] for t in temporal},
+                }
+            )
+
+        # Get all years for axis
+        all_years = conn.execute(
+            """SELECT DISTINCT SUBSTR(date, 1, 4) as year
+               FROM documents
+               WHERE date IS NOT NULL AND date != ''
+               ORDER BY year"""
+        ).fetchall()
+
+    return {
+        "phrases": phrase_data,
+        "years": [y["year"] for y in all_years],
+    }
+
+
+# ═══════════════════════════════════════════
+# ENTITY DISAMBIGUATION (review ambiguous matches)
+# ═══════════════════════════════════════════
+
+
+@app.get("/api/entity-disambiguation")
+def entity_disambiguation(min_docs: int = Query(2)):
+    """Find potentially ambiguous entities that may need disambiguation."""
+    with get_db() as conn:
+        # Find entities with similar names (potential duplicates not yet resolved)
+        # Group by first word of name for common-name detection
+        ambiguous = conn.execute(
+            """WITH entity_stats AS (
+                 SELECT e.id, e.name, e.type, e.canonical,
+                        COUNT(DISTINCT de.document_id) as doc_count,
+                        SUM(de.count) as total_mentions
+                 FROM entities e
+                 LEFT JOIN document_entities de ON de.entity_id = e.id
+                 GROUP BY e.id
+                 HAVING doc_count >= ?
+               )
+               SELECT es1.id as id_a, es1.name as name_a, es1.type as type_a,
+                      es1.doc_count as docs_a, es1.total_mentions as mentions_a,
+                      es2.id as id_b, es2.name as name_b, es2.type as type_b,
+                      es2.doc_count as docs_b, es2.total_mentions as mentions_b
+               FROM entity_stats es1
+               JOIN entity_stats es2 ON es2.id > es1.id
+                 AND es1.type = es2.type
+                 AND (
+                   LOWER(es1.name) LIKE '%' || LOWER(es2.name) || '%'
+                   OR LOWER(es2.name) LIKE '%' || LOWER(es1.name) || '%'
+                 )
+               ORDER BY es1.doc_count + es2.doc_count DESC
+               LIMIT 50""",
+            (min_docs,),
+        ).fetchall()
+
+        # Entities with very short names (likely abbreviations)
+        short_entities = conn.execute(
+            """SELECT e.id, e.name, e.type,
+                      COUNT(DISTINCT de.document_id) as doc_count
+               FROM entities e
+               JOIN document_entities de ON de.entity_id = e.id
+               WHERE LENGTH(e.name) <= 3
+               GROUP BY e.id
+               HAVING doc_count >= ?
+               ORDER BY doc_count DESC LIMIT 30""",
+            (min_docs,),
+        ).fetchall()
+
+        # Already resolved count
+        resolved = conn.execute("SELECT COUNT(*) FROM entity_resolutions").fetchone()[0]
+
+    return {
+        "ambiguous_pairs": [dict(a) for a in ambiguous],
+        "short_entities": [dict(s) for s in short_entities],
+        "already_resolved": resolved,
+    }
+
+
+# ═══════════════════════════════════════════
+# INVESTIGATION STATS (comprehensive metrics)
+# ═══════════════════════════════════════════
+
+
+@app.get("/api/investigation-stats")
+def investigation_stats():
+    """Comprehensive investigation metrics dashboard."""
+    with get_db() as conn:
+        # Core counts
+        total_docs = conn.execute("SELECT COUNT(*) FROM documents").fetchone()[0]
+        total_entities = conn.execute("SELECT COUNT(*) FROM entities").fetchone()[0]
+        total_events = conn.execute("SELECT COUNT(*) FROM events").fetchone()[0]
+        total_connections = conn.execute("SELECT COUNT(*) FROM entity_connections").fetchone()[0]
+
+        # Entity type breakdown
+        entity_types = conn.execute(
+            "SELECT type, COUNT(*) as count FROM entities GROUP BY type ORDER BY count DESC"
+        ).fetchall()
+
+        # Category breakdown
+        categories = conn.execute(
+            "SELECT category, COUNT(*) as count FROM documents GROUP BY category ORDER BY count DESC"
+        ).fetchall()
+
+        # Source breakdown
+        sources = conn.execute(
+            """SELECT source, COUNT(*) as count
+               FROM documents WHERE source IS NOT NULL AND source != ''
+               GROUP BY source ORDER BY count DESC"""
+        ).fetchall()
+
+        # Date coverage
+        date_range = conn.execute(
+            """SELECT MIN(date) as earliest, MAX(date) as latest,
+                      COUNT(CASE WHEN date IS NOT NULL AND date != '' THEN 1 END) as dated,
+                      COUNT(CASE WHEN date IS NULL OR date = '' THEN 1 END) as undated
+               FROM documents"""
+        ).fetchone()
+
+        # Total pages
+        total_pages = conn.execute("SELECT COALESCE(SUM(pages), 0) FROM documents").fetchone()[0]
+
+        # Flagged docs
+        flagged = conn.execute("SELECT COUNT(*) FROM documents WHERE flagged = 1").fetchone()[0]
+
+        # Evidence chains
+        chain_count = conn.execute("SELECT COUNT(*) FROM evidence_chains").fetchone()[0]
+        chain_links = conn.execute("SELECT COUNT(*) FROM evidence_chain_links").fetchone()[0]
+
+        # Financial indicators
+        fin_count = conn.execute("SELECT COUNT(*) FROM financial_indicators").fetchone()[0]
+        avg_risk = conn.execute("SELECT AVG(risk_score) FROM financial_indicators").fetchone()[0]
+
+        # Redaction count
+        redaction_count = conn.execute("SELECT COUNT(*) FROM redactions").fetchone()[0]
+
+        # Watchlist
+        watchlist_count = conn.execute("SELECT COUNT(*) FROM watchlist").fetchone()[0]
+
+        # Annotations & notes
+        annotation_count = conn.execute("SELECT COUNT(*) FROM annotations").fetchone()[0]
+        analyst_note_count = conn.execute("SELECT COUNT(*) FROM analyst_notes").fetchone()[0]
+
+        # Resolution stats
+        resolved_count = conn.execute("SELECT COUNT(*) FROM entity_resolutions").fetchone()[0]
+
+        # Most connected entities (by connection weight)
+        top_connected = conn.execute(
+            """SELECT e.name, e.type,
+                      SUM(ec.weight) as total_weight,
+                      COUNT(*) as connection_count
+               FROM entities e
+               JOIN entity_connections ec ON ec.entity_a_id = e.id OR ec.entity_b_id = e.id
+               GROUP BY e.id
+               ORDER BY total_weight DESC LIMIT 10"""
+        ).fetchall()
+
+    return {
+        "core": {
+            "documents": total_docs,
+            "entities": total_entities,
+            "events": total_events,
+            "connections": total_connections,
+            "pages": total_pages,
+            "flagged": flagged,
+        },
+        "entity_types": [dict(e) for e in entity_types],
+        "categories": [dict(c) for c in categories],
+        "sources": [dict(s) for s in sources],
+        "date_range": dict(date_range) if date_range else {},
+        "analysis": {
+            "evidence_chains": chain_count,
+            "chain_links": chain_links,
+            "financial_indicators": fin_count,
+            "avg_risk_score": round(avg_risk, 2) if avg_risk else 0,
+            "redactions": redaction_count,
+            "watchlist": watchlist_count,
+            "annotations": annotation_count,
+            "analyst_notes": analyst_note_count,
+            "resolved_entities": resolved_count,
+        },
+        "top_connected": [dict(t) for t in top_connected],
+    }
+
+
+# ═══════════════════════════════════════════
 # STATIC FILES (serve the frontend)
 # ═══════════════════════════════════════════
 

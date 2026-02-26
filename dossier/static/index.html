@@ -1969,6 +1969,23 @@ body::before {
 .corr-bridge { font-family: var(--font-mono); font-size: 12px; color: var(--accent); }
 .depo-card { padding: 12px 16px; background: var(--bg-card); border-radius: var(--radius); border: 1px solid var(--border); margin-bottom: 8px; cursor: pointer; transition: border-color var(--transition); }
 .depo-card:hover { border-color: var(--accent-dim); }
+
+.narrative-view, .contactnet-view, .provenance-view, .phrasetrend-view, .disambig-view, .invstats-view { display: none; flex-direction: column; gap: 16px; }
+.narrative-view.active, .contactnet-view.active, .provenance-view.active, .phrasetrend-view.active, .disambig-view.active, .invstats-view.active { display: flex; }
+.narrative-section { padding: 12px 16px; background: var(--bg-card); border-radius: var(--radius); border: 1px solid var(--border); margin-bottom: 8px; }
+.narrative-section-title { font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin-bottom: 8px; }
+.contact-pair { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--border); }
+.contact-bar { height: 12px; background: var(--entity-person); border-radius: 3px; transition: width 0.3s ease; }
+.provenance-event { display: flex; gap: 12px; padding: 8px 12px; border-left: 2px solid var(--entity-place); margin-left: 8px; margin-bottom: 6px; }
+.provenance-badge { font-family: var(--font-mono); font-size: 10px; padding: 2px 8px; border-radius: 10px; background: var(--bg-tertiary); border: 1px solid var(--border); color: var(--text-secondary); }
+.trend-row { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.trend-spark { display: flex; align-items: flex-end; gap: 1px; height: 20px; }
+.trend-spark-bar { width: 6px; background: var(--entity-date); border-radius: 1px 1px 0 0; min-height: 1px; }
+.disambig-pair { display: flex; align-items: center; gap: 12px; padding: 10px 14px; background: var(--bg-card); border-radius: var(--radius); border: 1px solid var(--border); margin-bottom: 6px; }
+.stat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+.stat-card { padding: 14px; background: var(--bg-card); border-radius: var(--radius); border: 1px solid var(--border); text-align: center; }
+.stat-value { font-size: 22px; font-weight: 700; font-family: var(--font-mono); }
+.stat-label { font-family: var(--font-mono); font-size: 9px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin-top: 2px; }
 </style>
 </head>
 <body>
@@ -2197,6 +2214,30 @@ body::before {
       <div class="sidebar-item" data-view="depositions" id="depositionsNav">
         <div class="sidebar-dot" style="background:var(--entity-thing)"></div>
         Depositions
+      </div>
+      <div class="sidebar-item" data-view="narrative" id="narrativeNav">
+        <div class="sidebar-dot" style="background:var(--entity-person)"></div>
+        Narrative Builder
+      </div>
+      <div class="sidebar-item" data-view="contactnet" id="contactnetNav">
+        <div class="sidebar-dot" style="background:var(--entity-org)"></div>
+        Contact Network
+      </div>
+      <div class="sidebar-item" data-view="provenance" id="provenanceNav">
+        <div class="sidebar-dot" style="background:var(--entity-place)"></div>
+        Provenance
+      </div>
+      <div class="sidebar-item" data-view="phrasetrend" id="phrasetrendNav">
+        <div class="sidebar-dot" style="background:var(--entity-date)"></div>
+        Phrase Trends
+      </div>
+      <div class="sidebar-item" data-view="disambig" id="disambigNav">
+        <div class="sidebar-dot" style="background:var(--entity-thing)"></div>
+        Disambiguation
+      </div>
+      <div class="sidebar-item" data-view="invstats" id="invstatsNav">
+        <div class="sidebar-dot" style="background:var(--accent)"></div>
+        Investigation Stats
       </div>
     </div>
 
@@ -3012,6 +3053,56 @@ body::before {
       <div id="depositionsContent">Loading depositions...</div>
     </div>
 
+    <!-- Narrative Builder View -->
+    <div class="narrative-view" id="narrativeView">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Narrative Builder</div>
+        <select id="narrativeEntityFilter" style="background:var(--bg-tertiary);border:1px solid var(--border);border-radius:var(--radius);padding:4px 8px;font-family:var(--font-mono);font-size:11px;color:var(--text-primary);outline:none;">
+          <option value="">All entities</option>
+        </select>
+        <button onclick="loadNarrative()" class="report-btn">Generate</button>
+      </div>
+      <div id="narrativeContent">Click Generate to build the investigation narrative.</div>
+    </div>
+
+    <!-- Contact Network View -->
+    <div class="contactnet-view" id="contactnetView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Contact Network</div>
+      <div id="contactnetContent">Loading contact network...</div>
+    </div>
+
+    <!-- Provenance View -->
+    <div class="provenance-view" id="provenanceView">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Document Provenance</div>
+      </div>
+      <div id="provenanceContent">Loading provenance data...</div>
+    </div>
+
+    <!-- Phrase Trends View -->
+    <div class="phrasetrend-view" id="phrasetrendView">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Key Phrase Trends</div>
+        <label style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted);">Top
+          <input id="phraseTrendCount" type="number" value="20" min="5" max="50" style="width:50px;background:var(--bg-tertiary);border:1px solid var(--border);border-radius:var(--radius);padding:4px 8px;font-family:var(--font-mono);font-size:11px;color:var(--text-primary);outline:none;">
+        </label>
+        <button onclick="loadPhraseTrends()" class="report-btn">Refresh</button>
+      </div>
+      <div id="phrasetrendContent">Loading phrase trends...</div>
+    </div>
+
+    <!-- Disambiguation View -->
+    <div class="disambig-view" id="disambigView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Entity Disambiguation</div>
+      <div id="disambigContent">Loading disambiguation candidates...</div>
+    </div>
+
+    <!-- Investigation Stats View -->
+    <div class="invstats-view" id="invstatsView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Investigation Stats</div>
+      <div id="invstatsContent">Loading investigation metrics...</div>
+    </div>
+
   </main>
 
   <!-- RIGHT PANEL -->
@@ -3648,6 +3739,12 @@ function hideAllViews() {
   document.getElementById('redactanalysisView').classList.remove('active');
   document.getElementById('corroborateView').classList.remove('active');
   document.getElementById('depositionsView').classList.remove('active');
+  document.getElementById('narrativeView').classList.remove('active');
+  document.getElementById('contactnetView').classList.remove('active');
+  document.getElementById('provenanceView').classList.remove('active');
+  document.getElementById('phrasetrendView').classList.remove('active');
+  document.getElementById('disambigView').classList.remove('active');
+  document.getElementById('invstatsView').classList.remove('active');
 }
 
 function showDocumentView() {
@@ -3737,6 +3834,12 @@ document.querySelectorAll('.sidebar-item[data-view]').forEach(item => {
     else if (view === 'redactanalysis') showRedactAnalysisView();
     else if (view === 'corroborate') showCorroborateView();
     else if (view === 'depositions') showDepositionsView();
+    else if (view === 'narrative') showNarrativeView();
+    else if (view === 'contactnet') showContactNetView();
+    else if (view === 'provenance') showProvenanceView();
+    else if (view === 'phrasetrend') showPhraseTrendView();
+    else if (view === 'disambig') showDisambigView();
+    else if (view === 'invstats') showInvStatsView();
   });
 });
 
@@ -4824,6 +4927,12 @@ function goBackFromReader() {
   else if (readerPreviousView === 'redactanalysis') showRedactAnalysisView();
   else if (readerPreviousView === 'corroborate') showCorroborateView();
   else if (readerPreviousView === 'depositions') showDepositionsView();
+  else if (readerPreviousView === 'narrative') showNarrativeView();
+  else if (readerPreviousView === 'contactnet') showContactNetView();
+  else if (readerPreviousView === 'provenance') showProvenanceView();
+  else if (readerPreviousView === 'phrasetrend') showPhraseTrendView();
+  else if (readerPreviousView === 'disambig') showDisambigView();
+  else if (readerPreviousView === 'invstats') showInvStatsView();
   else showDocumentView();
 }
 
@@ -8351,6 +8460,434 @@ async function loadDepositions() {
 
     el.innerHTML = html;
   } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load depositions</div>'; }
+}
+
+
+// ─── NARRATIVE BUILDER ───
+
+function showNarrativeView() {
+  currentView = 'narrative';
+  hideAllViews();
+  document.getElementById('narrativeView').classList.add('active');
+  loadNarrativeEntityPicker();
+}
+
+async function loadNarrativeEntityPicker() {
+  const sel = document.getElementById('narrativeEntityFilter');
+  if (sel.options.length > 1) return;
+  try {
+    const data = await api('/api/entities?type=person&limit=200');
+    const entities = data.entities || data || [];
+    entities.forEach(e => {
+      const opt = document.createElement('option');
+      opt.value = e.id;
+      opt.textContent = e.name;
+      sel.appendChild(opt);
+    });
+  } catch (err) { console.error('Failed to load entities for narrative:', err); }
+}
+
+async function loadNarrative() {
+  const el = document.getElementById('narrativeContent');
+  el.innerHTML = 'Generating narrative...';
+  const entityId = document.getElementById('narrativeEntityFilter').value;
+  const url = entityId ? `/api/narrative?entity_id=${entityId}` : '/api/narrative';
+  try {
+    const data = await api(url);
+    let html = '';
+
+    // Key People
+    if (data.key_people && data.key_people.length) {
+      html += '<div class="narrative-section"><div class="narrative-section-title">Key People</div>';
+      html += '<div style="display:flex;flex-wrap:wrap;gap:6px;">';
+      data.key_people.forEach(p => {
+        html += `<span class="entity-tag person" style="font-size:10px;">${p.name} <span style="opacity:0.6;">${p.doc_count} docs, ${p.total_mentions} mentions</span></span>`;
+      });
+      html += '</div></div>';
+    }
+
+    // Timeline Events
+    if (data.timeline_events && data.timeline_events.length) {
+      html += '<div class="narrative-section"><div class="narrative-section-title">Timeline</div>';
+      data.timeline_events.forEach(e => {
+        const ctx = (e.context || '').substring(0, 200);
+        html += `<div style="padding:6px 0;border-bottom:1px solid var(--border);">
+          <span style="font-family:var(--font-mono);font-size:10px;color:var(--accent);min-width:80px;display:inline-block;">${e.event_date}</span>
+          <span style="font-size:12px;">${ctx}</span>
+          ${e.doc_title ? '<span style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted);margin-left:8px;cursor:pointer;" onclick="openReader(' + e.doc_id + ',\'narrative\')">[' + e.doc_title.substring(0, 40) + ']</span>' : ''}
+        </div>`;
+      });
+      html += '</div>';
+    }
+
+    // Evidence Chains
+    if (data.evidence_chains && data.evidence_chains.length) {
+      html += '<div class="narrative-section"><div class="narrative-section-title">Evidence Chains</div>';
+      data.evidence_chains.forEach(c => {
+        html += `<div style="padding:4px 0;font-size:12px;">
+          <strong>${c.name}</strong> — ${c.link_count} links
+          ${c.description ? '<div style="font-size:11px;color:var(--text-muted);">' + c.description + '</div>' : ''}
+        </div>`;
+      });
+      html += '</div>';
+    }
+
+    // Financial Summary
+    if (data.financial_summary && data.financial_summary.length) {
+      html += '<div class="narrative-section"><div class="narrative-section-title">Financial Indicators</div>';
+      data.financial_summary.forEach(f => {
+        const riskColor = f.avg_risk > 7 ? 'var(--accent)' : f.avg_risk > 4 ? 'var(--entity-thing)' : 'var(--entity-date)';
+        html += `<div style="display:flex;justify-content:space-between;padding:4px 0;font-size:12px;border-bottom:1px solid var(--border);">
+          <span>${f.indicator_type}</span>
+          <span style="font-family:var(--font-mono);font-size:11px;color:${riskColor};">${f.count} found · risk ${f.avg_risk ? f.avg_risk.toFixed(1) : '?'}</span>
+        </div>`;
+      });
+      html += '</div>';
+    }
+
+    // Sources
+    if (data.sources && data.sources.length) {
+      html += '<div class="narrative-section"><div class="narrative-section-title">Source Distribution</div>';
+      data.sources.forEach(s => {
+        html += `<div style="display:flex;justify-content:space-between;padding:3px 0;font-size:12px;">
+          <span>${s.source}</span>
+          <span style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted);">${s.count}</span>
+        </div>`;
+      });
+      html += '</div>';
+    }
+
+    if (!html) html = '<div style="color:var(--text-muted);">No narrative data available.</div>';
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to generate narrative</div>'; }
+}
+
+
+// ─── CONTACT NETWORK ───
+
+function showContactNetView() {
+  currentView = 'contactnet';
+  hideAllViews();
+  document.getElementById('contactnetView').classList.add('active');
+  loadContactNetwork();
+}
+
+async function loadContactNetwork() {
+  const el = document.getElementById('contactnetContent');
+  try {
+    const data = await api('/api/contact-network');
+    const pairs = data.pairs || [];
+    const docs = data.correspondence_docs || [];
+
+    let html = `<div style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted);margin-bottom:12px;">${data.total_correspondence || 0} correspondence documents analyzed</div>`;
+
+    if (pairs.length) {
+      const maxFreq = Math.max(...pairs.map(p => p.frequency));
+      html += '<div style="margin-bottom:16px;"><div class="narrative-section-title">Most Frequent Contact Pairs</div>';
+      pairs.slice(0, 30).forEach(p => {
+        const pct = (p.frequency / maxFreq) * 100;
+        html += `<div class="contact-pair">
+          <span style="font-size:12px;min-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${p.person_a}</span>
+          <span style="font-family:var(--font-mono);font-size:10px;color:var(--accent);min-width:20px;text-align:center;">⟷</span>
+          <span style="font-size:12px;min-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${p.person_b}</span>
+          <div style="flex:1;height:12px;background:var(--bg-tertiary);border-radius:3px;overflow:hidden;">
+            <div class="contact-bar" style="width:${pct}%;"></div>
+          </div>
+          <span style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted);min-width:30px;text-align:right;">${p.frequency}</span>
+        </div>`;
+      });
+      html += '</div>';
+    }
+
+    if (docs.length) {
+      html += '<div><div class="narrative-section-title">Recent Correspondence</div>';
+      docs.slice(0, 30).forEach(d => {
+        html += `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border);cursor:pointer;" onclick="openReader(${d.doc_id},'contactnet')">
+          <span style="font-family:var(--font-mono);font-size:10px;color:var(--entity-date);min-width:80px;">${d.date || 'Undated'}</span>
+          <span style="font-size:12px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${d.title}</span>
+          <span style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted);">${d.participants.length} people</span>
+        </div>`;
+      });
+      html += '</div>';
+    }
+
+    if (!pairs.length && !docs.length) {
+      html = '<div style="color:var(--text-muted);">No correspondence documents found.</div>';
+    }
+
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load contact network</div>'; }
+}
+
+
+// ─── PROVENANCE ───
+
+function showProvenanceView() {
+  currentView = 'provenance';
+  hideAllViews();
+  document.getElementById('provenanceView').classList.add('active');
+  loadProvenanceSummary();
+}
+
+async function loadProvenanceSummary() {
+  const el = document.getElementById('provenanceContent');
+  try {
+    const data = await api('/api/provenance-summary');
+
+    let html = `<div style="display:flex;gap:20px;margin-bottom:16px;">
+      <div class="card" style="flex:1;text-align:center;">
+        <div style="font-size:24px;font-weight:700;color:var(--entity-place);">${data.tracked_documents || 0}</div>
+        <div style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted);">TRACKED</div>
+      </div>
+      <div class="card" style="flex:1;text-align:center;">
+        <div style="font-size:24px;font-weight:700;color:var(--accent);">${data.untracked || 0}</div>
+        <div style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted);">UNTRACKED</div>
+      </div>
+    </div>`;
+
+    // Event type breakdown
+    if (data.event_types && data.event_types.length) {
+      html += '<div style="margin-bottom:16px;"><div class="narrative-section-title">Event Types</div>';
+      data.event_types.forEach(e => {
+        html += `<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border);">
+          <span class="provenance-badge">${e.event_type}</span>
+          <span style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted);">${e.count}</span>
+        </div>`;
+      });
+      html += '</div>';
+    }
+
+    // Recent provenance events
+    if (data.recent_events && data.recent_events.length) {
+      html += '<div><div class="narrative-section-title">Recent Provenance Events</div>';
+      data.recent_events.forEach(r => {
+        html += `<div class="provenance-event">
+          <div>
+            <span class="provenance-badge">${r.event_type}</span>
+            <span style="font-family:var(--font-mono);font-size:10px;color:var(--entity-date);margin-left:6px;">${r.event_date || ''}</span>
+          </div>
+          <div style="flex:1;">
+            <div style="font-size:12px;cursor:pointer;color:var(--entity-place);" onclick="openReader(${r.doc_id},'provenance')">${r.title || 'Untitled'}</div>
+            ${r.description ? '<div style="font-size:11px;color:var(--text-muted);margin-top:2px;">' + r.description + '</div>' : ''}
+            ${r.actor ? '<div style="font-size:10px;color:var(--text-muted);">by ' + r.actor + '</div>' : ''}
+          </div>
+        </div>`;
+      });
+      html += '</div>';
+    }
+
+    if (!data.tracked_documents && !data.recent_events?.length) {
+      html += '<div style="margin-top:12px;color:var(--text-muted);">No provenance events recorded yet. Add provenance via the document reader.</div>';
+    }
+
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load provenance data</div>'; }
+}
+
+
+// ─── PHRASE TRENDS ───
+
+function showPhraseTrendView() {
+  currentView = 'phrasetrend';
+  hideAllViews();
+  document.getElementById('phrasetrendView').classList.add('active');
+  loadPhraseTrends();
+}
+
+async function loadPhraseTrends() {
+  const el = document.getElementById('phrasetrendContent');
+  const topN = document.getElementById('phraseTrendCount').value || 20;
+  try {
+    const data = await api(`/api/phrase-trends?top_n=${topN}`);
+    const phrases = data.phrases || [];
+    const years = data.years || [];
+
+    if (!phrases.length) { el.innerHTML = '<div style="color:var(--text-muted);">No phrases found in the database.</div>'; return; }
+
+    let html = '';
+
+    // Year headers
+    html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;padding-left:200px;">';
+    years.forEach(y => {
+      html += `<span style="font-family:var(--font-mono);font-size:9px;color:var(--text-muted);width:28px;text-align:center;">${y.substring(2)}</span>`;
+    });
+    html += '</div>';
+
+    phrases.forEach(p => {
+      const maxYearCount = Math.max(...years.map(y => p.by_year[y] || 0), 1);
+      html += `<div class="trend-row">
+        <span style="font-size:12px;min-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${p.phrase}">${p.phrase}</span>
+        <span style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted);min-width:50px;">${p.doc_count} docs</span>
+        <div class="trend-spark">`;
+      years.forEach(y => {
+        const count = p.by_year[y] || 0;
+        const height = count > 0 ? Math.max(2, (count / maxYearCount) * 20) : 0;
+        html += `<div class="trend-spark-bar" style="height:${height}px;" title="${y}: ${count}"></div>`;
+      });
+      html += '</div></div>';
+    });
+
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load phrase trends</div>'; }
+}
+
+
+// ─── DISAMBIGUATION ───
+
+function showDisambigView() {
+  currentView = 'disambig';
+  hideAllViews();
+  document.getElementById('disambigView').classList.add('active');
+  loadDisambiguation();
+}
+
+async function loadDisambiguation() {
+  const el = document.getElementById('disambigContent');
+  try {
+    const data = await api('/api/entity-disambiguation');
+    const pairs = data.ambiguous_pairs || [];
+    const shorts = data.short_entities || [];
+
+    let html = `<div style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted);margin-bottom:12px;">${data.already_resolved || 0} entities already resolved</div>`;
+
+    if (pairs.length) {
+      html += '<div style="margin-bottom:16px;"><div class="narrative-section-title">Ambiguous Pairs (Potential Duplicates)</div>';
+      pairs.forEach(p => {
+        html += `<div class="disambig-pair">
+          <div style="flex:1;">
+            <span class="entity-tag ${p.type_a}" style="font-size:11px;">${p.name_a}</span>
+            <span style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted);margin-left:4px;">${p.docs_a} docs, ${p.mentions_a} mentions</span>
+          </div>
+          <span style="font-family:var(--font-mono);font-size:12px;color:var(--accent);">?=</span>
+          <div style="flex:1;">
+            <span class="entity-tag ${p.type_b}" style="font-size:11px;">${p.name_b}</span>
+            <span style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted);margin-left:4px;">${p.docs_b} docs, ${p.mentions_b} mentions</span>
+          </div>
+        </div>`;
+      });
+      html += '</div>';
+    }
+
+    if (shorts.length) {
+      html += '<div><div class="narrative-section-title">Short/Ambiguous Names (3 chars or less)</div>';
+      html += '<div style="display:flex;flex-wrap:wrap;gap:6px;">';
+      shorts.forEach(s => {
+        html += `<span class="entity-tag ${s.type}" style="font-size:11px;" title="${s.doc_count} docs">${s.name} (${s.doc_count})</span>`;
+      });
+      html += '</div></div>';
+    }
+
+    if (!pairs.length && !shorts.length) {
+      html += '<div style="color:var(--text-muted);">No ambiguous entities found. The entity set looks clean.</div>';
+    }
+
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load disambiguation data</div>'; }
+}
+
+
+// ─── INVESTIGATION STATS ───
+
+function showInvStatsView() {
+  currentView = 'invstats';
+  hideAllViews();
+  document.getElementById('invstatsView').classList.add('active');
+  loadInvStats();
+}
+
+async function loadInvStats() {
+  const el = document.getElementById('invstatsContent');
+  try {
+    const data = await api('/api/investigation-stats');
+    const core = data.core || {};
+    const analysis = data.analysis || {};
+    const dr = data.date_range || {};
+
+    let html = '<div class="stat-grid">';
+    const coreStats = [
+      {val: core.documents, label: 'Documents', color: 'var(--entity-place)'},
+      {val: core.entities, label: 'Entities', color: 'var(--entity-person)'},
+      {val: core.events, label: 'Events', color: 'var(--entity-date)'},
+      {val: core.connections, label: 'Connections', color: 'var(--entity-org)'},
+      {val: core.pages, label: 'Pages', color: 'var(--entity-thing)'},
+      {val: core.flagged, label: 'Flagged', color: 'var(--accent)'},
+    ];
+    coreStats.forEach(s => {
+      html += `<div class="stat-card"><div class="stat-value" style="color:${s.color};">${(s.val || 0).toLocaleString()}</div><div class="stat-label">${s.label}</div></div>`;
+    });
+    html += '</div>';
+
+    // Date range
+    if (dr.earliest || dr.latest) {
+      html += `<div class="narrative-section" style="margin-top:12px;">
+        <div class="narrative-section-title">Date Coverage</div>
+        <div style="font-family:var(--font-mono);font-size:12px;">${dr.earliest || '?'} — ${dr.latest || '?'}</div>
+        <div style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted);margin-top:4px;">${dr.dated || 0} dated · ${dr.undated || 0} undated</div>
+      </div>`;
+    }
+
+    // Analysis metrics
+    html += '<div class="stat-grid" style="margin-top:12px;">';
+    const analysisStats = [
+      {val: analysis.evidence_chains, label: 'Chains'},
+      {val: analysis.chain_links, label: 'Chain Links'},
+      {val: analysis.financial_indicators, label: 'Financial'},
+      {val: analysis.redactions, label: 'Redactions'},
+      {val: analysis.watchlist, label: 'Watchlist'},
+      {val: analysis.annotations, label: 'Annotations'},
+      {val: analysis.analyst_notes, label: 'Notes'},
+      {val: analysis.resolved_entities, label: 'Resolved'},
+    ];
+    analysisStats.forEach(s => {
+      html += `<div class="stat-card"><div class="stat-value" style="color:var(--text-primary);font-size:18px;">${(s.val || 0).toLocaleString()}</div><div class="stat-label">${s.label}</div></div>`;
+    });
+    html += '</div>';
+
+    if (analysis.avg_risk_score) {
+      html += `<div class="narrative-section" style="margin-top:12px;">
+        <div class="narrative-section-title">Average Financial Risk Score</div>
+        <div style="font-family:var(--font-mono);font-size:20px;font-weight:700;color:${analysis.avg_risk_score > 7 ? 'var(--accent)' : analysis.avg_risk_score > 4 ? 'var(--entity-thing)' : 'var(--entity-date)'};">${analysis.avg_risk_score}</div>
+      </div>`;
+    }
+
+    // Entity type breakdown
+    if (data.entity_types && data.entity_types.length) {
+      html += '<div class="narrative-section" style="margin-top:12px;"><div class="narrative-section-title">Entity Types</div>';
+      data.entity_types.forEach(e => {
+        html += `<div style="display:flex;justify-content:space-between;padding:3px 0;font-size:12px;border-bottom:1px solid var(--border);">
+          <span class="entity-tag ${e.type}" style="font-size:10px;">${e.type}</span>
+          <span style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted);">${e.count.toLocaleString()}</span>
+        </div>`;
+      });
+      html += '</div>';
+    }
+
+    // Categories
+    if (data.categories && data.categories.length) {
+      html += '<div class="narrative-section" style="margin-top:12px;"><div class="narrative-section-title">Document Categories</div>';
+      data.categories.forEach(c => {
+        html += `<div style="display:flex;justify-content:space-between;padding:3px 0;font-size:12px;border-bottom:1px solid var(--border);">
+          <span>${c.category}</span>
+          <span style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted);">${c.count}</span>
+        </div>`;
+      });
+      html += '</div>';
+    }
+
+    // Top connected
+    if (data.top_connected && data.top_connected.length) {
+      html += '<div class="narrative-section" style="margin-top:12px;"><div class="narrative-section-title">Most Connected Entities</div>';
+      data.top_connected.forEach(t => {
+        html += `<div style="display:flex;justify-content:space-between;padding:3px 0;font-size:12px;border-bottom:1px solid var(--border);">
+          <span class="entity-tag ${t.type}" style="font-size:10px;">${t.name}</span>
+          <span style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted);">${t.connection_count} connections · weight ${t.total_weight}</span>
+        </div>`;
+      });
+      html += '</div>';
+    }
+
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load investigation stats</div>'; }
 }
 
 
