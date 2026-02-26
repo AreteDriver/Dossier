@@ -2039,6 +2039,8 @@ body::before {
 .entgrowth-view.active, .txtlen-view.active, .srcentdensity-view.active, .eventheat-view.active, .connweight-view.active, .multisrc-view.active { display: flex; }
 .hashaudit-view, .canoncov-view, .ftsstats-view, .eventresrate-view, .topconns-view, .docnotes-view { display: none; flex-direction: column; gap: 16px; }
 .hashaudit-view.active, .canoncov-view.active, .ftsstats-view.active, .eventresrate-view.active, .topconns-view.active, .docnotes-view.active { display: flex; }
+.entdupes-view, .ingestvel-view, .eventconf-view, .srcpages-view, .typeratio-view, .conndensity-view { display: none; flex-direction: column; gap: 16px; }
+.entdupes-view.active, .ingestvel-view.active, .eventconf-view.active, .srcpages-view.active, .typeratio-view.active, .conndensity-view.active { display: flex; }
 .rel-edge { display: flex; align-items: center; gap: 8px; padding: 4px 0; border-bottom: 1px solid var(--border); }
 .sbs-col { flex: 1; padding: 12px; background: var(--bg-card); border-radius: var(--radius); border: 1px solid var(--border); overflow: hidden; }
 .sbs-header { font-family: var(--font-mono); font-size: 12px; font-weight: 600; color: var(--text-primary); margin-bottom: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -2635,6 +2637,30 @@ body::before {
       <div class="sidebar-item" data-view="docnotes" id="docnotesNav">
         <div class="sidebar-dot" style="background:var(--entity-org)"></div>
         Document Notes
+      </div>
+      <div class="sidebar-item" data-view="entdupes" id="entdupesNav">
+        <div class="sidebar-dot" style="background:var(--entity-date)"></div>
+        Entity Name Dupes
+      </div>
+      <div class="sidebar-item" data-view="ingestvel" id="ingestvelNav">
+        <div class="sidebar-dot" style="background:var(--entity-place)"></div>
+        Ingest Velocity
+      </div>
+      <div class="sidebar-item" data-view="eventconf" id="eventconfNav">
+        <div class="sidebar-dot" style="background:var(--entity-person)"></div>
+        Event Confidence
+      </div>
+      <div class="sidebar-item" data-view="srcpages" id="srcpagesNav">
+        <div class="sidebar-dot" style="background:var(--entity-org)"></div>
+        Source Pages
+      </div>
+      <div class="sidebar-item" data-view="typeratio" id="typeratioNav">
+        <div class="sidebar-dot" style="background:var(--entity-date)"></div>
+        Entity Type Ratio
+      </div>
+      <div class="sidebar-item" data-view="conndensity" id="conndensityNav">
+        <div class="sidebar-dot" style="background:var(--entity-place)"></div>
+        Connection Density
       </div>
     </div>
 
@@ -4010,6 +4036,36 @@ body::before {
       <div id="docnotesContent">Loading document notes...</div>
     </div>
 
+    <div class="entdupes-view" id="entdupesView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Entity Name Duplicates</div>
+      <div id="entdupesContent">Loading entity name duplicates...</div>
+    </div>
+
+    <div class="ingestvel-view" id="ingestvelView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Ingest Velocity</div>
+      <div id="ingestvelContent">Loading ingest velocity...</div>
+    </div>
+
+    <div class="eventconf-view" id="eventconfView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Event Confidence Ranking</div>
+      <div id="eventconfContent">Loading event confidence...</div>
+    </div>
+
+    <div class="srcpages-view" id="srcpagesView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Source Page Distribution</div>
+      <div id="srcpagesContent">Loading source pages...</div>
+    </div>
+
+    <div class="typeratio-view" id="typeratioView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Entity Type Ratio by Source</div>
+      <div id="typeratioContent">Loading entity type ratio...</div>
+    </div>
+
+    <div class="conndensity-view" id="conndensityView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Connection Density by Type</div>
+      <div id="conndensityContent">Loading connection density...</div>
+    </div>
+
   </main>
 
   <!-- RIGHT PANEL -->
@@ -4736,6 +4792,12 @@ function hideAllViews() {
   document.getElementById('eventresrateView').classList.remove('active');
   document.getElementById('topconnsView').classList.remove('active');
   document.getElementById('docnotesView').classList.remove('active');
+  document.getElementById('entdupesView').classList.remove('active');
+  document.getElementById('ingestvelView').classList.remove('active');
+  document.getElementById('eventconfView').classList.remove('active');
+  document.getElementById('srcpagesView').classList.remove('active');
+  document.getElementById('typeratioView').classList.remove('active');
+  document.getElementById('conndensityView').classList.remove('active');
 }
 
 function showDocumentView() {
@@ -4915,6 +4977,12 @@ document.querySelectorAll('.sidebar-item[data-view]').forEach(item => {
     else if (view === 'eventresrate') showEventResRateView();
     else if (view === 'topconns') showTopConnsView();
     else if (view === 'docnotes') showDocNotesView();
+    else if (view === 'entdupes') showEntDupesView();
+    else if (view === 'ingestvel') showIngestVelView();
+    else if (view === 'eventconf') showEventConfView();
+    else if (view === 'srcpages') showSrcPagesView();
+    else if (view === 'typeratio') showTypeRatioView();
+    else if (view === 'conndensity') showConnDensityView();
   });
 });
 
@@ -6092,6 +6160,12 @@ function goBackFromReader() {
   else if (readerPreviousView === 'eventresrate') showEventResRateView();
   else if (readerPreviousView === 'topconns') showTopConnsView();
   else if (readerPreviousView === 'docnotes') showDocNotesView();
+  else if (readerPreviousView === 'entdupes') showEntDupesView();
+  else if (readerPreviousView === 'ingestvel') showIngestVelView();
+  else if (readerPreviousView === 'eventconf') showEventConfView();
+  else if (readerPreviousView === 'srcpages') showSrcPagesView();
+  else if (readerPreviousView === 'typeratio') showTypeRatioView();
+  else if (readerPreviousView === 'conndensity') showConnDensityView();
   else showDocumentView();
 }
 
@@ -13514,6 +13588,203 @@ async function loadDocNotes() {
     }
     el.innerHTML = html;
   } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load document notes</div>'; }
+}
+
+
+// ── Entity Name Duplicates ──
+
+function showEntDupesView() {
+  currentView = 'entdupes';
+  hideAllViews();
+  document.getElementById('entdupesView').classList.add('active');
+  loadEntDupes();
+}
+
+async function loadEntDupes() {
+  const el = document.getElementById('entdupesContent');
+  el.innerHTML = 'Loading entity name duplicates...';
+  try {
+    const data = await fetchJSON('/api/entity-name-duplicates');
+    let html = `<div class="stat-card" style="margin-bottom:12px;"><div class="stat-value">${data.total}</div><div class="stat-label">Duplicate Name Pairs</div></div>`;
+
+    if (data.duplicates.length) {
+      html += '<table class="data-table"><thead><tr><th>Name</th><th>Type A</th><th>ID A</th><th>Type B</th><th>ID B</th></tr></thead><tbody>';
+      data.duplicates.forEach(d => {
+        html += `<tr><td style="font-weight:600;">${d.name}</td>`;
+        html += `<td><span class="entity-tag ${d.type_a}" style="font-size:9px;">${d.type_a}</span></td><td>${d.id_a}</td>`;
+        html += `<td><span class="entity-tag ${d.type_b}" style="font-size:9px;">${d.type_b}</span></td><td>${d.id_b}</td></tr>`;
+      });
+      html += '</tbody></table>';
+    } else {
+      html += '<div style="color:var(--text-muted);">No duplicate entity names found.</div>';
+    }
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load entity name duplicates</div>'; }
+}
+
+// ── Ingest Velocity ──
+
+function showIngestVelView() {
+  currentView = 'ingestvel';
+  hideAllViews();
+  document.getElementById('ingestvelView').classList.add('active');
+  loadIngestVel();
+}
+
+async function loadIngestVel() {
+  const el = document.getElementById('ingestvelContent');
+  el.innerHTML = 'Loading ingest velocity...';
+  try {
+    const data = await fetchJSON('/api/ingest-velocity');
+    let html = `<div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:12px;">`;
+    html += `<div class="stat-card"><div class="stat-value">${data.total_hours}</div><div class="stat-label">Hour Buckets</div></div>`;
+    html += `<div class="stat-card"><div class="stat-value">${data.avg_per_hour}</div><div class="stat-label">Avg/Hour</div></div>`;
+    html += `<div class="stat-card"><div class="stat-value">${data.max_per_hour}</div><div class="stat-label">Max/Hour</div></div>`;
+    html += `</div>`;
+
+    if (data.buckets.length) {
+      const maxC = Math.max(...data.buckets.map(b => b.doc_count));
+      html += '<div style="display:flex;gap:2px;align-items:end;height:80px;margin-bottom:12px;">';
+      data.buckets.forEach(b => {
+        const pct = maxC ? (b.doc_count / maxC * 100) : 0;
+        html += `<div title="${b.hour_bucket}: ${b.doc_count} docs" style="flex:1;background:var(--accent);min-height:2px;height:${pct}%;border-radius:2px;"></div>`;
+      });
+      html += '</div>';
+
+      html += '<table class="data-table"><thead><tr><th>Hour</th><th>Docs</th><th>Pages</th></tr></thead><tbody>';
+      data.buckets.forEach(b => {
+        html += `<tr><td>${b.hour_bucket}</td><td>${b.doc_count}</td><td>${(b.total_pages||0).toLocaleString()}</td></tr>`;
+      });
+      html += '</tbody></table>';
+    }
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load ingest velocity</div>'; }
+}
+
+// ── Event Confidence ──
+
+function showEventConfView() {
+  currentView = 'eventconf';
+  hideAllViews();
+  document.getElementById('eventconfView').classList.add('active');
+  loadEventConf();
+}
+
+async function loadEventConf() {
+  const el = document.getElementById('eventconfContent');
+  el.innerHTML = 'Loading event confidence...';
+  try {
+    const data = await fetchJSON('/api/event-confidence-ranking');
+    let html = `<div class="stat-card" style="margin-bottom:12px;"><div class="stat-value">${data.total}</div><div class="stat-label">Lowest Confidence Events</div></div>`;
+
+    if (data.events.length) {
+      html += '<table class="data-table"><thead><tr><th>Date</th><th>Raw</th><th>Precision</th><th>Confidence</th><th>Context</th><th>Document</th></tr></thead><tbody>';
+      data.events.forEach(e => {
+        const confColor = e.confidence < 0.5 ? '#e05555' : e.confidence < 0.7 ? '#d4a017' : 'var(--text-primary)';
+        html += `<tr><td>${e.event_date||''}</td><td style="font-size:11px;">${(e.date_raw||'').substring(0,20)}</td>`;
+        html += `<td>${e.precision||''}</td>`;
+        html += `<td style="font-weight:600;color:${confColor};">${e.confidence}</td>`;
+        html += `<td style="font-size:11px;color:var(--text-muted);">${(e.context||'').substring(0,30)}</td>`;
+        html += `<td><a href="#" onclick="openReader(${e.doc_id});return false;">${(e.title||e.filename).substring(0,25)}</a></td></tr>`;
+      });
+      html += '</tbody></table>';
+    }
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load event confidence</div>'; }
+}
+
+// ── Source Pages ──
+
+function showSrcPagesView() {
+  currentView = 'srcpages';
+  hideAllViews();
+  document.getElementById('srcpagesView').classList.add('active');
+  loadSrcPages();
+}
+
+async function loadSrcPages() {
+  const el = document.getElementById('srcpagesContent');
+  el.innerHTML = 'Loading source pages...';
+  try {
+    const data = await fetchJSON('/api/source-page-distribution');
+    let html = `<div class="stat-card" style="margin-bottom:12px;"><div class="stat-value">${data.total}</div><div class="stat-label">Sources</div></div>`;
+
+    if (data.sources.length) {
+      html += '<table class="data-table"><thead><tr><th>Source</th><th>Docs</th><th>Total Pages</th><th>Avg</th><th>Min</th><th>Max</th></tr></thead><tbody>';
+      data.sources.forEach(s => {
+        html += `<tr><td>${s.source}</td><td>${s.doc_count}</td>`;
+        html += `<td style="font-weight:600;">${(s.total_pages||0).toLocaleString()}</td>`;
+        html += `<td>${s.avg_pages}</td><td>${s.min_pages}</td><td>${s.max_pages}</td></tr>`;
+      });
+      html += '</tbody></table>';
+    }
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load source pages</div>'; }
+}
+
+// ── Entity Type Ratio ──
+
+function showTypeRatioView() {
+  currentView = 'typeratio';
+  hideAllViews();
+  document.getElementById('typeratioView').classList.add('active');
+  loadTypeRatio();
+}
+
+async function loadTypeRatio() {
+  const el = document.getElementById('typeratioContent');
+  el.innerHTML = 'Loading entity type ratio...';
+  try {
+    const data = await fetchJSON('/api/entity-type-ratio');
+    if (!data.sources.length) { el.innerHTML = '<div style="color:var(--text-muted);">No data.</div>'; return; }
+
+    let html = '<div style="overflow-x:auto;"><table class="data-table"><thead><tr><th>Source</th>';
+    data.types.forEach(t => html += `<th>${t}</th>`);
+    html += '<th>Total</th></tr></thead><tbody>';
+
+    data.sources.forEach(src => {
+      html += `<tr><td style="font-weight:600;">${src}</td>`;
+      let total = 0;
+      data.types.forEach(t => {
+        const v = data.matrix[src] && data.matrix[src][t] ? data.matrix[src][t] : 0;
+        total += v;
+        html += `<td>${v || '—'}</td>`;
+      });
+      html += `<td style="font-weight:600;">${total}</td></tr>`;
+    });
+    html += '</tbody></table></div>';
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load entity type ratio</div>'; }
+}
+
+// ── Connection Density ──
+
+function showConnDensityView() {
+  currentView = 'conndensity';
+  hideAllViews();
+  document.getElementById('conndensityView').classList.add('active');
+  loadConnDensity();
+}
+
+async function loadConnDensity() {
+  const el = document.getElementById('conndensityContent');
+  el.innerHTML = 'Loading connection density...';
+  try {
+    const data = await fetchJSON('/api/connection-density');
+    let html = `<div class="stat-card" style="margin-bottom:12px;"><div class="stat-value">${data.total}</div><div class="stat-label">Type Pairs</div></div>`;
+
+    if (data.pairs.length) {
+      html += '<table class="data-table"><thead><tr><th>Type A</th><th>Type B</th><th>Connections</th><th>Total Weight</th></tr></thead><tbody>';
+      data.pairs.forEach(p => {
+        html += `<tr><td><span class="entity-tag ${p.type_a}" style="font-size:10px;">${p.type_a}</span></td>`;
+        html += `<td><span class="entity-tag ${p.type_b}" style="font-size:10px;">${p.type_b}</span></td>`;
+        html += `<td style="font-weight:600;">${p.connection_count.toLocaleString()}</td>`;
+        html += `<td>${p.total_weight.toLocaleString()}</td></tr>`;
+      });
+      html += '</tbody></table>';
+    }
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load connection density</div>'; }
 }
 
 

@@ -9537,6 +9537,144 @@ def document_notes():
     }
 
 
+# ── Entity Name Duplicates ───────────────────────
+
+
+@app.get("/api/entity-name-duplicates")
+def entity_name_duplicates():
+    """Entities with identical names but different types."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT e1.id as id_a, e1.name, e1.type as type_a, "
+            "e2.id as id_b, e2.type as type_b "
+            "FROM entities e1 "
+            "JOIN entities e2 ON e1.name = e2.name AND e1.id < e2.id AND e1.type != e2.type "
+            "ORDER BY e1.name "
+            "LIMIT 100"
+        ).fetchall()
+
+    return {"duplicates": [dict(r) for r in rows], "total": len(rows)}
+
+
+# ── Document Ingest Velocity ────────────────────
+
+
+@app.get("/api/ingest-velocity")
+def ingest_velocity():
+    """Documents ingested per hour."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT strftime('%Y-%m-%d %H:00', ingested_at) as hour_bucket, "
+            "COUNT(*) as doc_count, SUM(pages) as total_pages "
+            "FROM documents "
+            "WHERE ingested_at IS NOT NULL "
+            "GROUP BY hour_bucket ORDER BY hour_bucket"
+        ).fetchall()
+
+    buckets = [dict(r) for r in rows]
+    counts = [b["doc_count"] for b in buckets]
+
+    return {
+        "buckets": buckets,
+        "total_hours": len(buckets),
+        "avg_per_hour": round(sum(counts) / len(counts), 1) if counts else 0,
+        "max_per_hour": max(counts) if counts else 0,
+    }
+
+
+# ── Event Confidence Ranking ────────────────────
+
+
+@app.get("/api/event-confidence-ranking")
+def event_confidence_ranking():
+    """Lowest-confidence events needing review."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT ev.id, ev.event_date, ev.date_raw, ev.precision, ev.confidence, "
+            "ev.context, d.id as doc_id, d.title, d.filename "
+            "FROM events ev "
+            "JOIN documents d ON d.id = ev.document_id "
+            "WHERE ev.confidence IS NOT NULL "
+            "ORDER BY ev.confidence ASC "
+            "LIMIT 100"
+        ).fetchall()
+
+    return {"events": [dict(r) for r in rows], "total": len(rows)}
+
+
+# ── Source Page Distribution ────────────────────
+
+
+@app.get("/api/source-page-distribution")
+def source_page_distribution():
+    """Page count statistics per source."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT source, COUNT(*) as doc_count, "
+            "SUM(pages) as total_pages, "
+            "ROUND(AVG(pages), 1) as avg_pages, "
+            "MIN(pages) as min_pages, MAX(pages) as max_pages "
+            "FROM documents "
+            "WHERE source IS NOT NULL AND source != '' "
+            "GROUP BY source ORDER BY total_pages DESC"
+        ).fetchall()
+
+    return {"sources": [dict(r) for r in rows], "total": len(rows)}
+
+
+# ── Entity Type Ratio ───────────────────────────
+
+
+@app.get("/api/entity-type-ratio")
+def entity_type_ratio():
+    """Entity type ratios per document source."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT d.source, e.type, COUNT(DISTINCT e.id) as entity_count "
+            "FROM document_entities de "
+            "JOIN documents d ON d.id = de.document_id "
+            "JOIN entities e ON e.id = de.entity_id "
+            "WHERE d.source IS NOT NULL AND d.source != '' "
+            "GROUP BY d.source, e.type "
+            "ORDER BY d.source, entity_count DESC"
+        ).fetchall()
+
+    matrix = {}
+    types = set()
+    for r in rows:
+        src = r["source"]
+        t = r["type"]
+        types.add(t)
+        if src not in matrix:
+            matrix[src] = {}
+        matrix[src][t] = r["entity_count"]
+
+    sources = sorted(matrix.keys())
+    types = sorted(types)
+
+    return {"sources": sources, "types": types, "matrix": matrix}
+
+
+# ── Connection Density by Type ──────────────────
+
+
+@app.get("/api/connection-density")
+def connection_density():
+    """Connection counts between entity type pairs."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT ea.type as type_a, eb.type as type_b, "
+            "COUNT(*) as connection_count, SUM(ec.weight) as total_weight "
+            "FROM entity_connections ec "
+            "JOIN entities ea ON ea.id = ec.entity_a_id "
+            "JOIN entities eb ON eb.id = ec.entity_b_id "
+            "GROUP BY ea.type, eb.type "
+            "ORDER BY connection_count DESC"
+        ).fetchall()
+
+    return {"pairs": [dict(r) for r in rows], "total": len(rows)}
+
+
 # ═══════════════════════════════════════════
 # STATIC FILES (serve the frontend)
 # ═══════════════════════════════════════════
