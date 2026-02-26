@@ -2069,6 +2069,8 @@ body::before {
 .enttypesrc-view.active, .docingestgap-view.active, .evtweekday-view.active, .srccatcov-view.active, .entmultialias-view.active, .connasym-view.active { display: flex; }
 .entbetween-view, .docsrcdiv-view, .evtburst-view, .srcuniqent-view, .entlifecycle-view, .conngrowth-view { display: none; flex-direction: column; gap: 16px; }
 .entbetween-view.active, .docsrcdiv-view.active, .evtburst-view.active, .srcuniqent-view.active, .entlifecycle-view.active, .conngrowth-view.active { display: flex; }
+.entsrcloyalty-view, .docpageoutlier-view, .evtconftrend-view, .srcingestcad-view, .entconndensity-view, .conntempoverlap-view { display: none; flex-direction: column; gap: 16px; }
+.entsrcloyalty-view.active, .docpageoutlier-view.active, .evtconftrend-view.active, .srcingestcad-view.active, .entconndensity-view.active, .conntempoverlap-view.active { display: flex; }
 .rel-edge { display: flex; align-items: center; gap: 8px; padding: 4px 0; border-bottom: 1px solid var(--border); }
 .sbs-col { flex: 1; padding: 12px; background: var(--bg-card); border-radius: var(--radius); border: 1px solid var(--border); overflow: hidden; }
 .sbs-header { font-family: var(--font-mono); font-size: 12px; font-weight: 600; color: var(--text-primary); margin-bottom: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -3025,6 +3027,30 @@ body::before {
       <div class="sidebar-item" data-view="conngrowth" id="conngrowthNav">
         <div class="sidebar-dot" style="background:var(--entity-org)"></div>
         Connection Growth Timeline
+      </div>
+      <div class="sidebar-item" data-view="entsrcloyalty" id="entsrcloyaltyNav">
+        <div class="sidebar-dot" style="background:var(--entity-person)"></div>
+        Entity Source Loyalty
+      </div>
+      <div class="sidebar-item" data-view="docpageoutlier" id="docpageoutlierNav">
+        <div class="sidebar-dot" style="background:var(--accent)"></div>
+        Document Page Outliers
+      </div>
+      <div class="sidebar-item" data-view="evtconftrend" id="evtconftrendNav">
+        <div class="sidebar-dot" style="background:var(--danger)"></div>
+        Event Confidence Trend
+      </div>
+      <div class="sidebar-item" data-view="srcingestcad" id="srcingestcadNav">
+        <div class="sidebar-dot" style="background:var(--entity-location)"></div>
+        Source Ingestion Cadence
+      </div>
+      <div class="sidebar-item" data-view="entconndensity" id="entconndensityNav">
+        <div class="sidebar-dot" style="background:var(--entity-person)"></div>
+        Entity Connection Density
+      </div>
+      <div class="sidebar-item" data-view="conntempoverlap" id="conntempoverlapNav">
+        <div class="sidebar-dot" style="background:var(--entity-org)"></div>
+        Connection Temporal Overlap
       </div>
     </div>
 
@@ -4850,6 +4876,36 @@ body::before {
       <div id="conngrowthContent">Loading connection growth...</div>
     </div>
 
+    <div class="entsrcloyalty-view" id="entsrcloyaltyView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Entity Source Loyalty</div>
+      <div id="entsrcloyaltyContent">Loading entity source loyalty...</div>
+    </div>
+
+    <div class="docpageoutlier-view" id="docpageoutlierView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Document Page Outliers</div>
+      <div id="docpageoutlierContent">Loading page outliers...</div>
+    </div>
+
+    <div class="evtconftrend-view" id="evtconftrendView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Event Confidence Trend</div>
+      <div id="evtconftrendContent">Loading confidence trend...</div>
+    </div>
+
+    <div class="srcingestcad-view" id="srcingestcadView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Source Ingestion Cadence</div>
+      <div id="srcingestcadContent">Loading ingestion cadence...</div>
+    </div>
+
+    <div class="entconndensity-view" id="entconndensityView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Entity Connection Density</div>
+      <div id="entconndensityContent">Loading connection density...</div>
+    </div>
+
+    <div class="conntempoverlap-view" id="conntempoverlapView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Connection Temporal Overlap</div>
+      <div id="conntempoverlapContent">Loading temporal overlap...</div>
+    </div>
+
   </main>
 
   <!-- RIGHT PANEL -->
@@ -5666,6 +5722,12 @@ function hideAllViews() {
   document.getElementById('srcuniqentView').classList.remove('active');
   document.getElementById('entlifecycleView').classList.remove('active');
   document.getElementById('conngrowthView').classList.remove('active');
+  document.getElementById('entsrcloyaltyView').classList.remove('active');
+  document.getElementById('docpageoutlierView').classList.remove('active');
+  document.getElementById('evtconftrendView').classList.remove('active');
+  document.getElementById('srcingestcadView').classList.remove('active');
+  document.getElementById('entconndensityView').classList.remove('active');
+  document.getElementById('conntempoverlapView').classList.remove('active');
 }
 
 function showDocumentView() {
@@ -5935,6 +5997,12 @@ document.querySelectorAll('.sidebar-item[data-view]').forEach(item => {
     else if (view === 'srcuniqent') showSrcUniqEntView();
     else if (view === 'entlifecycle') showEntLifecycleView();
     else if (view === 'conngrowth') showConnGrowthView();
+    else if (view === 'entsrcloyalty') showEntSrcLoyaltyView();
+    else if (view === 'docpageoutlier') showDocPageOutlierView();
+    else if (view === 'evtconftrend') showEvtConfTrendView();
+    else if (view === 'srcingestcad') showSrcIngestCadView();
+    else if (view === 'entconndensity') showEntConnDensityView();
+    else if (view === 'conntempoverlap') showConnTempOverlapView();
   });
 });
 
@@ -7202,6 +7270,12 @@ function goBackFromReader() {
   else if (readerPreviousView === 'srcuniqent') showSrcUniqEntView();
   else if (readerPreviousView === 'entlifecycle') showEntLifecycleView();
   else if (readerPreviousView === 'conngrowth') showConnGrowthView();
+  else if (readerPreviousView === 'entsrcloyalty') showEntSrcLoyaltyView();
+  else if (readerPreviousView === 'docpageoutlier') showDocPageOutlierView();
+  else if (readerPreviousView === 'evtconftrend') showEvtConfTrendView();
+  else if (readerPreviousView === 'srcingestcad') showSrcIngestCadView();
+  else if (readerPreviousView === 'entconndensity') showEntConnDensityView();
+  else if (readerPreviousView === 'conntempoverlap') showConnTempOverlapView();
   else showDocumentView();
 }
 
@@ -16914,6 +16988,149 @@ async function loadConnGrowth() {
     html += '</tbody></table>';
     el.innerHTML = html;
   } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load connection growth</div>'; }
+}
+
+function showEntSrcLoyaltyView() {
+  currentView = 'entsrcloyalty';
+  hideAllViews();
+  document.getElementById('entsrcloyaltyView').classList.add('active');
+  loadEntSrcLoyalty();
+}
+async function loadEntSrcLoyalty() {
+  const el = document.getElementById('entsrcloyaltyContent');
+  try {
+    const res = await fetch('/api/entity-source-loyalty');
+    const data = await res.json();
+    let html = `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px;">`;
+    html += `<div style="background:var(--bg-secondary);padding:12px;border-radius:6px;"><div style="font-size:11px;color:var(--text-muted);">Total Entities</div><div style="font-size:20px;font-weight:700;color:var(--text-primary);">${data.total_entities}</div></div>`;
+    html += `<div style="background:var(--bg-secondary);padding:12px;border-radius:6px;"><div style="font-size:11px;color:var(--text-muted);">Single Source</div><div style="font-size:20px;font-weight:700;color:var(--accent);">${data.single_source}</div></div>`;
+    html += `<div style="background:var(--bg-secondary);padding:12px;border-radius:6px;"><div style="font-size:11px;color:var(--text-muted);">Multi Source</div><div style="font-size:20px;font-weight:700;color:var(--danger);">${data.multi_source}</div></div></div>`;
+    if (data.entities.length) {
+      html += '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="border-bottom:2px solid var(--border);"><th style="text-align:left;padding:8px;">Entity</th><th style="text-align:left;padding:8px;">Type</th><th style="text-align:right;padding:8px;">Sources</th></tr></thead><tbody>';
+      data.entities.forEach(r => {
+        html += `<tr style="border-bottom:1px solid var(--border);"><td style="padding:8px;font-weight:600;">${r.name}</td><td style="padding:8px;"><span class="entity-tag ${r.type}">${r.type}</span></td><td style="text-align:right;padding:8px;">${r.source_count}</td></tr>`;
+      });
+      html += '</tbody></table>';
+    }
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load entity source loyalty</div>'; }
+}
+
+function showDocPageOutlierView() {
+  currentView = 'docpageoutlier';
+  hideAllViews();
+  document.getElementById('docpageoutlierView').classList.add('active');
+  loadDocPageOutlier();
+}
+async function loadDocPageOutlier() {
+  const el = document.getElementById('docpageoutlierContent');
+  try {
+    const res = await fetch('/api/document-page-outliers');
+    const data = await res.json();
+    let html = `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px;">`;
+    html += `<div style="background:var(--bg-secondary);padding:12px;border-radius:6px;"><div style="font-size:11px;color:var(--text-muted);">Avg Pages</div><div style="font-size:20px;font-weight:700;color:var(--text-primary);">${data.avg_pages}</div></div>`;
+    html += `<div style="background:var(--bg-secondary);padding:12px;border-radius:6px;"><div style="font-size:11px;color:var(--text-muted);">Threshold (3x avg)</div><div style="font-size:20px;font-weight:700;color:var(--danger);">${data.threshold}</div></div>`;
+    html += `<div style="background:var(--bg-secondary);padding:12px;border-radius:6px;"><div style="font-size:11px;color:var(--text-muted);">Max Pages</div><div style="font-size:20px;font-weight:700;color:var(--accent);">${data.max_pages}</div></div></div>`;
+    if (data.outliers.length) {
+      html += '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="border-bottom:2px solid var(--border);"><th style="text-align:left;padding:8px;">Title</th><th style="text-align:left;padding:8px;">Source</th><th style="text-align:right;padding:8px;">Pages</th></tr></thead><tbody>';
+      data.outliers.forEach(r => {
+        html += `<tr style="border-bottom:1px solid var(--border);"><td style="padding:8px;font-weight:600;">${r.title || r.filename}</td><td style="padding:8px;">${r.source || '—'}</td><td style="text-align:right;padding:8px;font-weight:700;color:var(--danger);">${r.pages}</td></tr>`;
+      });
+      html += '</tbody></table>';
+    } else { html += '<div style="color:var(--text-muted);">No page outliers detected.</div>'; }
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load page outliers</div>'; }
+}
+
+function showEvtConfTrendView() {
+  currentView = 'evtconftrend';
+  hideAllViews();
+  document.getElementById('evtconftrendView').classList.add('active');
+  loadEvtConfTrend();
+}
+async function loadEvtConfTrend() {
+  const el = document.getElementById('evtconftrendContent');
+  try {
+    const res = await fetch('/api/event-confidence-trend');
+    const data = await res.json();
+    if (!data.months.length) { el.innerHTML = '<div style="color:var(--text-muted);">No confidence data.</div>'; return; }
+    let html = '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="border-bottom:2px solid var(--border);"><th style="text-align:left;padding:8px;">Month</th><th style="text-align:right;padding:8px;">Events</th><th style="text-align:right;padding:8px;">Avg Confidence</th><th style="text-align:left;padding:8px;width:40%;">Bar</th></tr></thead><tbody>';
+    data.months.forEach(r => {
+      const pct = r.avg_confidence * 100;
+      html += `<tr style="border-bottom:1px solid var(--border);"><td style="padding:8px;font-weight:600;">${r.month}</td><td style="text-align:right;padding:8px;">${r.event_count}</td><td style="text-align:right;padding:8px;">${r.avg_confidence}</td><td style="padding:8px;"><div style="background:var(--accent);height:14px;border-radius:3px;width:${pct}%;"></div></td></tr>`;
+    });
+    html += '</tbody></table>';
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load confidence trend</div>'; }
+}
+
+function showSrcIngestCadView() {
+  currentView = 'srcingestcad';
+  hideAllViews();
+  document.getElementById('srcingestcadView').classList.add('active');
+  loadSrcIngestCad();
+}
+async function loadSrcIngestCad() {
+  const el = document.getElementById('srcingestcadContent');
+  try {
+    const res = await fetch('/api/source-ingestion-cadence');
+    const data = await res.json();
+    if (!data.sources.length) { el.innerHTML = '<div style="color:var(--text-muted);">No ingestion data.</div>'; return; }
+    const max = Math.max(...data.sources.map(r => r.doc_count));
+    let html = '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="border-bottom:2px solid var(--border);"><th style="text-align:left;padding:8px;">Source</th><th style="text-align:right;padding:8px;">Docs</th><th style="padding:8px;">First Ingested</th><th style="padding:8px;">Last Ingested</th><th style="text-align:left;padding:8px;width:30%;">Bar</th></tr></thead><tbody>';
+    data.sources.forEach(r => {
+      const pct = max > 0 ? (r.doc_count / max * 100) : 0;
+      html += `<tr style="border-bottom:1px solid var(--border);"><td style="padding:8px;font-weight:600;">${r.source}</td><td style="text-align:right;padding:8px;">${r.doc_count}</td><td style="padding:8px;font-size:12px;">${(r.first_ingested||'').substring(0,10)}</td><td style="padding:8px;font-size:12px;">${(r.last_ingested||'').substring(0,10)}</td><td style="padding:8px;"><div style="background:var(--entity-location);height:14px;border-radius:3px;width:${pct}%;"></div></td></tr>`;
+    });
+    html += '</tbody></table>';
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load ingestion cadence</div>'; }
+}
+
+function showEntConnDensityView() {
+  currentView = 'entconndensity';
+  hideAllViews();
+  document.getElementById('entconndensityView').classList.add('active');
+  loadEntConnDensity();
+}
+async function loadEntConnDensity() {
+  const el = document.getElementById('entconndensityContent');
+  try {
+    const res = await fetch('/api/entity-connection-density');
+    const data = await res.json();
+    if (!data.entities.length) { el.innerHTML = '<div style="color:var(--text-muted);">No connection data.</div>'; return; }
+    const max = Math.max(...data.entities.map(r => r.actual));
+    let html = '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="border-bottom:2px solid var(--border);"><th style="text-align:left;padding:8px;">Entity</th><th style="text-align:left;padding:8px;">Type</th><th style="text-align:right;padding:8px;">Connections</th><th style="text-align:right;padding:8px;">Partners</th><th style="text-align:left;padding:8px;width:30%;">Bar</th></tr></thead><tbody>';
+    data.entities.forEach(r => {
+      const pct = max > 0 ? (r.actual / max * 100) : 0;
+      html += `<tr style="border-bottom:1px solid var(--border);"><td style="padding:8px;font-weight:600;">${r.name}</td><td style="padding:8px;"><span class="entity-tag ${r.type}">${r.type}</span></td><td style="text-align:right;padding:8px;">${r.actual}</td><td style="text-align:right;padding:8px;">${r.partners}</td><td style="padding:8px;"><div style="background:var(--accent);height:14px;border-radius:3px;width:${pct}%;"></div></td></tr>`;
+    });
+    html += '</tbody></table>';
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load connection density</div>'; }
+}
+
+function showConnTempOverlapView() {
+  currentView = 'conntempoverlap';
+  hideAllViews();
+  document.getElementById('conntempoverlapView').classList.add('active');
+  loadConnTempOverlap();
+}
+async function loadConnTempOverlap() {
+  const el = document.getElementById('conntempoverlapContent');
+  try {
+    const res = await fetch('/api/connection-temporal-overlap');
+    const data = await res.json();
+    if (!data.pairs.length) { el.innerHTML = '<div style="color:var(--text-muted);">No temporal overlap data.</div>'; return; }
+    const max = Math.max(...data.pairs.map(r => r.shared_months));
+    let html = '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="border-bottom:2px solid var(--border);"><th style="text-align:left;padding:8px;">Entity A</th><th style="text-align:left;padding:8px;">Entity B</th><th style="text-align:right;padding:8px;">Shared Months</th><th style="padding:8px;">Earliest</th><th style="padding:8px;">Latest</th><th style="text-align:left;padding:8px;width:20%;">Bar</th></tr></thead><tbody>';
+    data.pairs.forEach(r => {
+      const pct = max > 0 ? (r.shared_months / max * 100) : 0;
+      html += `<tr style="border-bottom:1px solid var(--border);"><td style="padding:8px;font-weight:600;">${r.entity_a}</td><td style="padding:8px;font-weight:600;">${r.entity_b}</td><td style="text-align:right;padding:8px;">${r.shared_months}</td><td style="padding:8px;font-size:12px;">${r.earliest}</td><td style="padding:8px;font-size:12px;">${r.latest}</td><td style="padding:8px;"><div style="background:var(--entity-org);height:14px;border-radius:3px;width:${pct}%;"></div></td></tr>`;
+    });
+    html += '</tbody></table>';
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load temporal overlap</div>'; }
 }
 
 // ─── INIT ───

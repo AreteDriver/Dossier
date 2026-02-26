@@ -11613,6 +11613,138 @@ def connection_growth_timeline():
     return {"timeline": [dict(r) for r in rows]}
 
 
+# ── Round 41 ─────────────────────────────────────────────────────────
+
+
+@app.get("/api/entity-source-loyalty")
+def entity_source_loyalty():
+    """Entities categorized by how many distinct sources they appear in."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT e.id, e.name, e.type, COUNT(DISTINCT d.source) AS source_count "
+            "FROM entities e "
+            "JOIN document_entities de ON de.entity_id = e.id "
+            "JOIN documents d ON d.id = de.document_id "
+            "WHERE d.source IS NOT NULL AND d.source != '' "
+            "GROUP BY e.id ORDER BY source_count ASC LIMIT 100"
+        ).fetchall()
+        total = conn.execute("SELECT COUNT(*) AS c FROM entities").fetchone()["c"]
+        single = conn.execute(
+            "SELECT COUNT(*) AS c FROM ("
+            "  SELECT de.entity_id FROM document_entities de "
+            "  JOIN documents d ON d.id = de.document_id "
+            "  WHERE d.source IS NOT NULL AND d.source != '' "
+            "  GROUP BY de.entity_id HAVING COUNT(DISTINCT d.source) = 1"
+            ")"
+        ).fetchone()["c"]
+    return {
+        "total_entities": total,
+        "single_source": single,
+        "multi_source": total - single,
+        "entities": [dict(r) for r in rows],
+    }
+
+
+@app.get("/api/document-page-outliers")
+def document_page_outliers():
+    """Documents with page counts significantly above average."""
+    with get_db() as conn:
+        stats = conn.execute(
+            "SELECT AVG(pages) AS avg_pages, "
+            "MAX(pages) AS max_pages, "
+            "COUNT(*) AS total "
+            "FROM documents WHERE pages IS NOT NULL AND pages > 0"
+        ).fetchone()
+        avg_p = stats["avg_pages"] or 0
+        threshold = avg_p * 3
+        outliers = conn.execute(
+            "SELECT id, title, filename, source, pages "
+            "FROM documents WHERE pages IS NOT NULL AND pages > ? "
+            "ORDER BY pages DESC LIMIT 50",
+            (threshold,),
+        ).fetchall()
+    return {
+        "avg_pages": round(avg_p, 1),
+        "threshold": round(threshold, 1),
+        "max_pages": stats["max_pages"] or 0,
+        "outliers": [dict(r) for r in outliers],
+    }
+
+
+@app.get("/api/event-confidence-trend")
+def event_confidence_trend():
+    """Average event confidence score per month over time."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT SUBSTR(event_date, 1, 7) AS month, "
+            "ROUND(AVG(confidence), 3) AS avg_confidence, "
+            "COUNT(*) AS event_count "
+            "FROM events "
+            "WHERE event_date IS NOT NULL AND LENGTH(event_date) >= 7 "
+            "AND confidence IS NOT NULL "
+            "GROUP BY month ORDER BY month"
+        ).fetchall()
+    return {"months": [dict(r) for r in rows]}
+
+
+@app.get("/api/source-ingestion-cadence")
+def source_ingestion_cadence():
+    """How frequently documents from each source were ingested."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT source, COUNT(*) AS doc_count, "
+            "MIN(ingested_at) AS first_ingested, "
+            "MAX(ingested_at) AS last_ingested "
+            "FROM documents "
+            "WHERE source IS NOT NULL AND source != '' "
+            "AND ingested_at IS NOT NULL "
+            "GROUP BY source ORDER BY doc_count DESC"
+        ).fetchall()
+    return {"sources": [dict(r) for r in rows]}
+
+
+@app.get("/api/entity-connection-density")
+def entity_connection_density():
+    """Ratio of actual connections to possible connections for top entities."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT e.id, e.name, e.type, sub.actual, sub.partners "
+            "FROM ("
+            "  SELECT entity_id, COUNT(*) AS actual, COUNT(DISTINCT partner) AS partners FROM ("
+            "    SELECT entity_a_id AS entity_id, entity_b_id AS partner FROM entity_connections "
+            "    UNION ALL "
+            "    SELECT entity_b_id, entity_a_id FROM entity_connections"
+            "  ) GROUP BY entity_id"
+            ") sub "
+            "JOIN entities e ON e.id = sub.entity_id "
+            "ORDER BY sub.actual DESC LIMIT 100"
+        ).fetchall()
+    return {"entities": [dict(r) for r in rows]}
+
+
+@app.get("/api/connection-temporal-overlap")
+def connection_temporal_overlap():
+    """Entity pairs that co-occur in documents from the same time periods."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT ea.name AS entity_a, eb.name AS entity_b, "
+            "COUNT(DISTINCT SUBSTR(d.date, 1, 7)) AS shared_months, "
+            "MIN(d.date) AS earliest, MAX(d.date) AS latest "
+            "FROM entity_connections ec "
+            "JOIN entities ea ON ea.id = ec.entity_a_id "
+            "JOIN entities eb ON eb.id = ec.entity_b_id "
+            "JOIN document_entities de_a ON de_a.entity_id = ec.entity_a_id "
+            "JOIN document_entities de_b ON de_b.entity_id = ec.entity_b_id "
+            "  AND de_a.document_id = de_b.document_id "
+            "JOIN documents d ON d.id = de_a.document_id "
+            "WHERE d.date IS NOT NULL AND LENGTH(d.date) >= 7 "
+            "GROUP BY ec.entity_a_id, ec.entity_b_id "
+            "HAVING shared_months >= 2 "
+            "ORDER BY shared_months DESC LIMIT 100"
+        ).fetchall()
+    return {"pairs": [dict(r) for r in rows]}
+
+
 # ═══════════════════════════════════════════
 # STATIC FILES (serve the frontend)
 # ═══════════════════════════════════════════
