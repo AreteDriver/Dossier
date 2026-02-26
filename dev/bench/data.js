@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1772099349318,
+  "lastUpdate": 1772099862199,
   "repoUrl": "https://github.com/AreteDriver/Dossier",
   "entries": {
     "Benchmark": [
@@ -714,6 +714,72 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.0011774414986418134",
             "extra": "mean: 5.66939232743342 msec\nrounds: 113"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "AreteDriver@users.noreply.github.com",
+            "name": "AreteDriver",
+            "username": "AreteDriver"
+          },
+          "committer": {
+            "email": "AreteDriver@users.noreply.github.com",
+            "name": "AreteDriver",
+            "username": "AreteDriver"
+          },
+          "distinct": true,
+          "id": "957c453c5117d650e5da182efc7604f948680582",
+          "message": "fix: reduce benchmark alert noise from CI runner variance\n\n- Increase alert-threshold from 115% to 150% (shared runners are noisy)\n- Disable fail-on-alert for PRs (benchmarks too flaky for hard gating)\n- Add --benchmark-min-rounds=5 for more stable averages\n\nThe 218→121 OPS regression was environmental, not code — only whitespace\nformatting changed in benchmarked modules.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>",
+          "timestamp": "2026-02-26T01:55:55-08:00",
+          "tree_id": "35f78710fb435e585702d7c33ede7fa514976c45",
+          "url": "https://github.com/AreteDriver/Dossier/commit/957c453c5117d650e5da182efc7604f948680582"
+        },
+        "date": 1772099861215,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/test_benchmarks.py::TestNERBenchmark::test_extract_entities_5k",
+            "value": 114.33068759958874,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00010239914465961252",
+            "extra": "mean: 8.746558085106775 msec\nrounds: 94"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestFTS5Benchmark::test_fts5_search_500_docs",
+            "value": 1562.8576017197222,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00001241356099925829",
+            "extra": "mean: 639.8535598506413 usec\nrounds: 1345"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestResolverBenchmark::test_resolve_all_200_entities",
+            "value": 13.424422077238514,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0020886031669914737",
+            "extra": "mean: 74.49110242857516 msec\nrounds: 14"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestGraphBenchmark::test_centrality_betweenness_100",
+            "value": 35.40393429937392,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0023272556815841163",
+            "extra": "mean: 28.245448416666047 msec\nrounds: 36"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestGraphBenchmark::test_communities_100",
+            "value": 214.73159650632158,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0010964079704809267",
+            "extra": "mean: 4.656976505879798 msec\nrounds: 170"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestBulkInsertBenchmark::test_bulk_insert_100_docs",
+            "value": 135.58654755892482,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0005799890576038478",
+            "extra": "mean: 7.375362954539485 msec\nrounds: 88"
           }
         ]
       }
