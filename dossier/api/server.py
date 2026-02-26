@@ -9954,6 +9954,161 @@ def redaction_density_ranking():
     return {"documents": [dict(r) for r in rows], "total_redactions": total}
 
 
+# ── Round 29 ──────────────────────────────────
+
+
+@app.get("/api/entity-spread")
+def entity_spread():
+    """How many unique sources and documents each entity appears in."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT e.id, e.name, e.type, "
+            "COUNT(DISTINCT d.id) AS doc_count, "
+            "COUNT(DISTINCT d.source) AS source_count "
+            "FROM entities e "
+            "JOIN document_entities de ON de.entity_id = e.id "
+            "JOIN documents d ON d.id = de.document_id "
+            "GROUP BY e.id ORDER BY doc_count DESC LIMIT 100"
+        ).fetchall()
+    return {"entities": [dict(r) for r in rows]}
+
+
+@app.get("/api/document-size-buckets")
+def document_size_buckets():
+    """Documents grouped by page count ranges."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT "
+            "CASE "
+            "  WHEN pages = 0 THEN '0 pages' "
+            "  WHEN pages = 1 THEN '1 page' "
+            "  WHEN pages BETWEEN 2 AND 10 THEN '2-10' "
+            "  WHEN pages BETWEEN 11 AND 50 THEN '11-50' "
+            "  WHEN pages BETWEEN 51 AND 200 THEN '51-200' "
+            "  WHEN pages BETWEEN 201 AND 500 THEN '201-500' "
+            "  ELSE '500+' END AS bucket, "
+            "COUNT(*) AS count, "
+            "SUM(pages) AS total_pages "
+            "FROM documents GROUP BY bucket ORDER BY MIN(pages)"
+        ).fetchall()
+    return {"buckets": [dict(r) for r in rows]}
+
+
+@app.get("/api/event-date-gaps")
+def event_date_gaps():
+    """Largest gaps between consecutive dated events."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT event_date FROM events "
+            "WHERE event_date IS NOT NULL AND event_date != '' "
+            "ORDER BY event_date"
+        ).fetchall()
+    dates = [r["event_date"] for r in rows]
+    gaps = []
+    for i in range(1, len(dates)):
+        try:
+            d1 = dates[i - 1][:10]
+            d2 = dates[i][:10]
+            from datetime import datetime
+
+            dt1 = datetime.strptime(d1, "%Y-%m-%d")
+            dt2 = datetime.strptime(d2, "%Y-%m-%d")
+            delta = (dt2 - dt1).days
+            if delta > 0:
+                gaps.append({"start": d1, "end": d2, "days": delta})
+        except (ValueError, TypeError):
+            continue
+    gaps.sort(key=lambda g: g["days"], reverse=True)
+    return {"gaps": gaps[:50], "total_events_with_dates": len(dates)}
+
+
+@app.get("/api/source-entity-overlap")
+def source_entity_overlap():
+    """Pairwise entity overlap between sources."""
+    with get_db() as conn:
+        sources = conn.execute(
+            "SELECT DISTINCT source FROM documents WHERE source IS NOT NULL"
+        ).fetchall()
+        source_names = [s["source"] for s in sources]
+        source_entities = {}
+        for src in source_names:
+            ents = conn.execute(
+                "SELECT DISTINCT de.entity_id FROM document_entities de "
+                "JOIN documents d ON d.id = de.document_id "
+                "WHERE d.source = ?",
+                (src,),
+            ).fetchall()
+            source_entities[src] = {r["entity_id"] for r in ents}
+    pairs = []
+    for i in range(len(source_names)):
+        for j in range(i + 1, len(source_names)):
+            sa, sb = source_names[i], source_names[j]
+            overlap = len(source_entities[sa] & source_entities[sb])
+            if overlap > 0:
+                pairs.append(
+                    {
+                        "source_a": sa,
+                        "source_b": sb,
+                        "shared_entities": overlap,
+                        "total_a": len(source_entities[sa]),
+                        "total_b": len(source_entities[sb]),
+                    }
+                )
+    pairs.sort(key=lambda p: p["shared_entities"], reverse=True)
+    return {"pairs": pairs}
+
+
+@app.get("/api/unresolved-entities-summary")
+def unresolved_entities_summary():
+    """Entities not yet canonically resolved."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT e.id, e.name, e.type, COUNT(DISTINCT de.document_id) AS doc_count "
+            "FROM entities e "
+            "JOIN document_entities de ON de.entity_id = e.id "
+            "WHERE e.id NOT IN (SELECT source_entity_id FROM entity_resolutions) "
+            "AND e.id NOT IN (SELECT canonical_entity_id FROM entity_resolutions) "
+            "GROUP BY e.id ORDER BY doc_count DESC LIMIT 200"
+        ).fetchall()
+        total = conn.execute(
+            "SELECT COUNT(*) AS cnt FROM entities "
+            "WHERE id NOT IN (SELECT source_entity_id FROM entity_resolutions) "
+            "AND id NOT IN (SELECT canonical_entity_id FROM entity_resolutions)"
+        ).fetchone()["cnt"]
+    return {"entities": [dict(r) for r in rows], "total": total}
+
+
+@app.get("/api/connection-reciprocity")
+def connection_reciprocity():
+    """Bidirectional vs unidirectional entity connections."""
+    with get_db() as conn:
+        total = conn.execute("SELECT COUNT(*) AS cnt FROM entity_connections").fetchone()["cnt"]
+        bidirectional = conn.execute(
+            "SELECT COUNT(*) AS cnt FROM entity_connections ec1 "
+            "WHERE EXISTS ("
+            "  SELECT 1 FROM entity_connections ec2 "
+            "  WHERE ec2.entity_a_id = ec1.entity_b_id "
+            "  AND ec2.entity_b_id = ec1.entity_a_id"
+            ")"
+        ).fetchone()["cnt"]
+        by_weight = conn.execute(
+            "SELECT "
+            "CASE "
+            "  WHEN weight = 1 THEN '1' "
+            "  WHEN weight BETWEEN 2 AND 5 THEN '2-5' "
+            "  WHEN weight BETWEEN 6 AND 20 THEN '6-20' "
+            "  ELSE '20+' END AS bucket, "
+            "COUNT(*) AS count "
+            "FROM entity_connections GROUP BY bucket ORDER BY MIN(weight)"
+        ).fetchall()
+    return {
+        "total": total,
+        "bidirectional": bidirectional,
+        "unidirectional": total - bidirectional,
+        "by_weight": [dict(r) for r in by_weight],
+    }
+
+
 # ═══════════════════════════════════════════
 # STATIC FILES (serve the frontend)
 # ═══════════════════════════════════════════

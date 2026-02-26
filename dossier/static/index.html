@@ -2045,6 +2045,8 @@ body::before {
 .docread-view.active, .srccomp-view.active, .orphanevt-view.active, .entfirst-view.active, .pagedensity-view.active, .docdupes-view.active { display: flex; }
 .entconntime-view, .srcxref-view, .evtprec-view, .cattime-view, .enthub-view, .redactdensity-view { display: none; flex-direction: column; gap: 16px; }
 .entconntime-view.active, .srcxref-view.active, .evtprec-view.active, .cattime-view.active, .enthub-view.active, .redactdensity-view.active { display: flex; }
+.entspread-view, .docsize-view, .evtgaps-view, .srcentoverlap-view, .unresolvedent-view, .connrecip-view { display: none; flex-direction: column; gap: 16px; }
+.entspread-view.active, .docsize-view.active, .evtgaps-view.active, .srcentoverlap-view.active, .unresolvedent-view.active, .connrecip-view.active { display: flex; }
 .rel-edge { display: flex; align-items: center; gap: 8px; padding: 4px 0; border-bottom: 1px solid var(--border); }
 .sbs-col { flex: 1; padding: 12px; background: var(--bg-card); border-radius: var(--radius); border: 1px solid var(--border); overflow: hidden; }
 .sbs-header { font-family: var(--font-mono); font-size: 12px; font-weight: 600; color: var(--text-primary); margin-bottom: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -2713,6 +2715,30 @@ body::before {
       <div class="sidebar-item" data-view="redactdensity" id="redactdensityNav">
         <div class="sidebar-dot" style="background:var(--entity-org)"></div>
         Redaction Density
+      </div>
+      <div class="sidebar-item" data-view="entspread" id="entspreadNav">
+        <div class="sidebar-dot" style="background:var(--entity-person)"></div>
+        Entity Spread
+      </div>
+      <div class="sidebar-item" data-view="docsize" id="docsizeNav">
+        <div class="sidebar-dot" style="background:var(--entity-date)"></div>
+        Document Size Buckets
+      </div>
+      <div class="sidebar-item" data-view="evtgaps" id="evtgapsNav">
+        <div class="sidebar-dot" style="background:var(--entity-org)"></div>
+        Event Date Gaps
+      </div>
+      <div class="sidebar-item" data-view="srcentoverlap" id="srcentoverlapNav">
+        <div class="sidebar-dot" style="background:var(--entity-place)"></div>
+        Source Entity Overlap
+      </div>
+      <div class="sidebar-item" data-view="unresolvedent" id="unresolvedentNav">
+        <div class="sidebar-dot" style="background:var(--entity-person)"></div>
+        Unresolved Entities
+      </div>
+      <div class="sidebar-item" data-view="connrecip" id="connrecipNav">
+        <div class="sidebar-dot" style="background:var(--entity-org)"></div>
+        Connection Reciprocity
       </div>
     </div>
 
@@ -4178,6 +4204,36 @@ body::before {
       <div id="redactdensityContent">Loading redaction density...</div>
     </div>
 
+    <div class="entspread-view" id="entspreadView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Entity Spread</div>
+      <div id="entspreadContent">Loading entity spread...</div>
+    </div>
+
+    <div class="docsize-view" id="docsizeView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Document Size Buckets</div>
+      <div id="docsizeContent">Loading document size buckets...</div>
+    </div>
+
+    <div class="evtgaps-view" id="evtgapsView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Event Date Gaps</div>
+      <div id="evtgapsContent">Loading event date gaps...</div>
+    </div>
+
+    <div class="srcentoverlap-view" id="srcentoverlapView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Source Entity Overlap</div>
+      <div id="srcentoverlapContent">Loading source entity overlap...</div>
+    </div>
+
+    <div class="unresolvedent-view" id="unresolvedentView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Unresolved Entities</div>
+      <div id="unresolvedentContent">Loading unresolved entities...</div>
+    </div>
+
+    <div class="connrecip-view" id="connrecipView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Connection Reciprocity</div>
+      <div id="connrecipContent">Loading connection reciprocity...</div>
+    </div>
+
   </main>
 
   <!-- RIGHT PANEL -->
@@ -4922,6 +4978,12 @@ function hideAllViews() {
   document.getElementById('cattimeView').classList.remove('active');
   document.getElementById('enthubView').classList.remove('active');
   document.getElementById('redactdensityView').classList.remove('active');
+  document.getElementById('entspreadView').classList.remove('active');
+  document.getElementById('docsizeView').classList.remove('active');
+  document.getElementById('evtgapsView').classList.remove('active');
+  document.getElementById('srcentoverlapView').classList.remove('active');
+  document.getElementById('unresolvedentView').classList.remove('active');
+  document.getElementById('connrecipView').classList.remove('active');
 }
 
 function showDocumentView() {
@@ -5119,6 +5181,12 @@ document.querySelectorAll('.sidebar-item[data-view]').forEach(item => {
     else if (view === 'cattime') showCatTimeView();
     else if (view === 'enthub') showEntHubView();
     else if (view === 'redactdensity') showRedactDensityView();
+    else if (view === 'entspread') showEntSpreadView();
+    else if (view === 'docsize') showDocSizeView();
+    else if (view === 'evtgaps') showEvtGapsView();
+    else if (view === 'srcentoverlap') showSrcEntOverlapView();
+    else if (view === 'unresolvedent') showUnresolvedEntView();
+    else if (view === 'connrecip') showConnRecipView();
   });
 });
 
@@ -6314,6 +6382,12 @@ function goBackFromReader() {
   else if (readerPreviousView === 'cattime') showCatTimeView();
   else if (readerPreviousView === 'enthub') showEntHubView();
   else if (readerPreviousView === 'redactdensity') showRedactDensityView();
+  else if (readerPreviousView === 'entspread') showEntSpreadView();
+  else if (readerPreviousView === 'docsize') showDocSizeView();
+  else if (readerPreviousView === 'evtgaps') showEvtGapsView();
+  else if (readerPreviousView === 'srcentoverlap') showSrcEntOverlapView();
+  else if (readerPreviousView === 'unresolvedent') showUnresolvedEntView();
+  else if (readerPreviousView === 'connrecip') showConnRecipView();
   else showDocumentView();
 }
 
@@ -14271,6 +14345,170 @@ async function loadRedactDensity() {
     }
     el.innerHTML = html;
   } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load redaction density</div>'; }
+}
+
+// ── Round 29 ──────────────────────────────────
+
+function showEntSpreadView() {
+  currentView = 'entspread';
+  hideAllViews();
+  document.getElementById('entspreadView').classList.add('active');
+  loadEntSpread();
+}
+async function loadEntSpread() {
+  const el = document.getElementById('entspreadContent');
+  try {
+    const res = await fetch('/api/entity-spread');
+    const data = await res.json();
+    if (!data.entities.length) { el.innerHTML = '<div style="color:var(--text-muted);">No entities found.</div>'; return; }
+    let html = '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="border-bottom:2px solid var(--border);"><th style="text-align:left;padding:8px;">Entity</th><th style="text-align:left;padding:8px;">Type</th><th style="text-align:right;padding:8px;">Documents</th><th style="text-align:right;padding:8px;">Sources</th></tr></thead><tbody>';
+    data.entities.forEach(e => {
+      html += `<tr style="border-bottom:1px solid var(--border);">`;
+      html += `<td style="padding:8px;font-weight:600;">${e.name}</td>`;
+      html += `<td style="padding:8px;"><span class="entity-tag ${e.type}" style="font-size:10px;">${e.type}</span></td>`;
+      html += `<td style="text-align:right;padding:8px;">${e.doc_count}</td>`;
+      html += `<td style="text-align:right;padding:8px;font-weight:600;">${e.source_count}</td>`;
+      html += `</tr>`;
+    });
+    html += '</tbody></table>';
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load entity spread</div>'; }
+}
+
+function showDocSizeView() {
+  currentView = 'docsize';
+  hideAllViews();
+  document.getElementById('docsizeView').classList.add('active');
+  loadDocSize();
+}
+async function loadDocSize() {
+  const el = document.getElementById('docsizeContent');
+  try {
+    const res = await fetch('/api/document-size-buckets');
+    const data = await res.json();
+    const maxCount = Math.max(...data.buckets.map(b => b.count));
+    let html = '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="border-bottom:2px solid var(--border);"><th style="text-align:left;padding:8px;">Pages</th><th style="text-align:right;padding:8px;">Docs</th><th style="text-align:right;padding:8px;">Total Pages</th><th style="padding:8px;">Bar</th></tr></thead><tbody>';
+    data.buckets.forEach(b => {
+      const pct = maxCount > 0 ? (b.count / maxCount * 100) : 0;
+      html += `<tr style="border-bottom:1px solid var(--border);">`;
+      html += `<td style="padding:8px;font-weight:600;">${b.bucket}</td>`;
+      html += `<td style="text-align:right;padding:8px;">${b.count}</td>`;
+      html += `<td style="text-align:right;padding:8px;">${(b.total_pages || 0).toLocaleString()}</td>`;
+      html += `<td style="padding:8px;width:30%;"><div style="background:var(--accent);height:14px;width:${pct}%;border-radius:3px;"></div></td>`;
+      html += `</tr>`;
+    });
+    html += '</tbody></table>';
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load document size buckets</div>'; }
+}
+
+function showEvtGapsView() {
+  currentView = 'evtgaps';
+  hideAllViews();
+  document.getElementById('evtgapsView').classList.add('active');
+  loadEvtGaps();
+}
+async function loadEvtGaps() {
+  const el = document.getElementById('evtgapsContent');
+  try {
+    const res = await fetch('/api/event-date-gaps');
+    const data = await res.json();
+    let html = `<div style="background:var(--bg-secondary);padding:12px;border-radius:6px;margin-bottom:16px;"><span style="font-size:11px;color:var(--text-muted);">Events with Dates</span> <span style="font-size:20px;font-weight:700;color:var(--text-primary);margin-left:8px;">${data.total_events_with_dates.toLocaleString()}</span></div>`;
+    if (data.gaps.length) {
+      html += '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="border-bottom:2px solid var(--border);"><th style="text-align:left;padding:8px;">Start</th><th style="text-align:left;padding:8px;">End</th><th style="text-align:right;padding:8px;">Gap (days)</th></tr></thead><tbody>';
+      data.gaps.forEach(g => {
+        const color = g.days > 365 ? '#e05555' : g.days > 90 ? '#facc15' : 'var(--text-primary)';
+        html += `<tr style="border-bottom:1px solid var(--border);">`;
+        html += `<td style="padding:8px;font-family:var(--font-mono);">${g.start}</td>`;
+        html += `<td style="padding:8px;font-family:var(--font-mono);">${g.end}</td>`;
+        html += `<td style="text-align:right;padding:8px;font-weight:600;color:${color};">${g.days.toLocaleString()}</td>`;
+        html += `</tr>`;
+      });
+      html += '</tbody></table>';
+    }
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load event date gaps</div>'; }
+}
+
+function showSrcEntOverlapView() {
+  currentView = 'srcentoverlap';
+  hideAllViews();
+  document.getElementById('srcentoverlapView').classList.add('active');
+  loadSrcEntOverlap();
+}
+async function loadSrcEntOverlap() {
+  const el = document.getElementById('srcentoverlapContent');
+  try {
+    const res = await fetch('/api/source-entity-overlap');
+    const data = await res.json();
+    if (!data.pairs.length) { el.innerHTML = '<div style="color:var(--text-muted);">No overlapping sources.</div>'; return; }
+    let html = '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="border-bottom:2px solid var(--border);"><th style="text-align:left;padding:8px;">Source A</th><th style="text-align:left;padding:8px;">Source B</th><th style="text-align:right;padding:8px;">Shared</th><th style="text-align:right;padding:8px;">Total A</th><th style="text-align:right;padding:8px;">Total B</th></tr></thead><tbody>';
+    data.pairs.forEach(p => {
+      html += `<tr style="border-bottom:1px solid var(--border);">`;
+      html += `<td style="padding:8px;">${p.source_a}</td>`;
+      html += `<td style="padding:8px;">${p.source_b}</td>`;
+      html += `<td style="text-align:right;padding:8px;font-weight:600;">${p.shared_entities.toLocaleString()}</td>`;
+      html += `<td style="text-align:right;padding:8px;">${p.total_a.toLocaleString()}</td>`;
+      html += `<td style="text-align:right;padding:8px;">${p.total_b.toLocaleString()}</td>`;
+      html += `</tr>`;
+    });
+    html += '</tbody></table>';
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load source entity overlap</div>'; }
+}
+
+function showUnresolvedEntView() {
+  currentView = 'unresolvedent';
+  hideAllViews();
+  document.getElementById('unresolvedentView').classList.add('active');
+  loadUnresolvedEnt();
+}
+async function loadUnresolvedEnt() {
+  const el = document.getElementById('unresolvedentContent');
+  try {
+    const res = await fetch('/api/unresolved-entities-summary');
+    const data = await res.json();
+    let html = `<div style="background:var(--bg-secondary);padding:12px;border-radius:6px;margin-bottom:16px;"><span style="font-size:11px;color:var(--text-muted);">Total Unresolved</span> <span style="font-size:20px;font-weight:700;color:var(--text-primary);margin-left:8px;">${data.total.toLocaleString()}</span></div>`;
+    if (data.entities.length) {
+      html += '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="border-bottom:2px solid var(--border);"><th style="text-align:left;padding:8px;">Entity</th><th style="text-align:left;padding:8px;">Type</th><th style="text-align:right;padding:8px;">Documents</th></tr></thead><tbody>';
+      data.entities.forEach(e => {
+        html += `<tr style="border-bottom:1px solid var(--border);">`;
+        html += `<td style="padding:8px;font-weight:600;">${e.name}</td>`;
+        html += `<td style="padding:8px;"><span class="entity-tag ${e.type}" style="font-size:10px;">${e.type}</span></td>`;
+        html += `<td style="text-align:right;padding:8px;">${e.doc_count}</td>`;
+        html += `</tr>`;
+      });
+      html += '</tbody></table>';
+    }
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load unresolved entities</div>'; }
+}
+
+function showConnRecipView() {
+  currentView = 'connrecip';
+  hideAllViews();
+  document.getElementById('connrecipView').classList.add('active');
+  loadConnRecip();
+}
+async function loadConnRecip() {
+  const el = document.getElementById('connrecipContent');
+  try {
+    const res = await fetch('/api/connection-reciprocity');
+    const data = await res.json();
+    let html = `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px;">`;
+    html += `<div style="background:var(--bg-secondary);padding:12px;border-radius:6px;"><div style="font-size:11px;color:var(--text-muted);">Total</div><div style="font-size:24px;font-weight:700;color:var(--text-primary);">${data.total.toLocaleString()}</div></div>`;
+    html += `<div style="background:var(--bg-secondary);padding:12px;border-radius:6px;"><div style="font-size:11px;color:var(--text-muted);">Bidirectional</div><div style="font-size:24px;font-weight:700;color:#4ade80;">${data.bidirectional.toLocaleString()}</div></div>`;
+    html += `<div style="background:var(--bg-secondary);padding:12px;border-radius:6px;"><div style="font-size:11px;color:var(--text-muted);">Unidirectional</div><div style="font-size:24px;font-weight:700;color:#facc15;">${data.unidirectional.toLocaleString()}</div></div>`;
+    html += `</div>`;
+    if (data.by_weight.length) {
+      html += '<div style="font-size:12px;font-weight:600;margin-bottom:8px;color:var(--text-primary);">By Weight</div>';
+      data.by_weight.forEach(w => {
+        const pct = data.total > 0 ? (w.count / data.total * 100).toFixed(1) : 0;
+        html += `<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);"><span>Weight ${w.bucket}</span><span style="font-weight:600;">${w.count.toLocaleString()} (${pct}%)</span></div>`;
+      });
+    }
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load connection reciprocity</div>'; }
 }
 
 
