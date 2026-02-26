@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1772099862199,
+  "lastUpdate": 1772100350177,
   "repoUrl": "https://github.com/AreteDriver/Dossier",
   "entries": {
     "Benchmark": [
@@ -780,6 +780,72 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.0005799890576038478",
             "extra": "mean: 7.375362954539485 msec\nrounds: 88"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "AreteDriver@users.noreply.github.com",
+            "name": "AreteDriver",
+            "username": "AreteDriver"
+          },
+          "committer": {
+            "email": "AreteDriver@users.noreply.github.com",
+            "name": "AreteDriver",
+            "username": "AreteDriver"
+          },
+          "distinct": true,
+          "id": "0b76c6cb4a8e9a439c6a8c04b77803d11a511fcd",
+          "message": "feat: add entity timeline, source credibility, doc gaps, redaction analysis, corroboration, depositions\n\nRound 10 — 6 new investigative features:\n- Entity Timeline: per-entity chronological view across all events/documents\n- Source Credibility: rate sources A-F, track cross-source entity overlap\n- Document Gaps: temporal gap analysis with year coverage visualization\n- Redaction Analysis: density maps, reason breakdown, category distribution\n- Corroboration Engine: cross-reference entities across independent sources\n- Deposition Tracker: track testimonies, key deponents, associated entities\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>",
+          "timestamp": "2026-02-26T02:03:52-08:00",
+          "tree_id": "555c4a343f735d975a78a766b0015b032915c526",
+          "url": "https://github.com/AreteDriver/Dossier/commit/0b76c6cb4a8e9a439c6a8c04b77803d11a511fcd"
+        },
+        "date": 1772100349185,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/test_benchmarks.py::TestNERBenchmark::test_extract_entities_5k",
+            "value": 112.60919000550206,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0000617326344678988",
+            "extra": "mean: 8.880269895833015 msec\nrounds: 96"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestFTS5Benchmark::test_fts5_search_500_docs",
+            "value": 1488.2705482537826,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0000673512034758201",
+            "extra": "mean: 671.920842062836 usec\nrounds: 1241"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestResolverBenchmark::test_resolve_all_200_entities",
+            "value": 13.615629894411148,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00021213493063624978",
+            "extra": "mean: 73.44500458333354 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestGraphBenchmark::test_centrality_betweenness_100",
+            "value": 36.04169969459338,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00015990016736200816",
+            "extra": "mean: 27.745639314286002 msec\nrounds: 35"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestGraphBenchmark::test_communities_100",
+            "value": 210.06037690037854,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0012182108283402997",
+            "extra": "mean: 4.760536064706061 msec\nrounds: 170"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestBulkInsertBenchmark::test_bulk_insert_100_docs",
+            "value": 118.1345537997887,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0013754643203009675",
+            "extra": "mean: 8.464923833333078 msec\nrounds: 84"
           }
         ]
       }
