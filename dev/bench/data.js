@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1772100350177,
+  "lastUpdate": 1772101038486,
   "repoUrl": "https://github.com/AreteDriver/Dossier",
   "entries": {
     "Benchmark": [
@@ -846,6 +846,72 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.0013754643203009675",
             "extra": "mean: 8.464923833333078 msec\nrounds: 84"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "AreteDriver@users.noreply.github.com",
+            "name": "AreteDriver",
+            "username": "AreteDriver"
+          },
+          "committer": {
+            "email": "AreteDriver@users.noreply.github.com",
+            "name": "AreteDriver",
+            "username": "AreteDriver"
+          },
+          "distinct": true,
+          "id": "1b666faead385f571c23ed50bd3742ff2530de25",
+          "message": "feat: add narrative builder, contact network, provenance, phrase trends, disambiguation, investigation stats\n\nRound 11 — 6 new investigative features:\n- Narrative Builder: auto-generate investigation summary from evidence chains, events, financials\n- Contact Network: who-contacted-who analysis from correspondence documents\n- Document Provenance: chain of custody tracking with event types and actors\n- Key Phrase Trends: temporal distribution of top phrases with sparkline visualization\n- Entity Disambiguation: identify ambiguous/duplicate entities and short names\n- Investigation Stats: comprehensive metrics dashboard across all data dimensions\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>",
+          "timestamp": "2026-02-26T02:15:42-08:00",
+          "tree_id": "9039025b6b7f27b93d11f3599b669ff766c16fbb",
+          "url": "https://github.com/AreteDriver/Dossier/commit/1b666faead385f571c23ed50bd3742ff2530de25"
+        },
+        "date": 1772101038173,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/test_benchmarks.py::TestNERBenchmark::test_extract_entities_5k",
+            "value": 113.42809026047178,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00006791759323184725",
+            "extra": "mean: 8.816158305263182 msec\nrounds: 95"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestFTS5Benchmark::test_fts5_search_500_docs",
+            "value": 1523.916804514476,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00002300285459998117",
+            "extra": "mean: 656.2038013083021 usec\nrounds: 1223"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestResolverBenchmark::test_resolve_all_200_entities",
+            "value": 13.112618062090883,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0043106158317043255",
+            "extra": "mean: 76.26242107142899 msec\nrounds: 14"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestGraphBenchmark::test_centrality_betweenness_100",
+            "value": 34.35042211349307,
+            "unit": "iter/sec",
+            "range": "stddev: 0.001604175388769192",
+            "extra": "mean: 29.111723771429105 msec\nrounds: 35"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestGraphBenchmark::test_communities_100",
+            "value": 201.5740492231683,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0016745498963369305",
+            "extra": "mean: 4.960956054878235 msec\nrounds: 164"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestBulkInsertBenchmark::test_bulk_insert_100_docs",
+            "value": 130.6566949209173,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0008656532283142805",
+            "extra": "mean: 7.653645307691817 msec\nrounds: 91"
           }
         ]
       }
