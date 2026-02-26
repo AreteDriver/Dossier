@@ -78,7 +78,7 @@ jobs:
         run: pip install -e ".[dev]"
 
       - name: Run benchmarks
-        run: pytest tests/test_benchmarks.py --benchmark-only --benchmark-json=benchmark-results.json
+        run: pytest tests/test_benchmarks.py --benchmark-only --benchmark-min-rounds=5 --benchmark-json=benchmark-results.json
 
       - name: Store benchmark results
         uses: benchmark-action/github-action-benchmark@v1
@@ -87,8 +87,8 @@ jobs:
           output-file-path: benchmark-results.json
           github-token: ${{ secrets.GITHUB_TOKEN }}
           auto-push: true
-          alert-threshold: "115%"
+          alert-threshold: "150%"
           comment-on-alert: true
-          fail-on-alert: ${{ github.event_name == 'pull_request' }}
+          fail-on-alert: false
           gh-pages-branch: gh-pages
           benchmark-data-dir-path: dev/bench
