@@ -9369,6 +9369,174 @@ def multi_source_entities():
     return {"entities": [dict(r) for r in rows], "total": len(rows)}
 
 
+# ── Document Hash Audit ──────────────────────────
+
+
+@app.get("/api/hash-audit")
+def hash_audit():
+    """Documents missing file hashes or with duplicate hashes."""
+    with get_db() as conn:
+        missing = conn.execute(
+            "SELECT id, filename, title, category, source "
+            "FROM documents WHERE file_hash IS NULL OR file_hash = ''"
+        ).fetchall()
+
+        dupes = conn.execute(
+            "SELECT file_hash, COUNT(*) as cnt, "
+            "GROUP_CONCAT(id) as doc_ids, "
+            "GROUP_CONCAT(filename, ' | ') as filenames "
+            "FROM documents "
+            "WHERE file_hash IS NOT NULL AND file_hash != '' "
+            "GROUP BY file_hash HAVING cnt > 1 "
+            "ORDER BY cnt DESC"
+        ).fetchall()
+
+        total = conn.execute("SELECT COUNT(*) as c FROM documents").fetchone()["c"]
+        hashed = conn.execute(
+            "SELECT COUNT(*) as c FROM documents WHERE file_hash IS NOT NULL AND file_hash != ''"
+        ).fetchone()["c"]
+
+    return {
+        "total_docs": total,
+        "hashed": hashed,
+        "missing_hash": [dict(r) for r in missing],
+        "missing_count": len(missing),
+        "duplicates": [dict(r) for r in dupes],
+        "duplicate_groups": len(dupes),
+    }
+
+
+# ── Entity Canonical Coverage ────────────────────
+
+
+@app.get("/api/canonical-coverage")
+def canonical_coverage():
+    """How many entities have canonical names set."""
+    with get_db() as conn:
+        total = conn.execute("SELECT COUNT(*) as c FROM entities").fetchone()["c"]
+        with_canonical = conn.execute(
+            "SELECT COUNT(*) as c FROM entities WHERE canonical IS NOT NULL AND canonical != ''"
+        ).fetchone()["c"]
+
+        by_type = conn.execute(
+            "SELECT type, COUNT(*) as total, "
+            "SUM(CASE WHEN canonical IS NOT NULL AND canonical != '' THEN 1 ELSE 0 END) as with_canonical "
+            "FROM entities GROUP BY type ORDER BY total DESC"
+        ).fetchall()
+
+    return {
+        "total": total,
+        "with_canonical": with_canonical,
+        "without_canonical": total - with_canonical,
+        "coverage_pct": round(with_canonical / total * 100, 1) if total else 0,
+        "by_type": [dict(r) for r in by_type],
+    }
+
+
+# ── FTS5 Index Stats ────────────────────────────
+
+
+@app.get("/api/fts-stats")
+def fts_stats():
+    """Full-text search index statistics."""
+    with get_db() as conn:
+        indexed = conn.execute("SELECT COUNT(*) as c FROM documents_fts").fetchone()["c"]
+
+        total = conn.execute("SELECT COUNT(*) as c FROM documents").fetchone()["c"]
+
+        # Sample recent search terms from FTS queries
+        with_text = conn.execute(
+            "SELECT COUNT(*) as c FROM documents WHERE raw_text IS NOT NULL AND raw_text != ''"
+        ).fetchone()["c"]
+
+        by_category = conn.execute(
+            "SELECT category, COUNT(*) as cnt FROM documents "
+            "WHERE raw_text IS NOT NULL AND raw_text != '' "
+            "GROUP BY category ORDER BY cnt DESC"
+        ).fetchall()
+
+    return {
+        "indexed_docs": indexed,
+        "total_docs": total,
+        "with_text": with_text,
+        "coverage_pct": round(indexed / total * 100, 1) if total else 0,
+        "by_category": [dict(r) for r in by_category],
+    }
+
+
+# ── Event Resolution Rate ───────────────────────
+
+
+@app.get("/api/event-resolution-rate")
+def event_resolution_rate():
+    """Resolved vs unresolved events by document source."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT d.source, "
+            "COUNT(*) as total_events, "
+            "SUM(CASE WHEN ev.is_resolved = 1 THEN 1 ELSE 0 END) as resolved, "
+            "SUM(CASE WHEN ev.is_resolved = 0 THEN 1 ELSE 0 END) as unresolved "
+            "FROM events ev "
+            "JOIN documents d ON d.id = ev.document_id "
+            "WHERE d.source IS NOT NULL AND d.source != '' "
+            "GROUP BY d.source "
+            "ORDER BY total_events DESC"
+        ).fetchall()
+
+    sources = [dict(r) for r in rows]
+    for s in sources:
+        s["resolution_rate"] = (
+            round(s["resolved"] / s["total_events"] * 100, 1) if s["total_events"] else 0
+        )
+
+    return {"sources": sources, "total": len(sources)}
+
+
+# ── Top Entity Connections ──────────────────────
+
+
+@app.get("/api/top-connections")
+def top_connections():
+    """Highest-weight entity connections."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT ec.entity_a_id, ec.entity_b_id, ec.weight, "
+            "ea.name as name_a, ea.type as type_a, "
+            "eb.name as name_b, eb.type as type_b "
+            "FROM entity_connections ec "
+            "JOIN entities ea ON ea.id = ec.entity_a_id "
+            "JOIN entities eb ON eb.id = ec.entity_b_id "
+            "ORDER BY ec.weight DESC "
+            "LIMIT 100"
+        ).fetchall()
+
+    return {"connections": [dict(r) for r in rows], "total": len(rows)}
+
+
+# ── Document Notes Summary ──────────────────────
+
+
+@app.get("/api/document-notes")
+def document_notes():
+    """Documents with notes/annotations."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT id, title, filename, category, source, notes "
+            "FROM documents "
+            "WHERE notes IS NOT NULL AND notes != '' "
+            "ORDER BY id DESC"
+        ).fetchall()
+
+        total = conn.execute("SELECT COUNT(*) as c FROM documents").fetchone()["c"]
+
+    return {
+        "documents": [dict(r) for r in rows],
+        "with_notes": len(rows),
+        "total_docs": total,
+        "pct_noted": round(len(rows) / total * 100, 1) if total else 0,
+    }
+
+
 # ═══════════════════════════════════════════
 # STATIC FILES (serve the frontend)
 # ═══════════════════════════════════════════
