@@ -11,7 +11,7 @@ Deep analysis layer for investigative document intelligence:
 """
 
 import re
-from collections import Counter, defaultdict
+from collections import Counter
 
 
 # ═══════════════════════════════════════════
@@ -607,11 +607,13 @@ def _classify_intent(text_lower: str) -> list[dict]:
         if score > 0:
             # Normalize: score relative to document length
             normalized = min(1.0, score / (total_words * 0.01))
-            results.append({
-                "label": intent,
-                "score": round(normalized, 3),
-                "evidence": hits[:5],
-            })
+            results.append(
+                {
+                    "label": intent,
+                    "score": round(normalized, 3),
+                    "evidence": hits[:5],
+                }
+            )
 
     results.sort(key=lambda x: x["score"], reverse=True)
     return results
@@ -667,11 +669,13 @@ def _detect_aml_flags(text: str, text_lower: str) -> list[dict]:
         if matches:
             structuring_evidence.extend(matches[:3])
     if structuring_evidence:
-        flags.append({
-            "flag": "structuring",
-            "severity": "high",
-            "evidence": structuring_evidence[:5],
-        })
+        flags.append(
+            {
+                "flag": "structuring",
+                "severity": "high",
+                "evidence": structuring_evidence[:5],
+            }
+        )
 
     # Shell company indicators
     shell_evidence = []
@@ -682,11 +686,13 @@ def _detect_aml_flags(text: str, text_lower: str) -> list[dict]:
             end = min(len(text_lower), idx + len(signal) + 40)
             shell_evidence.append(text_lower[start:end].strip())
     if len(shell_evidence) >= 2:  # Need multiple signals
-        flags.append({
-            "flag": "shell_company",
-            "severity": "high" if len(shell_evidence) >= 4 else "medium",
-            "evidence": shell_evidence[:5],
-        })
+        flags.append(
+            {
+                "flag": "shell_company",
+                "severity": "high" if len(shell_evidence) >= 4 else "medium",
+                "evidence": shell_evidence[:5],
+            }
+        )
 
     # Layering indicators
     layering_evidence = []
@@ -697,11 +703,13 @@ def _detect_aml_flags(text: str, text_lower: str) -> list[dict]:
             end = min(len(text_lower), idx + len(signal) + 40)
             layering_evidence.append(text_lower[start:end].strip())
     if layering_evidence:
-        flags.append({
-            "flag": "layering",
-            "severity": "high" if len(layering_evidence) >= 3 else "medium",
-            "evidence": layering_evidence[:5],
-        })
+        flags.append(
+            {
+                "flag": "layering",
+                "severity": "high" if len(layering_evidence) >= 3 else "medium",
+                "evidence": layering_evidence[:5],
+            }
+        )
 
     # High-risk jurisdictions
     jurisdiction_evidence = []
@@ -712,11 +720,13 @@ def _detect_aml_flags(text: str, text_lower: str) -> list[dict]:
             end = min(len(text_lower), idx + len(jurisdiction) + 40)
             jurisdiction_evidence.append(text_lower[start:end].strip())
     if jurisdiction_evidence:
-        flags.append({
-            "flag": "high_risk_jurisdiction",
-            "severity": "medium",
-            "evidence": jurisdiction_evidence[:5],
-        })
+        flags.append(
+            {
+                "flag": "high_risk_jurisdiction",
+                "severity": "medium",
+                "evidence": jurisdiction_evidence[:5],
+            }
+        )
 
     # Secrecy/concealment language
     secrecy_evidence = []
@@ -727,11 +737,13 @@ def _detect_aml_flags(text: str, text_lower: str) -> list[dict]:
             end = min(len(text_lower), idx + len(signal) + 40)
             secrecy_evidence.append(text_lower[start:end].strip())
     if secrecy_evidence:
-        flags.append({
-            "flag": "secrecy_concealment",
-            "severity": "high" if len(secrecy_evidence) >= 3 else "medium",
-            "evidence": secrecy_evidence[:5],
-        })
+        flags.append(
+            {
+                "flag": "secrecy_concealment",
+                "severity": "high" if len(secrecy_evidence) >= 3 else "medium",
+                "evidence": secrecy_evidence[:5],
+            }
+        )
 
     # Round-number transactions (suspicious pattern)
     round_amounts = []
@@ -744,11 +756,13 @@ def _detect_aml_flags(text: str, text_lower: str) -> list[dict]:
         except ValueError:
             continue
     if len(round_amounts) >= 3:
-        flags.append({
-            "flag": "round_number_transactions",
-            "severity": "low",
-            "evidence": round_amounts[:5],
-        })
+        flags.append(
+            {
+                "flag": "round_number_transactions",
+                "severity": "low",
+                "evidence": round_amounts[:5],
+            }
+        )
 
     return flags
 
@@ -770,12 +784,14 @@ def _detect_codewords(text: str, text_lower: str) -> list[dict]:
             start = max(0, idx - 50)
             end = min(len(text_lower), idx + len(word) + 50)
             context = text_lower[start:end].strip()
-            found.append({
-                "word": word,
-                "context": f"...{context}...",
-                "count": count,
-                "note": note,
-            })
+            found.append(
+                {
+                    "word": word,
+                    "context": f"...{context}...",
+                    "count": count,
+                    "note": note,
+                }
+            )
 
     # Detect quoted ordinary words (e.g., "pizza", "delivery")
     # These suggest words being used with special meaning
@@ -789,12 +805,14 @@ def _detect_codewords(text: str, text_lower: str) -> list[dict]:
             context = text[start:end].strip()
             # Only flag if it's a common word being quoted (unusual usage)
             if word in KNOWN_CODE_SUBSTITUTES or _is_common_word(word):
-                found.append({
-                    "word": f'"{word}"',
-                    "context": f"...{context}...",
-                    "count": 1,
-                    "note": "quoted ordinary word",
-                })
+                found.append(
+                    {
+                        "word": f'"{word}"',
+                        "context": f"...{context}...",
+                        "count": 1,
+                        "note": "quoted ordinary word",
+                    }
+                )
 
     # Deduplicate by word
     seen = set()
@@ -811,11 +829,41 @@ def _detect_codewords(text: str, text_lower: str) -> list[dict]:
 def _is_common_word(word: str) -> bool:
     """Check if a word is common English (thus suspicious when quoted)."""
     common = {
-        "food", "dinner", "lunch", "breakfast", "party", "meeting", "game",
-        "play", "fun", "trip", "visit", "friend", "help", "work", "job",
-        "business", "deal", "trade", "exchange", "gift", "present", "favor",
-        "service", "ticket", "pass", "green", "white", "snow", "ice",
-        "rock", "sugar", "candy", "chocolate", "coffee", "tea",
+        "food",
+        "dinner",
+        "lunch",
+        "breakfast",
+        "party",
+        "meeting",
+        "game",
+        "play",
+        "fun",
+        "trip",
+        "visit",
+        "friend",
+        "help",
+        "work",
+        "job",
+        "business",
+        "deal",
+        "trade",
+        "exchange",
+        "gift",
+        "present",
+        "favor",
+        "service",
+        "ticket",
+        "pass",
+        "green",
+        "white",
+        "snow",
+        "ice",
+        "rock",
+        "sugar",
+        "candy",
+        "chocolate",
+        "coffee",
+        "tea",
     }
     return word in common
 
@@ -834,23 +882,41 @@ def _extract_repeated_phrases(text_lower: str, min_count: int = 2) -> list[dict]
 
     # 3-grams
     for i in range(len(words) - 2):
-        trigram = f"{words[i]} {words[i+1]} {words[i+2]}"
+        trigram = f"{words[i]} {words[i + 1]} {words[i + 2]}"
         phrases[trigram] += 1
 
     # 4-grams
     for i in range(len(words) - 3):
-        fourgram = f"{words[i]} {words[i+1]} {words[i+2]} {words[i+3]}"
+        fourgram = f"{words[i]} {words[i + 1]} {words[i + 2]} {words[i + 3]}"
         phrases[fourgram] += 1
 
     # 5-grams
     for i in range(len(words) - 4):
-        fivegram = f"{words[i]} {words[i+1]} {words[i+2]} {words[i+3]} {words[i+4]}"
+        fivegram = f"{words[i]} {words[i + 1]} {words[i + 2]} {words[i + 3]} {words[i + 4]}"
         phrases[fivegram] += 1
 
     # Filter: must appear at least min_count times, skip boring phrases
     stop_phrases = {
-        "the", "a", "an", "and", "or", "but", "in", "on", "at", "to", "for",
-        "of", "with", "by", "from", "is", "was", "were", "are", "be",
+        "the",
+        "a",
+        "an",
+        "and",
+        "or",
+        "but",
+        "in",
+        "on",
+        "at",
+        "to",
+        "for",
+        "of",
+        "with",
+        "by",
+        "from",
+        "is",
+        "was",
+        "were",
+        "are",
+        "be",
     }
 
     results = []
@@ -900,19 +966,21 @@ def _extract_financial_indicators(text: str, text_lower: str) -> list[dict]:
             risk = 0.3  # Round numbers
 
         # Boost risk if near suspicious language
-        near_text = text_lower[max(0, idx - 200):min(len(text_lower), match.end() + 200)]
+        near_text = text_lower[max(0, idx - 200) : min(len(text_lower), match.end() + 200)]
         for signal in STRUCTURING_LANGUAGE + SECRECY_LANGUAGE:
             if signal in near_text:
                 risk = min(1.0, risk + 0.2)
                 break
 
         if amount >= 500:  # Only track amounts $500+
-            indicators.append({
-                "type": "currency_amount",
-                "value": full_match.strip(),
-                "context": f"...{context}...",
-                "risk_score": round(risk, 2),
-            })
+            indicators.append(
+                {
+                    "type": "currency_amount",
+                    "value": full_match.strip(),
+                    "context": f"...{context}...",
+                    "risk_score": round(risk, 2),
+                }
+            )
 
     # Account numbers
     for match in re.finditer(ACCOUNT_PATTERN, text, re.IGNORECASE):
@@ -920,12 +988,14 @@ def _extract_financial_indicators(text: str, text_lower: str) -> list[dict]:
         start = max(0, idx - 40)
         end = min(len(text), match.end() + 40)
         context = text[start:end].strip()
-        indicators.append({
-            "type": "account_number",
-            "value": match.group(1),
-            "context": f"...{context}...",
-            "risk_score": 0.4,
-        })
+        indicators.append(
+            {
+                "type": "account_number",
+                "value": match.group(1),
+                "context": f"...{context}...",
+                "risk_score": 0.4,
+            }
+        )
 
     # Routing numbers
     for match in re.finditer(ROUTING_PATTERN, text, re.IGNORECASE):
@@ -933,12 +1003,14 @@ def _extract_financial_indicators(text: str, text_lower: str) -> list[dict]:
         start = max(0, idx - 40)
         end = min(len(text), match.end() + 40)
         context = text[start:end].strip()
-        indicators.append({
-            "type": "routing_number",
-            "value": match.group(1),
-            "context": f"...{context}...",
-            "risk_score": 0.4,
-        })
+        indicators.append(
+            {
+                "type": "routing_number",
+                "value": match.group(1),
+                "context": f"...{context}...",
+                "risk_score": 0.4,
+            }
+        )
 
     # SWIFT/BIC codes (8 or 11 alphanumeric, starts with 4 letters)
     for match in re.finditer(SWIFT_PATTERN, text):
@@ -949,12 +1021,14 @@ def _extract_financial_indicators(text: str, text_lower: str) -> list[dict]:
             start = max(0, idx - 40)
             end = min(len(text), match.end() + 40)
             context = text[start:end].strip()
-            indicators.append({
-                "type": "swift_code",
-                "value": candidate,
-                "context": f"...{context}...",
-                "risk_score": 0.5,
-            })
+            indicators.append(
+                {
+                    "type": "swift_code",
+                    "value": candidate,
+                    "context": f"...{context}...",
+                    "risk_score": 0.5,
+                }
+            )
 
     # EIN (employer identification number)
     for match in re.finditer(EIN_PATTERN, text):
@@ -962,12 +1036,14 @@ def _extract_financial_indicators(text: str, text_lower: str) -> list[dict]:
         start = max(0, idx - 40)
         end = min(len(text), match.end() + 40)
         context = text[start:end].strip()
-        indicators.append({
-            "type": "ein",
-            "value": match.group(1),
-            "context": f"...{context}...",
-            "risk_score": 0.2,
-        })
+        indicators.append(
+            {
+                "type": "ein",
+                "value": match.group(1),
+                "context": f"...{context}...",
+                "risk_score": 0.2,
+            }
+        )
 
     # Deduplicate by type+value
     seen = set()

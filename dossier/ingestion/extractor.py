@@ -6,7 +6,6 @@ Handles: PDF, plain text, HTML, images (OCR), DOCX, XLSX, CSV, JSON, EML, RTF, Z
 import csv
 import email
 import hashlib
-import io
 import json
 import os
 import subprocess

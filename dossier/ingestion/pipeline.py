@@ -236,7 +236,9 @@ def ingest_file(filepath: str, source: str = "", date: str = "") -> dict:
         "intents": [i["label"] for i in forensics["intents"][:2]],
     }
 
-    print(f"[INGEST] Document {doc_id}: {entity_count} entities, {keyword_count} keywords, risk={risk_score:.3f}")
+    print(
+        f"[INGEST] Document {doc_id}: {entity_count} entities, {keyword_count} keywords, risk={risk_score:.3f}"
+    )
     return {
         "success": True,
         "document_id": doc_id,
@@ -546,8 +548,6 @@ def ingest_mbox(filepath: str, source: str = "", limit: int = 0) -> dict:
             tmp_path = tmp.name
 
         try:
-            # Use the subject as a hint for the filename
-            safe_subject = _re.sub(r"[^\w\s-]", "", subject or "email")[:60].strip()
             result = ingest_file(
                 tmp_path,
                 source=source or f"MBOX:{mbox_path.name}",

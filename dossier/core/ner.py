@@ -265,11 +265,13 @@ KNOWN_ORGS = {
 # Sort by length descending so longer matches take priority
 # ═══════════════════════════════════════════
 
+
 def _compile_gazetteer(names: set) -> re.Pattern:
     """Compile a set of names into a single alternation regex, longest-first."""
     sorted_names = sorted(names, key=len, reverse=True)
     escaped = [re.escape(n) for n in sorted_names]
     return re.compile("|".join(escaped))
+
 
 _PEOPLE_RE = _compile_gazetteer(KNOWN_PEOPLE)
 _PLACES_RE = _compile_gazetteer(KNOWN_PLACES)

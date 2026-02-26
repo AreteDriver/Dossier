@@ -664,7 +664,8 @@ def forensics_summary():
 def forensics_risk_documents(limit: int = Query(20, ge=1, le=100)):
     """Documents ranked by risk score, highest first."""
     with get_db() as conn:
-        rows = conn.execute("""
+        rows = conn.execute(
+            """
             SELECT df.document_id, df.score as risk_score,
                    d.filename, d.title, d.category, d.source
             FROM document_forensics df
@@ -672,27 +673,35 @@ def forensics_risk_documents(limit: int = Query(20, ge=1, le=100)):
             WHERE df.analysis_type = 'risk_score' AND df.score > 0
             ORDER BY df.score DESC
             LIMIT ?
-        """, (limit,)).fetchall()
+        """,
+            (limit,),
+        ).fetchall()
 
         results = []
         for row in rows:
             doc = dict(row)
             # Get AML flags for this doc
-            flags = conn.execute("""
+            flags = conn.execute(
+                """
                 SELECT label, severity, evidence
                 FROM document_forensics
                 WHERE document_id = ? AND analysis_type = 'aml_flag'
                 ORDER BY severity DESC
-            """, (doc["document_id"],)).fetchall()
+            """,
+                (doc["document_id"],),
+            ).fetchall()
             doc["aml_flags"] = [dict(f) for f in flags]
 
             # Get topics
-            topics = conn.execute("""
+            topics = conn.execute(
+                """
                 SELECT label, score
                 FROM document_forensics
                 WHERE document_id = ? AND analysis_type = 'topic'
                 ORDER BY score DESC LIMIT 3
-            """, (doc["document_id"],)).fetchall()
+            """,
+                (doc["document_id"],),
+            ).fetchall()
             doc["topics"] = [dict(t) for t in topics]
             results.append(doc)
 
@@ -703,7 +712,8 @@ def forensics_risk_documents(limit: int = Query(20, ge=1, le=100)):
 def forensics_financial(limit: int = Query(50, ge=1, le=200)):
     """Financial indicators across the corpus."""
     with get_db() as conn:
-        rows = conn.execute("""
+        rows = conn.execute(
+            """
             SELECT fi.id, fi.document_id, fi.indicator_type, fi.value,
                    fi.context, fi.risk_score,
                    d.title, d.filename
@@ -711,7 +721,9 @@ def forensics_financial(limit: int = Query(50, ge=1, le=200)):
             JOIN documents d ON d.id = fi.document_id
             ORDER BY fi.risk_score DESC, fi.id DESC
             LIMIT ?
-        """, (limit,)).fetchall()
+        """,
+            (limit,),
+        ).fetchall()
 
         # Type breakdown
         type_counts = conn.execute("""
@@ -730,7 +742,8 @@ def forensics_financial(limit: int = Query(50, ge=1, le=200)):
 def forensics_codewords(limit: int = Query(30, ge=1, le=100)):
     """Detected codewords/suspicious language across the corpus."""
     with get_db() as conn:
-        rows = conn.execute("""
+        rows = conn.execute(
+            """
             SELECT label as word,
                    COUNT(DISTINCT document_id) as doc_count,
                    GROUP_CONCAT(DISTINCT evidence) as contexts
@@ -739,7 +752,9 @@ def forensics_codewords(limit: int = Query(30, ge=1, le=100)):
             GROUP BY label
             ORDER BY doc_count DESC
             LIMIT ?
-        """, (limit,)).fetchall()
+        """,
+            (limit,),
+        ).fetchall()
 
     return {"codewords": [dict(r) for r in rows]}
 
@@ -757,67 +772,88 @@ def forensics_harvest(min_risk: float = Query(0.5, ge=0, le=1)):
     """
     with get_db() as conn:
         # High-risk documents with details
-        risk_docs = conn.execute("""
+        risk_docs = conn.execute(
+            """
             SELECT df.document_id, df.score as risk_score,
                    d.filename, d.title, d.category, d.source, d.date
             FROM document_forensics df
             JOIN documents d ON d.id = df.document_id
             WHERE df.analysis_type = 'risk_score' AND df.score >= ?
             ORDER BY df.score DESC
-        """, (min_risk,)).fetchall()
+        """,
+            (min_risk,),
+        ).fetchall()
 
         documents = []
         for row in risk_docs:
             doc = dict(row)
 
             # AML flags
-            flags = conn.execute("""
+            flags = conn.execute(
+                """
                 SELECT label, severity, evidence
                 FROM document_forensics
                 WHERE document_id = ? AND analysis_type = 'aml_flag'
                 ORDER BY CASE severity WHEN 'high' THEN 0 WHEN 'medium' THEN 1 ELSE 2 END
-            """, (doc["document_id"],)).fetchall()
+            """,
+                (doc["document_id"],),
+            ).fetchall()
             doc["aml_flags"] = [dict(f) for f in flags]
 
             # Topics and intents
-            topics = conn.execute("""
+            topics = conn.execute(
+                """
                 SELECT label, score FROM document_forensics
                 WHERE document_id = ? AND analysis_type = 'topic'
                 ORDER BY score DESC
-            """, (doc["document_id"],)).fetchall()
+            """,
+                (doc["document_id"],),
+            ).fetchall()
             doc["topics"] = [dict(t) for t in topics]
 
-            intents = conn.execute("""
+            intents = conn.execute(
+                """
                 SELECT label, score FROM document_forensics
                 WHERE document_id = ? AND analysis_type = 'intent'
                 ORDER BY score DESC
-            """, (doc["document_id"],)).fetchall()
+            """,
+                (doc["document_id"],),
+            ).fetchall()
             doc["intents"] = [dict(i) for i in intents]
 
             # Financial indicators
-            indicators = conn.execute("""
+            indicators = conn.execute(
+                """
                 SELECT indicator_type, value, context, risk_score
                 FROM financial_indicators
                 WHERE document_id = ?
                 ORDER BY risk_score DESC
-            """, (doc["document_id"],)).fetchall()
+            """,
+                (doc["document_id"],),
+            ).fetchall()
             doc["financial_indicators"] = [dict(fi) for fi in indicators]
 
             # Codewords
-            codewords = conn.execute("""
+            codewords = conn.execute(
+                """
                 SELECT label, evidence FROM document_forensics
                 WHERE document_id = ? AND analysis_type = 'codeword'
-            """, (doc["document_id"],)).fetchall()
+            """,
+                (doc["document_id"],),
+            ).fetchall()
             doc["codewords"] = [dict(c) for c in codewords]
 
             # Key entities
-            entities = conn.execute("""
+            entities = conn.execute(
+                """
                 SELECT e.name, e.type, de.count
                 FROM document_entities de
                 JOIN entities e ON e.id = de.entity_id
                 WHERE de.document_id = ?
                 ORDER BY de.count DESC LIMIT 20
-            """, (doc["document_id"],)).fetchall()
+            """,
+                (doc["document_id"],),
+            ).fetchall()
             doc["entities"] = [dict(e) for e in entities]
 
             documents.append(doc)
@@ -844,7 +880,8 @@ def forensics_harvest(min_risk: float = Query(0.5, ge=0, le=1)):
         """).fetchall()
 
         # Entities most connected to high-risk documents
-        key_persons = conn.execute("""
+        key_persons = conn.execute(
+            """
             SELECT e.name, COUNT(DISTINCT de.document_id) as doc_count,
                    SUM(de.count) as total_mentions
             FROM entities e
@@ -855,7 +892,9 @@ def forensics_harvest(min_risk: float = Query(0.5, ge=0, le=1)):
             GROUP BY e.id
             ORDER BY doc_count DESC, total_mentions DESC
             LIMIT 30
-        """, (min_risk,)).fetchall()
+        """,
+            (min_risk,),
+        ).fetchall()
 
     return {
         "min_risk_threshold": min_risk,
@@ -916,16 +955,18 @@ def graph_path_between(
             return {"error": "Entity not found", "path": [], "shared_documents": []}
 
     from dossier.core.graph_analysis import GraphAnalyzer
+
     with get_db() as conn:
         try:
             analyzer = GraphAnalyzer(conn)
             result = analyzer.find_shortest_path(src["id"], tgt["id"])
-        except Exception as e:
+        except Exception:
             logger.exception("Graph path error")
             result = None
 
         # Also find shared documents
-        shared = conn.execute("""
+        shared = conn.execute(
+            """
             SELECT DISTINCT d.id, d.title, d.filename, d.category, d.source
             FROM document_entities de1
             JOIN document_entities de2 ON de1.document_id = de2.document_id
@@ -933,11 +974,16 @@ def graph_path_between(
             WHERE de1.entity_id = ? AND de2.entity_id = ?
             ORDER BY d.title
             LIMIT 20
-        """, (src["id"], tgt["id"])).fetchall()
+        """,
+            (src["id"], tgt["id"]),
+        ).fetchall()
 
     if not result:
         return {
-            "path": [], "edges": [], "hops": 0, "total_weight": 0,
+            "path": [],
+            "edges": [],
+            "hops": 0,
+            "total_weight": 0,
             "shared_documents": [dict(d) for d in shared],
             "error": "No path found" if not shared else None,
         }
@@ -1012,7 +1058,7 @@ def export_intel_brief(
     lines = [
         "# DOSSIER — Intelligence Brief",
         f"**Generated**: {__import__('datetime').datetime.now().strftime('%Y-%m-%d %H:%M')}",
-        f"**Risk Threshold**: {min_risk*100:.0f}%+",
+        f"**Risk Threshold**: {min_risk * 100:.0f}%+",
         f"**Source Filter**: {source or 'All Sources'}",
         "",
         "## Corpus Overview",
@@ -1030,20 +1076,30 @@ def export_intel_brief(
 
     lines += ["", "## AML Flags", "| Flag | Severity | Count |", "|------|----------|-------|"]
     for f in aml_flags:
-        lines.append(f"| {f['label'].replace('_',' ')} | {f['severity']} | {f['count']} |")
+        lines.append(f"| {f['label'].replace('_', ' ')} | {f['severity']} | {f['count']} |")
 
-    lines += ["", "## Highest Risk Documents", "| Risk | Document | Category | Source |", "|------|----------|----------|--------|"]
+    lines += [
+        "",
+        "## Highest Risk Documents",
+        "| Risk | Document | Category | Source |",
+        "|------|----------|----------|--------|",
+    ]
     for d in risk_docs[:30]:
-        score = f"{d['risk_score']*100:.0f}%"
-        lines.append(f"| {score} | {d['title'] or d['filename']} | {d['category']} | {d['source'] or ''} |")
+        score = f"{d['risk_score'] * 100:.0f}%"
+        lines.append(
+            f"| {score} | {d['title'] or d['filename']} | {d['category']} | {d['source'] or ''} |"
+        )
 
     lines += ["", "---", "*Generated by DOSSIER Document Intelligence System*"]
 
-    return {"markdown": "\n".join(lines), "summary": {
-        "flagged_documents": len(risk_docs),
-        "key_persons": len(persons),
-        "aml_flags": len(aml_flags),
-    }}
+    return {
+        "markdown": "\n".join(lines),
+        "summary": {
+            "flagged_documents": len(risk_docs),
+            "key_persons": len(persons),
+            "aml_flags": len(aml_flags),
+        },
+    }
 
 
 @app.get("/api/documents/{doc_id}/notes")
@@ -1096,7 +1152,9 @@ def dashboard_summary():
         doc_count = conn.execute("SELECT COUNT(*) FROM documents").fetchone()[0]
         entity_count = conn.execute("SELECT COUNT(*) FROM entities").fetchone()[0]
         page_count = conn.execute("SELECT COALESCE(SUM(pages),0) FROM documents").fetchone()[0]
-        flagged_count = conn.execute("SELECT COUNT(*) FROM documents WHERE flagged = 1").fetchone()[0]
+        flagged_count = conn.execute("SELECT COUNT(*) FROM documents WHERE flagged = 1").fetchone()[
+            0
+        ]
 
         # Recent documents
         recent = conn.execute("""
@@ -1121,9 +1179,7 @@ def dashboard_summary():
         """).fetchall()
 
         # Entity resolution stats
-        resolved_count = conn.execute(
-            "SELECT COUNT(*) FROM entity_resolutions"
-        ).fetchone()[0]
+        resolved_count = conn.execute("SELECT COUNT(*) FROM entity_resolutions").fetchone()[0]
 
         # AML summary
         aml_count = conn.execute(
@@ -1168,13 +1224,16 @@ def forensics_phrases(limit: int = Query(30, ge=1, le=100)):
     # Filter out noise phrases (HTML artifacts, content-id fragments, etc.)
     noise = {"cid", "nbsp", "amp", "quot", "http", "https", "www", "com", "org", "net"}
     with get_db() as conn:
-        rows = conn.execute("""
+        rows = conn.execute(
+            """
             SELECT p.phrase, p.doc_count, p.total_count
             FROM phrases p
             WHERE p.doc_count > 0
             ORDER BY p.total_count DESC
             LIMIT ?
-        """, (limit * 3,)).fetchall()
+        """,
+            (limit * 3,),
+        ).fetchall()
 
     # Post-filter noise
     filtered = []
@@ -1200,27 +1259,36 @@ def forensics_document(doc_id: int):
         if not doc:
             raise HTTPException(404, "Document not found")
 
-        forensics = conn.execute("""
+        forensics = conn.execute(
+            """
             SELECT analysis_type, label, score, severity, evidence
             FROM document_forensics
             WHERE document_id = ?
             ORDER BY analysis_type, score DESC
-        """, (doc_id,)).fetchall()
+        """,
+            (doc_id,),
+        ).fetchall()
 
-        indicators = conn.execute("""
+        indicators = conn.execute(
+            """
             SELECT indicator_type, value, context, risk_score
             FROM financial_indicators
             WHERE document_id = ?
             ORDER BY risk_score DESC
-        """, (doc_id,)).fetchall()
+        """,
+            (doc_id,),
+        ).fetchall()
 
-        phrases = conn.execute("""
+        phrases = conn.execute(
+            """
             SELECT p.phrase, dp.count
             FROM document_phrases dp
             JOIN phrases p ON p.id = dp.phrase_id
             WHERE dp.document_id = ?
             ORDER BY dp.count DESC LIMIT 20
-        """, (doc_id,)).fetchall()
+        """,
+            (doc_id,),
+        ).fetchall()
 
     # Group forensics by type
     grouped = {}
@@ -1228,12 +1296,14 @@ def forensics_document(doc_id: int):
         atype = row["analysis_type"]
         if atype not in grouped:
             grouped[atype] = []
-        grouped[atype].append({
-            "label": row["label"],
-            "score": row["score"],
-            "severity": row["severity"],
-            "evidence": row["evidence"],
-        })
+        grouped[atype].append(
+            {
+                "label": row["label"],
+                "score": row["score"],
+                "severity": row["severity"],
+                "evidence": row["evidence"],
+            }
+        )
 
     risk_score = 0.0
     if "risk_score" in grouped and grouped["risk_score"]:
@@ -1260,12 +1330,14 @@ OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://localhost:11434")
 
 def _ollama_generate(prompt: str, model: str = "qwen2.5:14b", max_tokens: int = 1024) -> str:
     """Call Ollama API to generate text. Raises HTTPException 503 if unavailable."""
-    payload = json.dumps({
-        "model": model,
-        "prompt": prompt,
-        "stream": False,
-        "options": {"num_predict": max_tokens, "temperature": 0.3},
-    }).encode()
+    payload = json.dumps(
+        {
+            "model": model,
+            "prompt": prompt,
+            "stream": False,
+            "options": {"num_predict": max_tokens, "temperature": 0.3},
+        }
+    ).encode()
     req = urllib.request.Request(
         f"{OLLAMA_URL}/api/generate",
         data=payload,
@@ -1316,14 +1388,17 @@ async def ai_ask(request: Request):
         fts_query = re.sub(r'["\*\(\)\{\}\[\]:^~]', " ", question).strip()
         rows = []
         if fts_query:
-            rows = conn.execute("""
+            rows = conn.execute(
+                """
                 SELECT d.id, d.title,
                        snippet(documents_fts, 1, '', '', '...', 80) as excerpt
                 FROM documents_fts
                 JOIN documents d ON d.id = documents_fts.rowid
                 WHERE documents_fts MATCH ?
                 ORDER BY rank LIMIT 5
-            """, [f'"{fts_query}"']).fetchall()
+            """,
+                [f'"{fts_query}"'],
+            ).fetchall()
 
     context = "\n\n".join(f"[{r['title']}]: {r['excerpt']}" for r in rows)
     prompt = (
@@ -1334,7 +1409,12 @@ async def ai_ask(request: Request):
     )
     answer = _ollama_generate(prompt, max_tokens=1500)
     sources = [{"id": r["id"], "title": r["title"]} for r in rows]
-    return {"question": question, "answer": answer.strip(), "sources": sources, "model": "qwen2.5:14b"}
+    return {
+        "question": question,
+        "answer": answer.strip(),
+        "sources": sources,
+        "model": "qwen2.5:14b",
+    }
 
 
 # ═══════════════════════════════════════════
@@ -1346,7 +1426,8 @@ async def ai_ask(request: Request):
 def relationship_matrix(limit: int = Query(30, ge=5, le=100)):
     """Person-to-person relationship strength matrix."""
     with get_db() as conn:
-        top_persons = conn.execute("""
+        top_persons = conn.execute(
+            """
             SELECT e.id, e.name, SUM(de.count) as total_mentions
             FROM entities e
             JOIN document_entities de ON de.entity_id = e.id
@@ -1354,7 +1435,9 @@ def relationship_matrix(limit: int = Query(30, ge=5, le=100)):
             GROUP BY e.id
             ORDER BY total_mentions DESC
             LIMIT ?
-        """, (limit,)).fetchall()
+        """,
+            (limit,),
+        ).fetchall()
 
         person_ids = [p["id"] for p in top_persons]
         person_names = [p["name"] for p in top_persons]
@@ -1363,12 +1446,15 @@ def relationship_matrix(limit: int = Query(30, ge=5, le=100)):
             return {"entities": person_names, "matrix": [], "connections": []}
 
         placeholders = ",".join("?" * len(person_ids))
-        connections = conn.execute(f"""
+        connections = conn.execute(
+            f"""
             SELECT entity_a_id, entity_b_id, weight
             FROM entity_connections
             WHERE entity_a_id IN ({placeholders})
               AND entity_b_id IN ({placeholders})
-        """, person_ids + person_ids).fetchall()
+        """,
+            person_ids + person_ids,
+        ).fetchall()
 
     id_to_idx = {pid: i for i, pid in enumerate(person_ids)}
     n = len(person_ids)
@@ -1381,10 +1467,13 @@ def relationship_matrix(limit: int = Query(30, ge=5, le=100)):
         if i is not None and j is not None:
             matrix[i][j] = c["weight"]
             matrix[j][i] = c["weight"]
-            conn_list.append({
-                "source": person_names[i], "target": person_names[j],
-                "weight": c["weight"],
-            })
+            conn_list.append(
+                {
+                    "source": person_names[i],
+                    "target": person_names[j],
+                    "weight": c["weight"],
+                }
+            )
 
     return {"entities": person_names, "matrix": matrix, "connections": conn_list}
 
@@ -1398,7 +1487,8 @@ def relationship_matrix(limit: int = Query(30, ge=5, le=100)):
 def geo_locations(limit: int = Query(50, ge=1, le=200)):
     """Place entities with document counts for map visualization."""
     with get_db() as conn:
-        rows = conn.execute("""
+        rows = conn.execute(
+            """
             SELECT e.id, e.name,
                    COUNT(DISTINCT de.document_id) as doc_count,
                    SUM(de.count) as total_mentions
@@ -1408,18 +1498,23 @@ def geo_locations(limit: int = Query(50, ge=1, le=200)):
             GROUP BY e.id
             ORDER BY doc_count DESC, total_mentions DESC
             LIMIT ?
-        """, (limit,)).fetchall()
+        """,
+            (limit,),
+        ).fetchall()
 
         locations = []
         for r in rows:
             loc = dict(r)
-            docs = conn.execute("""
+            docs = conn.execute(
+                """
                 SELECT d.id, d.title, d.category
                 FROM document_entities de
                 JOIN documents d ON d.id = de.document_id
                 WHERE de.entity_id = ?
                 ORDER BY de.count DESC LIMIT 3
-            """, (r["id"],)).fetchall()
+            """,
+                (r["id"],),
+            ).fetchall()
             loc["documents"] = [dict(d) for d in docs]
             locations.append(loc)
 
@@ -1517,9 +1612,7 @@ def advanced_search(
             raw = conn.execute(
                 "SELECT raw_text FROM documents WHERE id = ?", (doc["id"],)
             ).fetchone()
-            doc["excerpt"] = (
-                (raw["raw_text"][:300] + "...") if raw and raw["raw_text"] else ""
-            )
+            doc["excerpt"] = (raw["raw_text"][:300] + "...") if raw and raw["raw_text"] else ""
             results.append(doc)
 
         count_params = params[:-2]
@@ -1606,9 +1699,7 @@ async def update_board_item(item_id: int, request: Request):
                 params.append(body[field])
         if updates:
             params.append(item_id)
-            conn.execute(
-                f"UPDATE board_items SET {', '.join(updates)} WHERE id = ?", params
-            )
+            conn.execute(f"UPDATE board_items SET {', '.join(updates)} WHERE id = ?", params)
 
     return {"id": item_id, "updated": True}
 
@@ -1653,12 +1744,14 @@ def detect_anomalies():
             threshold = max(avg_count * 3, 5)
             for r in date_counts:
                 if r["count"] >= threshold:
-                    anomalies["temporal_spikes"].append({
-                        "date": r["event_date"][:10],
-                        "count": r["count"],
-                        "avg": round(avg_count, 1),
-                        "ratio": round(r["count"] / avg_count, 1) if avg_count > 0 else 0,
-                    })
+                    anomalies["temporal_spikes"].append(
+                        {
+                            "date": r["event_date"][:10],
+                            "count": r["count"],
+                            "avg": round(avg_count, 1),
+                            "ratio": round(r["count"] / avg_count, 1) if avg_count > 0 else 0,
+                        }
+                    )
                 if len(anomalies["temporal_spikes"]) >= 20:
                     break
 
@@ -1687,12 +1780,16 @@ def detect_anomalies():
 
         for r in entity_anoms:
             freq_sum = (r["freq_a"] or 1) + (r["freq_b"] or 1)
-            anomalies["entity_anomalies"].append({
-                "entity_a": r["entity_a"], "entity_b": r["entity_b"],
-                "type_a": r["type_a"], "type_b": r["type_b"],
-                "co_occurrences": r["weight"],
-                "ratio": round(r["weight"] / freq_sum * 100, 1),
-            })
+            anomalies["entity_anomalies"].append(
+                {
+                    "entity_a": r["entity_a"],
+                    "entity_b": r["entity_b"],
+                    "type_a": r["type_a"],
+                    "type_b": r["type_b"],
+                    "co_occurrences": r["weight"],
+                    "ratio": round(r["weight"] / freq_sum * 100, 1),
+                }
+            )
 
         # 3. Financial clusters — documents with many financial indicators
         fin_clusters = conn.execute("""
@@ -1743,17 +1840,21 @@ def entity_profile(entity_id: int):
             raise HTTPException(404, "Entity not found")
 
         # Documents containing this entity
-        docs = conn.execute("""
+        docs = conn.execute(
+            """
             SELECT d.id, d.title, d.filename, d.category, d.source, d.date,
                    d.pages, de.count as mentions
             FROM document_entities de
             JOIN documents d ON d.id = de.document_id
             WHERE de.entity_id = ?
             ORDER BY de.count DESC
-        """, (entity_id,)).fetchall()
+        """,
+            (entity_id,),
+        ).fetchall()
 
         # Risk exposure — docs with risk scores
-        risk_docs = conn.execute("""
+        risk_docs = conn.execute(
+            """
             SELECT df.score, d.id, d.title
             FROM document_entities de
             JOIN document_forensics df ON df.document_id = de.document_id
@@ -1761,14 +1862,17 @@ def entity_profile(entity_id: int):
             JOIN documents d ON d.id = de.document_id
             WHERE de.entity_id = ?
             ORDER BY df.score DESC LIMIT 10
-        """, (entity_id,)).fetchall()
+        """,
+            (entity_id,),
+        ).fetchall()
 
         avg_risk = 0.0
         if risk_docs:
             avg_risk = sum(r["score"] for r in risk_docs) / len(risk_docs)
 
         # Timeline events mentioning this entity
-        timeline = conn.execute("""
+        timeline = conn.execute(
+            """
             SELECT ev.event_date, ev.precision, ev.confidence, ev.context,
                    ev.document_id
             FROM events ev
@@ -1777,10 +1881,13 @@ def entity_profile(entity_id: int):
               AND ev.confidence >= 0.5
             ORDER BY ev.event_date
             LIMIT 50
-        """, (entity_id,)).fetchall()
+        """,
+            (entity_id,),
+        ).fetchall()
 
         # Top co-occurring entities
-        cooccurring = conn.execute("""
+        cooccurring = conn.execute(
+            """
             SELECT e.id, e.name, e.type, ec.weight
             FROM entity_connections ec
             JOIN entities e ON e.id = CASE
@@ -1790,7 +1897,9 @@ def entity_profile(entity_id: int):
               AND ec.weight >= 1
             ORDER BY ec.weight DESC
             LIMIT 30
-        """, (entity_id, entity_id, entity_id)).fetchall()
+        """,
+            (entity_id, entity_id, entity_id),
+        ).fetchall()
 
         # Tags
         _ensure_tags_table(conn)
@@ -1801,9 +1910,10 @@ def entity_profile(entity_id: int):
 
         # Watchlist status
         _ensure_watchlist_table(conn)
-        watched = conn.execute(
-            "SELECT 1 FROM watchlist WHERE entity_id = ?", (entity_id,)
-        ).fetchone() is not None
+        watched = (
+            conn.execute("SELECT 1 FROM watchlist WHERE entity_id = ?", (entity_id,)).fetchone()
+            is not None
+        )
 
     return {
         "entity": dict(entity),
@@ -1835,7 +1945,8 @@ def document_similar(doc_id: int, limit: int = Query(10, ge=1, le=50)):
             raise HTTPException(404, "Document not found")
 
         # Jaccard-like similarity: shared entities / union of entities
-        similar = conn.execute("""
+        similar = conn.execute(
+            """
             SELECT d.id, d.title, d.filename, d.category, d.source, d.date, d.pages,
                    COUNT(DISTINCT de2.entity_id) as shared_entities,
                    (SELECT COUNT(DISTINCT entity_id) FROM document_entities
@@ -1848,13 +1959,18 @@ def document_similar(doc_id: int, limit: int = Query(10, ge=1, le=50)):
             GROUP BY d.id
             ORDER BY shared_entities DESC
             LIMIT ?
-        """, (doc_id, doc_id, limit)).fetchall()
+        """,
+            (doc_id, doc_id, limit),
+        ).fetchall()
 
         # Get source doc entity count for similarity score
-        src_total = conn.execute(
-            "SELECT COUNT(DISTINCT entity_id) FROM document_entities WHERE document_id = ?",
-            (doc_id,),
-        ).fetchone()[0] or 1
+        src_total = (
+            conn.execute(
+                "SELECT COUNT(DISTINCT entity_id) FROM document_entities WHERE document_id = ?",
+                (doc_id,),
+            ).fetchone()[0]
+            or 1
+        )
 
         results = []
         for r in similar:
@@ -1925,6 +2041,7 @@ def export_report(
         # Communities
         try:
             from dossier.core.graph_analysis import GraphAnalyzer
+
             analyzer = GraphAnalyzer(conn)
             communities = analyzer.get_communities(min_size=3)
         except Exception:
@@ -1949,8 +2066,8 @@ th{{background:#f5f5f5;font-weight:600;}}
 .stat-val{{font-size:24px;font-weight:700;color:#c4473a;}} .stat-lbl{{font-size:11px;color:#888;text-transform:uppercase;}}
 </style></head><body>
 <h1>DOSSIER — Investigation Report</h1>
-<p><strong>Generated:</strong> {now} | <strong>Risk Threshold:</strong> {min_risk*100:.0f}%+
-{f' | <strong>Source:</strong> {source}' if source else ''}</p>
+<p><strong>Generated:</strong> {now} | <strong>Risk Threshold:</strong> {min_risk * 100:.0f}%+
+{f" | <strong>Source:</strong> {source}" if source else ""}</p>
 
 <div>
 <div class="stat"><div class="stat-val">{doc_count:,}</div><div class="stat-lbl">Documents</div></div>
@@ -1961,38 +2078,43 @@ th{{background:#f5f5f5;font-weight:600;}}
 
 <h2>Key Persons</h2>
 <table><thead><tr><th>Name</th><th>Documents</th><th>Mentions</th></tr></thead><tbody>
-{''.join(f'<tr><td>{p["name"]}</td><td>{p["doc_count"]}</td><td>{p["mentions"]:,}</td></tr>' for p in persons)}
+{"".join(f"<tr><td>{p['name']}</td><td>{p['doc_count']}</td><td>{p['mentions']:,}</td></tr>" for p in persons)}
 </tbody></table>
 
 <h2>Highest Risk Documents</h2>
 <table><thead><tr><th>Risk</th><th>Document</th><th>Category</th><th>Source</th></tr></thead><tbody>
-{''.join(f'<tr><td><span class="badge {"critical" if d["score"]>0.7 else "high" if d["score"]>0.5 else "medium"}">{d["score"]*100:.0f}%</span></td><td>{d["title"] or d["filename"]}</td><td>{d["category"]}</td><td>{d["source"] or ""}</td></tr>' for d in risk_docs[:30])}
+{"".join(f'<tr><td><span class="badge {"critical" if d["score"] > 0.7 else "high" if d["score"] > 0.5 else "medium"}">{d["score"] * 100:.0f}%</span></td><td>{d["title"] or d["filename"]}</td><td>{d["category"]}</td><td>{d["source"] or ""}</td></tr>' for d in risk_docs[:30])}
 </tbody></table>
 
 <h2>AML Flags</h2>
 <table><thead><tr><th>Flag</th><th>Severity</th><th>Count</th></tr></thead><tbody>
-{''.join(f'<tr><td>{f["label"].replace("_"," ")}</td><td>{f["severity"]}</td><td>{f["count"]}</td></tr>' for f in aml)}
+{"".join(f"<tr><td>{f['label'].replace('_', ' ')}</td><td>{f['severity']}</td><td>{f['count']}</td></tr>" for f in aml)}
 </tbody></table>
 
 <h2>Network Communities ({len(communities)} detected)</h2>"""
 
     for i, comm in enumerate(communities[:10]):
         members = ", ".join(m["name"] for m in comm.members[:15])
-        html += f"<p><strong>Community {i+1}</strong> ({comm.size} members, density {comm.density:.2f}): {members}</p>"
+        html += f"<p><strong>Community {i + 1}</strong> ({comm.size} members, density {comm.density:.2f}): {members}</p>"
 
     html += f"""
 <h2>Temporal Hotspots</h2>
 <table><thead><tr><th>Date</th><th>Events</th></tr></thead><tbody>
-{''.join(f'<tr><td>{s["event_date"][:10]}</td><td>{s["count"]}</td></tr>' for s in spikes)}
+{"".join(f"<tr><td>{s['event_date'][:10]}</td><td>{s['count']}</td></tr>" for s in spikes)}
 </tbody></table>
 
 <hr><p style="color:#888;font-size:11px;">Generated by DOSSIER Document Intelligence System — {now}</p>
 </body></html>"""
 
-    return {"html": html, "stats": {
-        "documents": doc_count, "flagged": len(risk_docs),
-        "persons": len(persons), "communities": len(communities),
-    }}
+    return {
+        "html": html,
+        "stats": {
+            "documents": doc_count,
+            "flagged": len(risk_docs),
+            "persons": len(persons),
+            "communities": len(communities),
+        },
+    }
 
 
 # ═══════════════════════════════════════════
@@ -2060,7 +2182,8 @@ def entities_by_tag(tag: str = Query(...)):
     """Get all entities with a specific tag."""
     with get_db() as conn:
         _ensure_tags_table(conn)
-        rows = conn.execute("""
+        rows = conn.execute(
+            """
             SELECT e.id, e.name, e.type, et.tag,
                    COUNT(DISTINCT de.document_id) as doc_count,
                    SUM(de.count) as total_mentions
@@ -2070,7 +2193,9 @@ def entities_by_tag(tag: str = Query(...)):
             WHERE et.tag = ?
             GROUP BY e.id
             ORDER BY total_mentions DESC
-        """, (tag,)).fetchall()
+        """,
+            (tag,),
+        ).fetchall()
     return {"tag": tag, "entities": [dict(r) for r in rows]}
 
 
@@ -2164,9 +2289,9 @@ def communities_labeled(min_size: int = Query(3, ge=2)):
         try:
             analyzer = GraphAnalyzer(conn)
             communities = analyzer.get_communities(min_size=min_size)
-        except Exception as e:
+        except Exception:
             logger.exception("Community detection error")
-            return {"communities": [], "error": str(e)}
+            return {"communities": [], "error": "Community detection failed"}
 
         result = []
         for i, comm in enumerate(communities):
@@ -2181,7 +2306,8 @@ def communities_labeled(min_size: int = Query(3, ge=2)):
             member_ids = [m["entity_id"] for m in comm.members[:20]]
             if len(member_ids) >= 2:
                 ph = ",".join("?" * len(member_ids))
-                shared = conn.execute(f"""
+                shared = conn.execute(
+                    f"""
                     SELECT d.id, d.title, d.category, COUNT(DISTINCT de.entity_id) as member_count
                     FROM document_entities de
                     JOIN documents d ON d.id = de.document_id
@@ -2189,21 +2315,29 @@ def communities_labeled(min_size: int = Query(3, ge=2)):
                     GROUP BY d.id
                     HAVING COUNT(DISTINCT de.entity_id) >= 2
                     ORDER BY member_count DESC LIMIT 5
-                """, member_ids).fetchall()
+                """,
+                    member_ids,
+                ).fetchall()
             else:
                 shared = []
 
-            result.append({
-                "id": i,
-                "label": label,
-                "size": comm.size,
-                "density": comm.density,
-                "members": [dict(m) if isinstance(m, dict) else
-                            {"entity_id": m.entity_id, "name": m.name, "type": m.type}
-                            if hasattr(m, "entity_id") else m
-                            for m in comm.members],
-                "shared_documents": [dict(d) for d in shared],
-            })
+            result.append(
+                {
+                    "id": i,
+                    "label": label,
+                    "size": comm.size,
+                    "density": comm.density,
+                    "members": [
+                        dict(m)
+                        if isinstance(m, dict)
+                        else {"entity_id": m.entity_id, "name": m.name, "type": m.type}
+                        if hasattr(m, "entity_id")
+                        else m
+                        for m in comm.members
+                    ],
+                    "shared_documents": [dict(d) for d in shared],
+                }
+            )
 
     return {"communities": result, "total": len(result)}
 
@@ -2221,7 +2355,8 @@ def detect_duplicates(
     """Find potential duplicate document pairs based on title similarity and shared entities."""
     with get_db() as conn:
         # Find document pairs with very similar entity fingerprints
-        pairs = conn.execute("""
+        pairs = conn.execute(
+            """
             SELECT d1.id as id_a, d1.title as title_a, d1.filename as filename_a,
                    d1.category as category_a, d1.pages as pages_a,
                    d2.id as id_b, d2.title as title_b, d2.filename as filename_b,
@@ -2242,7 +2377,9 @@ def detect_duplicates(
                    )) >= ?
             ORDER BY shared_entities DESC
             LIMIT ?
-        """, (threshold, limit)).fetchall()
+        """,
+            (threshold, limit),
+        ).fetchall()
 
         results = []
         for r in pairs:
@@ -2297,7 +2434,8 @@ def timeline_overlay(
 
     with get_db() as conn:
         ph = ",".join("?" * len(ids))
-        rows = conn.execute(f"""
+        rows = conn.execute(
+            f"""
             SELECT DISTINCT e.id as entity_id, e.name as entity_name, e.type as entity_type,
                    ev.event_date, ev.precision, ev.confidence, ev.context,
                    ev.document_id, d.title as doc_title
@@ -2310,7 +2448,9 @@ def timeline_overlay(
               AND ev.confidence >= 0.5
             ORDER BY ev.event_date, e.id
             LIMIT ?
-        """, ids + [limit]).fetchall()
+        """,
+            ids + [limit],
+        ).fetchall()
 
         # Group by entity
         by_entity: dict[int, dict] = {}
@@ -2323,13 +2463,15 @@ def timeline_overlay(
                     "entity_type": r["entity_type"],
                     "events": [],
                 }
-            by_entity[eid]["events"].append({
-                "date": r["event_date"],
-                "precision": r["precision"],
-                "context": r["context"],
-                "doc_id": r["document_id"],
-                "doc_title": r["doc_title"],
-            })
+            by_entity[eid]["events"].append(
+                {
+                    "date": r["event_date"],
+                    "precision": r["precision"],
+                    "context": r["context"],
+                    "doc_id": r["document_id"],
+                    "doc_title": r["doc_title"],
+                }
+            )
 
     return {"entities": list(by_entity.values()), "total_events": len(rows)}
 
@@ -2405,14 +2547,17 @@ def search_annotations(q: str = Query("", description="Search annotation notes")
     """Search across all annotations."""
     with get_db() as conn:
         _ensure_annotations_table(conn)
-        rows = conn.execute("""
+        rows = conn.execute(
+            """
             SELECT a.*, d.title as doc_title, d.filename as doc_filename
             FROM annotations a
             JOIN documents d ON d.id = a.document_id
             WHERE a.note LIKE ? OR a.text LIKE ?
             ORDER BY a.created_at DESC
             LIMIT 50
-        """, (f"%{q}%", f"%{q}%")).fetchall()
+        """,
+            (f"%{q}%", f"%{q}%"),
+        ).fetchall()
     return {"annotations": [dict(r) for r in rows], "query": q}
 
 
@@ -2544,6 +2689,7 @@ def export_entities(
     if format == "csv":
         import csv
         import io
+
         out = io.StringIO()
         if entities:
             writer = csv.DictWriter(out, fieldnames=entities[0].keys())
@@ -2562,7 +2708,8 @@ def export_connections(
 ):
     """Export entity connections as JSON or CSV."""
     with get_db() as conn:
-        rows = conn.execute("""
+        rows = conn.execute(
+            """
             SELECT ec.entity_a_id, ea.name as entity_a_name, ea.type as entity_a_type,
                    ec.entity_b_id, eb.name as entity_b_name, eb.type as entity_b_type,
                    ec.weight, ec.co_document_count
@@ -2572,13 +2719,16 @@ def export_connections(
             WHERE ec.weight >= ?
             ORDER BY ec.weight DESC
             LIMIT ?
-        """, (min_weight, limit)).fetchall()
+        """,
+            (min_weight, limit),
+        ).fetchall()
 
     connections = [dict(r) for r in rows]
 
     if format == "csv":
         import csv
         import io
+
         out = io.StringIO()
         if connections:
             writer = csv.DictWriter(out, fieldnames=connections[0].keys())
@@ -2596,7 +2746,8 @@ def export_timeline(
 ):
     """Export timeline events as JSON or CSV."""
     with get_db() as conn:
-        rows = conn.execute("""
+        rows = conn.execute(
+            """
             SELECT ev.id, ev.event_date, ev.precision, ev.confidence,
                    ev.context, ev.document_id, d.title as doc_title
             FROM events ev
@@ -2604,13 +2755,16 @@ def export_timeline(
             WHERE ev.event_date IS NOT NULL AND ev.confidence >= 0.5
             ORDER BY ev.event_date
             LIMIT ?
-        """, (limit,)).fetchall()
+        """,
+            (limit,),
+        ).fetchall()
 
     events = [dict(r) for r in rows]
 
     if format == "csv":
         import csv
         import io
+
         out = io.StringIO()
         if events:
             writer = csv.DictWriter(out, fieldnames=events[0].keys())
@@ -2783,7 +2937,9 @@ def delete_redaction(redaction_id: int):
 def get_redacted_text(doc_id: int):
     """Get document text with redactions applied."""
     with get_db() as conn:
-        doc = conn.execute("SELECT id, title, filename, raw_text FROM documents WHERE id = ?", (doc_id,)).fetchone()
+        doc = conn.execute(
+            "SELECT id, title, filename, raw_text FROM documents WHERE id = ?", (doc_id,)
+        ).fetchone()
         if not doc:
             raise HTTPException(404, "Document not found")
         _ensure_redactions_table(conn)
@@ -2798,7 +2954,12 @@ def get_redacted_text(doc_id: int):
             end = min(len(text), r["end_offset"])
             text = text[:start] + "[REDACTED]" + text[end:]
 
-    return {"document_id": doc_id, "title": doc["title"] or doc["filename"], "redacted_text": text, "redaction_count": len(redactions)}
+    return {
+        "document_id": doc_id,
+        "title": doc["title"] or doc["filename"],
+        "redacted_text": text,
+        "redaction_count": len(redactions),
+    }
 
 
 # ═══════════════════════════════════════════
@@ -2860,7 +3021,13 @@ async def add_audit_entry(request: Request):
     if not action:
         raise HTTPException(400, "action required")
     with get_db() as conn:
-        _log_audit(conn, action, body.get("target_type", ""), body.get("target_id", 0), body.get("details", ""))
+        _log_audit(
+            conn,
+            action,
+            body.get("target_type", ""),
+            body.get("target_id", 0),
+            body.get("details", ""),
+        )
     return {"logged": True}
 
 
@@ -2876,41 +3043,82 @@ def merge_preview(
 ):
     """Preview what merging two entities would look like."""
     with get_db() as conn:
-        src = conn.execute("SELECT id, name, type, canonical FROM entities WHERE id = ?", (source_id,)).fetchone()
-        tgt = conn.execute("SELECT id, name, type, canonical FROM entities WHERE id = ?", (target_id,)).fetchone()
+        src = conn.execute(
+            "SELECT id, name, type, canonical FROM entities WHERE id = ?", (source_id,)
+        ).fetchone()
+        tgt = conn.execute(
+            "SELECT id, name, type, canonical FROM entities WHERE id = ?", (target_id,)
+        ).fetchone()
         if not src or not tgt:
             raise HTTPException(404, "Entity not found")
 
         # Count docs and mentions for each
-        src_stats = conn.execute("""
+        src_stats = conn.execute(
+            """
             SELECT COUNT(DISTINCT document_id) as doc_count, SUM(count) as mentions
             FROM document_entities WHERE entity_id = ?
-        """, (source_id,)).fetchone()
-        tgt_stats = conn.execute("""
+        """,
+            (source_id,),
+        ).fetchone()
+        tgt_stats = conn.execute(
+            """
             SELECT COUNT(DISTINCT document_id) as doc_count, SUM(count) as mentions
             FROM document_entities WHERE entity_id = ?
-        """, (target_id,)).fetchone()
+        """,
+            (target_id,),
+        ).fetchone()
 
         # Shared documents
-        shared = conn.execute("""
+        shared = conn.execute(
+            """
             SELECT COUNT(DISTINCT de1.document_id)
             FROM document_entities de1
             JOIN document_entities de2 ON de1.document_id = de2.document_id
             WHERE de1.entity_id = ? AND de2.entity_id = ?
-        """, (source_id, target_id)).fetchone()[0]
+        """,
+            (source_id, target_id),
+        ).fetchone()[0]
 
         # Tags
         _ensure_tags_table(conn)
-        src_tags = [r["tag"] for r in conn.execute("SELECT tag FROM entity_tags WHERE entity_id = ?", (source_id,)).fetchall()]
-        tgt_tags = [r["tag"] for r in conn.execute("SELECT tag FROM entity_tags WHERE entity_id = ?", (target_id,)).fetchall()]
+        src_tags = [
+            r["tag"]
+            for r in conn.execute(
+                "SELECT tag FROM entity_tags WHERE entity_id = ?", (source_id,)
+            ).fetchall()
+        ]
+        tgt_tags = [
+            r["tag"]
+            for r in conn.execute(
+                "SELECT tag FROM entity_tags WHERE entity_id = ?", (target_id,)
+            ).fetchall()
+        ]
 
         # Connections
-        src_conns = conn.execute("SELECT COUNT(*) FROM entity_connections WHERE entity_a_id = ? OR entity_b_id = ?", (source_id, source_id)).fetchone()[0]
-        tgt_conns = conn.execute("SELECT COUNT(*) FROM entity_connections WHERE entity_a_id = ? OR entity_b_id = ?", (target_id, target_id)).fetchone()[0]
+        src_conns = conn.execute(
+            "SELECT COUNT(*) FROM entity_connections WHERE entity_a_id = ? OR entity_b_id = ?",
+            (source_id, source_id),
+        ).fetchone()[0]
+        tgt_conns = conn.execute(
+            "SELECT COUNT(*) FROM entity_connections WHERE entity_a_id = ? OR entity_b_id = ?",
+            (target_id, target_id),
+        ).fetchone()[0]
 
     return {
-        "source": {**dict(src), "doc_count": src_stats["doc_count"], "mentions": src_stats["mentions"], "tags": src_tags, "connections": src_conns},
-        "target": {**dict(tgt), "doc_count": tgt_stats["doc_count"], "mentions": tgt_stats["mentions"], "tags": tgt_tags, "connections": tgt_conns},
+        "source": {
+            **dict(src),
+            "doc_count": src_stats["doc_count"],
+            "mentions": src_stats["mentions"],
+            "tags": src_tags,
+            "connections": src_conns,
+        },
+        "target": {
+            **dict(tgt),
+            "doc_count": tgt_stats["doc_count"],
+            "mentions": tgt_stats["mentions"],
+            "tags": tgt_tags,
+            "connections": tgt_conns,
+        },
         "shared_documents": shared,
         "merged_tags": sorted(set(src_tags + tgt_tags)),
         "merged_doc_count": src_stats["doc_count"] + tgt_stats["doc_count"] - shared,
@@ -2933,12 +3141,15 @@ async def merge_entities(request: Request):
             raise HTTPException(404, "Entity not found")
 
         # Transfer document_entities (merge counts for shared docs)
-        shared_docs = conn.execute("""
+        shared_docs = conn.execute(
+            """
             SELECT de1.document_id, de1.count as src_count, de2.count as tgt_count
             FROM document_entities de1
             JOIN document_entities de2 ON de1.document_id = de2.document_id
             WHERE de1.entity_id = ? AND de2.entity_id = ?
-        """, (source_id, target_id)).fetchall()
+        """,
+            (source_id, target_id),
+        ).fetchall()
 
         for sd in shared_docs:
             conn.execute(
@@ -2965,30 +3176,53 @@ async def merge_entities(request: Request):
             "UPDATE OR IGNORE entity_connections SET entity_b_id = ? WHERE entity_b_id = ? AND entity_a_id != ?",
             (target_id, source_id, target_id),
         )
-        conn.execute("DELETE FROM entity_connections WHERE entity_a_id = ? OR entity_b_id = ?", (source_id, source_id))
+        conn.execute(
+            "DELETE FROM entity_connections WHERE entity_a_id = ? OR entity_b_id = ?",
+            (source_id, source_id),
+        )
 
         # Transfer tags
         _ensure_tags_table(conn)
-        src_tags = conn.execute("SELECT tag FROM entity_tags WHERE entity_id = ?", (source_id,)).fetchall()
+        src_tags = conn.execute(
+            "SELECT tag FROM entity_tags WHERE entity_id = ?", (source_id,)
+        ).fetchall()
         for t in src_tags:
-            conn.execute("INSERT OR IGNORE INTO entity_tags (entity_id, tag) VALUES (?, ?)", (target_id, t["tag"]))
+            conn.execute(
+                "INSERT OR IGNORE INTO entity_tags (entity_id, tag) VALUES (?, ?)",
+                (target_id, t["tag"]),
+            )
         conn.execute("DELETE FROM entity_tags WHERE entity_id = ?", (source_id,))
 
         # Transfer watchlist
         _ensure_watchlist_table(conn)
-        watched = conn.execute("SELECT notes FROM watchlist WHERE entity_id = ?", (source_id,)).fetchone()
+        watched = conn.execute(
+            "SELECT notes FROM watchlist WHERE entity_id = ?", (source_id,)
+        ).fetchone()
         if watched:
-            conn.execute("INSERT OR IGNORE INTO watchlist (entity_id, notes) VALUES (?, ?)", (target_id, watched["notes"]))
+            conn.execute(
+                "INSERT OR IGNORE INTO watchlist (entity_id, notes) VALUES (?, ?)",
+                (target_id, watched["notes"]),
+            )
             conn.execute("DELETE FROM watchlist WHERE entity_id = ?", (source_id,))
 
         # Delete source entity
         conn.execute("DELETE FROM entities WHERE id = ?", (source_id,))
 
         # Audit
-        _log_audit(conn, "entity_merge", "entity", target_id,
-                   f"Merged '{src['name']}' (#{source_id}) into '{tgt['name']}' (#{target_id})")
+        _log_audit(
+            conn,
+            "entity_merge",
+            "entity",
+            target_id,
+            f"Merged '{src['name']}' (#{source_id}) into '{tgt['name']}' (#{target_id})",
+        )
 
-    return {"merged": True, "source_id": source_id, "target_id": target_id, "target_name": tgt["name"]}
+    return {
+        "merged": True,
+        "source_id": source_id,
+        "target_id": target_id,
+        "target_name": tgt["name"],
+    }
 
 
 # ═══════════════════════════════════════════
@@ -3037,14 +3271,18 @@ def document_clusters(
 
             ph = ",".join("?" * min(len(doc_ids), 10))
             sample_ids = doc_ids[:10]
-            doc_rows = conn.execute(f"""
+            doc_rows = conn.execute(
+                f"""
                 SELECT id, title, filename, category, source, pages
                 FROM documents WHERE id IN ({ph})
-            """, sample_ids).fetchall()
+            """,
+                sample_ids,
+            ).fetchall()
 
             # Get shared entities across cluster
             all_ph = ",".join("?" * len(doc_ids))
-            shared_entities = conn.execute(f"""
+            shared_entities = conn.execute(
+                f"""
                 SELECT e.name, e.type, COUNT(DISTINCT de.document_id) as doc_count
                 FROM document_entities de
                 JOIN entities e ON e.id = de.entity_id
@@ -3052,14 +3290,18 @@ def document_clusters(
                 GROUP BY e.id
                 HAVING COUNT(DISTINCT de.document_id) >= ?
                 ORDER BY doc_count DESC LIMIT 10
-            """, doc_ids + [max(2, len(doc_ids) // 3)]).fetchall()
+            """,
+                doc_ids + [max(2, len(doc_ids) // 3)],
+            ).fetchall()
 
-            clusters.append({
-                "keyword": kw,
-                "size": len(doc_ids),
-                "documents": [dict(r) for r in doc_rows],
-                "shared_entities": [dict(e) for e in shared_entities],
-            })
+            clusters.append(
+                {
+                    "keyword": kw,
+                    "size": len(doc_ids),
+                    "documents": [dict(r) for r in doc_rows],
+                    "shared_entities": [dict(e) for e in shared_entities],
+                }
+            )
 
     return {"clusters": clusters, "total": len(clusters)}
 
@@ -3103,7 +3345,13 @@ async def save_query(request: Request):
         _ensure_saved_queries_table(conn)
         cur = conn.execute(
             "INSERT INTO saved_queries (name, query_text, category, entity_type, source) VALUES (?, ?, ?, ?, ?)",
-            (name, body.get("query_text", ""), body.get("category", ""), body.get("entity_type", ""), body.get("source", "")),
+            (
+                name,
+                body.get("query_text", ""),
+                body.get("category", ""),
+                body.get("entity_type", ""),
+                body.get("source", ""),
+            ),
         )
     return {"id": cur.lastrowid, "name": name, "saved": True}
 
@@ -3139,19 +3387,23 @@ def cross_references(
         if text.strip():
             # Extract entity names from the selected text by matching known entities
             text_lower = text.lower()
-            entity_matches = conn.execute("""
+            entity_matches = conn.execute(
+                """
                 SELECT DISTINCT e.id, e.name, e.type
                 FROM entities e
                 WHERE LENGTH(e.name) >= 3 AND LOWER(e.name) != ''
                   AND ? LIKE '%' || LOWER(e.name) || '%'
                 ORDER BY LENGTH(e.name) DESC
                 LIMIT 20
-            """, (text_lower,)).fetchall()
+            """,
+                (text_lower,),
+            ).fetchall()
 
             if entity_matches:
                 entity_ids = [e["id"] for e in entity_matches]
                 ph = ",".join("?" * len(entity_ids))
-                xrefs = conn.execute(f"""
+                xrefs = conn.execute(
+                    f"""
                     SELECT d.id, d.title, d.filename, d.category, d.source,
                            COUNT(DISTINCT de.entity_id) as matching_entities,
                            GROUP_CONCAT(DISTINCT e.name) as matched_names
@@ -3162,26 +3414,38 @@ def cross_references(
                     GROUP BY d.id
                     ORDER BY matching_entities DESC
                     LIMIT ?
-                """, entity_ids + [doc_id, limit]).fetchall()
+                """,
+                    entity_ids + [doc_id, limit],
+                ).fetchall()
                 results = [dict(r) for r in xrefs]
 
             # Also try FTS if text is meaningful enough
             if len(text.strip()) >= 5 and len(results) < limit:
                 fts_query = re.sub(r'["\*\(\)\{\}\[\]:^~]', " ", text.strip())[:100]
                 try:
-                    fts_results = conn.execute("""
+                    fts_results = conn.execute(
+                        """
                         SELECT d.id, d.title, d.filename, d.category, d.source,
                                snippet(documents_fts, 1, '<mark>', '</mark>', '...', 20) as excerpt
                         FROM documents_fts
                         JOIN documents d ON d.id = documents_fts.rowid
                         WHERE documents_fts MATCH ? AND d.id != ?
                         LIMIT ?
-                    """, (f'"{fts_query}"', doc_id, limit)).fetchall()
+                    """,
+                        (f'"{fts_query}"', doc_id, limit),
+                    ).fetchall()
 
                     existing_ids = {r["id"] for r in results}
                     for fr in fts_results:
                         if fr["id"] not in existing_ids:
-                            results.append({**dict(fr), "matching_entities": 0, "matched_names": "", "fts_match": True})
+                            results.append(
+                                {
+                                    **dict(fr),
+                                    "matching_entities": 0,
+                                    "matched_names": "",
+                                    "fts_match": True,
+                                }
+                            )
                 except Exception:
                     pass  # FTS match may fail on certain inputs
 
@@ -3241,7 +3505,8 @@ def get_evidence_chain(chain_id: int):
         chain = conn.execute("SELECT * FROM evidence_chains WHERE id = ?", (chain_id,)).fetchone()
         if not chain:
             raise HTTPException(404, "Chain not found")
-        links = conn.execute("""
+        links = conn.execute(
+            """
             SELECT ecl.*, CASE ecl.link_type
                 WHEN 'document' THEN (SELECT title FROM documents WHERE id = ecl.target_id)
                 WHEN 'entity' THEN (SELECT name FROM entities WHERE id = ecl.target_id)
@@ -3252,8 +3517,10 @@ def get_evidence_chain(chain_id: int):
             FROM evidence_chain_links ecl
             WHERE ecl.chain_id = ?
             ORDER BY ecl.position
-        """, (chain_id,)).fetchall()
-    return {"chain": dict(chain), "links": [dict(l) for l in links]}
+        """,
+            (chain_id,),
+        ).fetchall()
+    return {"chain": dict(chain), "links": [dict(lnk) for lnk in links]}
 
 
 @app.post("/api/evidence-chains")
@@ -3283,13 +3550,16 @@ async def add_chain_link(chain_id: int, request: Request):
     with get_db() as conn:
         _ensure_evidence_chains_table(conn)
         max_pos = conn.execute(
-            "SELECT COALESCE(MAX(position), 0) FROM evidence_chain_links WHERE chain_id = ?", (chain_id,)
+            "SELECT COALESCE(MAX(position), 0) FROM evidence_chain_links WHERE chain_id = ?",
+            (chain_id,),
         ).fetchone()[0]
         conn.execute(
             "INSERT INTO evidence_chain_links (chain_id, position, link_type, target_id, narrative) VALUES (?, ?, ?, ?, ?)",
             (chain_id, max_pos + 1, link_type, target_id, narrative),
         )
-        conn.execute("UPDATE evidence_chains SET updated_at = datetime('now') WHERE id = ?", (chain_id,))
+        conn.execute(
+            "UPDATE evidence_chains SET updated_at = datetime('now') WHERE id = ?", (chain_id,)
+        )
     return {"added": True, "position": max_pos + 1}
 
 
@@ -3314,33 +3584,37 @@ def delete_chain_link(link_id: int):
 def export_evidence_chain(chain_id: int):
     """Export evidence chain as HTML case brief."""
     import datetime
+
     with get_db() as conn:
         _ensure_evidence_chains_table(conn)
         chain = conn.execute("SELECT * FROM evidence_chains WHERE id = ?", (chain_id,)).fetchone()
         if not chain:
             raise HTTPException(404, "Chain not found")
-        links = conn.execute("""
+        links = conn.execute(
+            """
             SELECT ecl.*, CASE ecl.link_type
                 WHEN 'document' THEN (SELECT title FROM documents WHERE id = ecl.target_id)
                 WHEN 'entity' THEN (SELECT name FROM entities WHERE id = ecl.target_id)
                 ELSE '' END as target_name
             FROM evidence_chain_links ecl WHERE ecl.chain_id = ? ORDER BY ecl.position
-        """, (chain_id,)).fetchall()
+        """,
+            (chain_id,),
+        ).fetchall()
 
     now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
-    html = f"""<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Case Brief: {chain['name']}</title>
+    html = f"""<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Case Brief: {chain["name"]}</title>
 <style>body{{font-family:'Helvetica Neue',sans-serif;max-width:800px;margin:0 auto;padding:40px;color:#222;line-height:1.6;}}
 h1{{color:#c4473a;border-bottom:3px solid #c4473a;padding-bottom:10px;}}
 .step{{display:flex;gap:16px;margin:16px 0;padding:16px;border-left:4px solid #c4473a;background:#f9f9f9;border-radius:0 8px 8px 0;}}
 .step-num{{font-size:24px;font-weight:700;color:#c4473a;min-width:40px;text-align:center;}}
 .step-body h3{{margin:0 0 4px;}} .step-body p{{margin:4px 0;color:#555;font-size:14px;}}
 .meta{{color:#888;font-size:11px;}}</style></head><body>
-<h1>Case Brief: {chain['name']}</h1>
-<p>{chain['description']}</p><p class="meta">Generated: {now} | {len(links)} links</p>"""
-    for l in links:
-        html += f"""<div class="step"><div class="step-num">{l['position']}</div><div class="step-body">
-<h3>[{l['link_type'].title()}] {l['target_name'] or f"#{l['target_id']}"}</h3>
-<p>{l['narrative'] or '<em>No narrative</em>'}</p></div></div>"""
+<h1>Case Brief: {chain["name"]}</h1>
+<p>{chain["description"]}</p><p class="meta">Generated: {now} | {len(links)} links</p>"""
+    for lnk in links:
+        html += f"""<div class="step"><div class="step-num">{lnk["position"]}</div><div class="step-body">
+<h3>[{lnk["link_type"].title()}] {lnk["target_name"] or f"#{lnk['target_id']}"}</h3>
+<p>{lnk["narrative"] or "<em>No narrative</em>"}</p></div></div>"""
     html += "</body></html>"
     return {"html": html, "name": chain["name"]}
 
@@ -3358,7 +3632,8 @@ def detect_patterns(
     """Detect recurring behavioral patterns across time windows."""
     with get_db() as conn:
         # 1. Recurring entity co-appearances via shared documents per date
-        coappearance = conn.execute("""
+        coappearance = conn.execute(
+            """
             WITH dated_entities AS (
                 SELECT DISTINCT de.entity_id, e.name, e.type, ev.event_date
                 FROM events ev
@@ -3381,10 +3656,13 @@ def detect_patterns(
             HAVING co_dates >= ?
             ORDER BY co_dates DESC
             LIMIT 30
-        """, (min_occurrences,)).fetchall()
+        """,
+            (min_occurrences,),
+        ).fetchall()
 
         # 2. Entity activity bursts — entities with event clusters
-        bursts = conn.execute("""
+        bursts = conn.execute(
+            """
             SELECT e.name, e.type, e.id as entity_id,
                    SUBSTR(ev.event_date, 1, 7) as month,
                    COUNT(*) as event_count
@@ -3397,7 +3675,9 @@ def detect_patterns(
             HAVING COUNT(*) >= ?
             ORDER BY event_count DESC
             LIMIT 40
-        """, (min_occurrences,)).fetchall()
+        """,
+            (min_occurrences,),
+        ).fetchall()
 
         # 3. Document category sequences — same entity appearing in docs of different categories
         category_patterns = conn.execute("""
@@ -3434,22 +3714,34 @@ def compare_documents(
 ):
     """Compare two documents: shared entities, unique entities, text overlap indicators."""
     with get_db() as conn:
-        a = conn.execute("SELECT id, title, filename, category, source, pages, raw_text FROM documents WHERE id = ?", (doc_a,)).fetchone()
-        b = conn.execute("SELECT id, title, filename, category, source, pages, raw_text FROM documents WHERE id = ?", (doc_b,)).fetchone()
+        a = conn.execute(
+            "SELECT id, title, filename, category, source, pages, raw_text FROM documents WHERE id = ?",
+            (doc_a,),
+        ).fetchone()
+        b = conn.execute(
+            "SELECT id, title, filename, category, source, pages, raw_text FROM documents WHERE id = ?",
+            (doc_b,),
+        ).fetchone()
         if not a or not b:
             raise HTTPException(404, "Document not found")
 
         # Entities for each doc
-        ents_a = conn.execute("""
+        ents_a = conn.execute(
+            """
             SELECT e.id, e.name, e.type, de.count
             FROM document_entities de JOIN entities e ON e.id = de.entity_id
             WHERE de.document_id = ? ORDER BY de.count DESC
-        """, (doc_a,)).fetchall()
-        ents_b = conn.execute("""
+        """,
+            (doc_a,),
+        ).fetchall()
+        ents_b = conn.execute(
+            """
             SELECT e.id, e.name, e.type, de.count
             FROM document_entities de JOIN entities e ON e.id = de.entity_id
             WHERE de.document_id = ? ORDER BY de.count DESC
-        """, (doc_b,)).fetchall()
+        """,
+            (doc_b,),
+        ).fetchall()
 
         ids_a = {e["id"] for e in ents_a}
         ids_b = {e["id"] for e in ents_b}
@@ -3464,13 +3756,28 @@ def compare_documents(
         text_b = (b["raw_text"] or "")[:2000]
 
     return {
-        "doc_a": {"id": a["id"], "title": a["title"] or a["filename"], "category": a["category"], "source": a["source"], "pages": a["pages"], "text_preview": text_a},
-        "doc_b": {"id": b["id"], "title": b["title"] or b["filename"], "category": b["category"], "source": b["source"], "pages": b["pages"], "text_preview": text_b},
+        "doc_a": {
+            "id": a["id"],
+            "title": a["title"] or a["filename"],
+            "category": a["category"],
+            "source": a["source"],
+            "pages": a["pages"],
+            "text_preview": text_a,
+        },
+        "doc_b": {
+            "id": b["id"],
+            "title": b["title"] or b["filename"],
+            "category": b["category"],
+            "source": b["source"],
+            "pages": b["pages"],
+            "text_preview": text_b,
+        },
         "shared_entities": shared[:30],
         "only_a": only_a,
         "only_b": only_b,
         "stats": {
-            "entities_a": len(ids_a), "entities_b": len(ids_b),
+            "entities_a": len(ids_a),
+            "entities_b": len(ids_b),
             "shared": len(shared_ids),
             "jaccard": round(len(shared_ids) / max(len(ids_a | ids_b), 1), 3),
         },
@@ -3514,7 +3821,10 @@ async def add_alias(entity_id: int, request: Request):
         if not entity:
             raise HTTPException(404, "Entity not found")
         _ensure_aliases_table(conn)
-        conn.execute("INSERT OR IGNORE INTO entity_aliases (entity_id, alias_name) VALUES (?, ?)", (entity_id, alias))
+        conn.execute(
+            "INSERT OR IGNORE INTO entity_aliases (entity_id, alias_name) VALUES (?, ?)",
+            (entity_id, alias),
+        )
         _log_audit(conn, "add_alias", "entity", entity_id, alias)
     return {"entity_id": entity_id, "alias": alias, "added": True}
 
@@ -3533,12 +3843,15 @@ def resolve_alias(name: str = Query(...)):
     with get_db() as conn:
         _ensure_aliases_table(conn)
         # Check aliases first
-        alias_match = conn.execute("""
+        alias_match = conn.execute(
+            """
             SELECT ea.entity_id, e.name, e.type, ea.alias_name
             FROM entity_aliases ea
             JOIN entities e ON e.id = ea.entity_id
             WHERE LOWER(ea.alias_name) = LOWER(?)
-        """, (name,)).fetchone()
+        """,
+            (name,),
+        ).fetchone()
         if alias_match:
             return {"resolved": True, "entity": dict(alias_match), "via": "alias"}
         # Fall back to direct entity name match
@@ -3559,7 +3872,9 @@ def resolve_alias(name: str = Query(...)):
 def analyze_tone(doc_id: int):
     """Analyze document tone using keyword-based markers."""
     with get_db() as conn:
-        doc = conn.execute("SELECT id, title, filename, raw_text FROM documents WHERE id = ?", (doc_id,)).fetchone()
+        doc = conn.execute(
+            "SELECT id, title, filename, raw_text FROM documents WHERE id = ?", (doc_id,)
+        ).fetchone()
         if not doc:
             raise HTTPException(404, "Document not found")
 
@@ -3568,12 +3883,72 @@ def analyze_tone(doc_id: int):
 
         # Keyword-based tone markers
         markers = {
-            "threat": ["threat", "warn", "danger", "risk", "harm", "attack", "violent", "kill", "weapon"],
-            "urgency": ["urgent", "immediately", "asap", "critical", "emergency", "deadline", "rush", "time-sensitive"],
-            "evasion": ["deny", "refuse", "decline", "no comment", "plead the fifth", "i don't recall", "i don't remember", "cannot recall", "i have no"],
-            "legal_exposure": ["liability", "lawsuit", "prosecution", "criminal", "indictment", "guilty", "plaintiff", "defendant", "settlement", "subpoena"],
-            "financial": ["payment", "transfer", "wire", "account", "fund", "invest", "dollar", "million", "billion", "transaction"],
-            "secrecy": ["confidential", "secret", "classified", "private", "restricted", "do not distribute", "off the record", "between us"],
+            "threat": [
+                "threat",
+                "warn",
+                "danger",
+                "risk",
+                "harm",
+                "attack",
+                "violent",
+                "kill",
+                "weapon",
+            ],
+            "urgency": [
+                "urgent",
+                "immediately",
+                "asap",
+                "critical",
+                "emergency",
+                "deadline",
+                "rush",
+                "time-sensitive",
+            ],
+            "evasion": [
+                "deny",
+                "refuse",
+                "decline",
+                "no comment",
+                "plead the fifth",
+                "i don't recall",
+                "i don't remember",
+                "cannot recall",
+                "i have no",
+            ],
+            "legal_exposure": [
+                "liability",
+                "lawsuit",
+                "prosecution",
+                "criminal",
+                "indictment",
+                "guilty",
+                "plaintiff",
+                "defendant",
+                "settlement",
+                "subpoena",
+            ],
+            "financial": [
+                "payment",
+                "transfer",
+                "wire",
+                "account",
+                "fund",
+                "invest",
+                "dollar",
+                "million",
+                "billion",
+                "transaction",
+            ],
+            "secrecy": [
+                "confidential",
+                "secret",
+                "classified",
+                "private",
+                "restricted",
+                "do not distribute",
+                "off the record",
+                "between us",
+            ],
         }
 
         analysis = {}
@@ -3587,7 +3962,11 @@ def analyze_tone(doc_id: int):
                     hits.append({"keyword": kw, "count": kw_count})
                     count += kw_count
             density = round(count / (text_len / 1000), 3)  # per 1000 chars
-            analysis[category] = {"count": count, "density": density, "hits": sorted(hits, key=lambda h: -h["count"])[:5]}
+            analysis[category] = {
+                "count": count,
+                "density": density,
+                "hits": sorted(hits, key=lambda h: -h["count"])[:5],
+            }
             total_score += min(density * 10, 10)  # cap each category at 10
 
         overall_score = round(min(total_score / 60, 1.0), 3)  # normalize to 0-1
@@ -3622,7 +4001,9 @@ def _ensure_snapshots_table(conn):
 def list_snapshots():
     with get_db() as conn:
         _ensure_snapshots_table(conn)
-        rows = conn.execute("SELECT id, name, description, created_at FROM investigation_snapshots ORDER BY created_at DESC").fetchall()
+        rows = conn.execute(
+            "SELECT id, name, description, created_at FROM investigation_snapshots ORDER BY created_at DESC"
+        ).fetchall()
     return {"snapshots": [dict(r) for r in rows]}
 
 
@@ -3642,20 +4023,34 @@ async def create_snapshot(request: Request):
         _ensure_board_table(conn)
 
         # Gather current state
-        watchlist = [dict(r) for r in conn.execute("SELECT entity_id, notes FROM watchlist").fetchall()]
+        watchlist = [
+            dict(r) for r in conn.execute("SELECT entity_id, notes FROM watchlist").fetchall()
+        ]
         tags = [dict(r) for r in conn.execute("SELECT entity_id, tag FROM entity_tags").fetchall()]
-        annotations = [dict(r) for r in conn.execute("SELECT document_id, start_offset, end_offset, text, note, color FROM annotations").fetchall()]
-        board = [dict(r) for r in conn.execute("SELECT document_id, x, y, notes FROM board_items").fetchall()]
-        flagged = [r["id"] for r in conn.execute("SELECT id FROM documents WHERE flagged = 1").fetchall()]
+        annotations = [
+            dict(r)
+            for r in conn.execute(
+                "SELECT document_id, start_offset, end_offset, text, note, color FROM annotations"
+            ).fetchall()
+        ]
+        board = [
+            dict(r)
+            for r in conn.execute("SELECT document_id, x, y, notes FROM board_items").fetchall()
+        ]
+        flagged = [
+            r["id"] for r in conn.execute("SELECT id FROM documents WHERE flagged = 1").fetchall()
+        ]
 
-        snapshot_data = json.dumps({
-            "watchlist": watchlist,
-            "tags": tags,
-            "annotations_count": len(annotations),
-            "board_items": len(board),
-            "flagged_docs": flagged,
-            "filters": body.get("filters", {}),
-        })
+        snapshot_data = json.dumps(
+            {
+                "watchlist": watchlist,
+                "tags": tags,
+                "annotations_count": len(annotations),
+                "board_items": len(board),
+                "flagged_docs": flagged,
+                "filters": body.get("filters", {}),
+            }
+        )
 
         cur = conn.execute(
             "INSERT INTO investigation_snapshots (name, description, snapshot_data) VALUES (?, ?, ?)",
@@ -3670,7 +4065,9 @@ async def create_snapshot(request: Request):
 def get_snapshot(snapshot_id: int):
     with get_db() as conn:
         _ensure_snapshots_table(conn)
-        row = conn.execute("SELECT * FROM investigation_snapshots WHERE id = ?", (snapshot_id,)).fetchone()
+        row = conn.execute(
+            "SELECT * FROM investigation_snapshots WHERE id = ?", (snapshot_id,)
+        ).fetchone()
         if not row:
             raise HTTPException(404, "Snapshot not found")
         result = dict(row)
@@ -3735,21 +4132,22 @@ def _ensure_keyword_alerts_table(conn):
 def list_keyword_alerts():
     with get_db() as conn:
         _ensure_keyword_alerts_table(conn)
-        alerts = conn.execute(
-            "SELECT * FROM keyword_alerts ORDER BY created_at DESC"
-        ).fetchall()
+        alerts = conn.execute("SELECT * FROM keyword_alerts ORDER BY created_at DESC").fetchall()
         result = []
         for a in alerts:
             ad = dict(a)
             # Count matches across documents
-            matches = conn.execute("""
+            matches = conn.execute(
+                """
                 SELECT d.id, d.title, d.filename, d.category,
                        (LENGTH(d.raw_text) - LENGTH(REPLACE(LOWER(d.raw_text), LOWER(?), ''))) / MAX(LENGTH(?), 1) as hit_count
                 FROM documents d
                 WHERE LOWER(d.raw_text) LIKE '%' || LOWER(?) || '%'
                 ORDER BY hit_count DESC
                 LIMIT 20
-            """, (ad["keyword"], ad["keyword"], ad["keyword"])).fetchall()
+            """,
+                (ad["keyword"], ad["keyword"], ad["keyword"]),
+            ).fetchall()
             ad["match_count"] = sum(m["hit_count"] for m in matches)
             ad["documents"] = [dict(m) for m in matches]
             result.append(ad)
@@ -3764,9 +4162,7 @@ async def create_keyword_alert(request: Request):
         raise HTTPException(400, "keyword required")
     with get_db() as conn:
         _ensure_keyword_alerts_table(conn)
-        conn.execute(
-            "INSERT OR IGNORE INTO keyword_alerts (keyword) VALUES (?)", (keyword,)
-        )
+        conn.execute("INSERT OR IGNORE INTO keyword_alerts (keyword) VALUES (?)", (keyword,))
         _log_audit(conn, "create_keyword_alert", "keyword", 0, keyword)
     return {"keyword": keyword, "created": True}
 
@@ -3792,7 +4188,8 @@ def link_analysis(
     """Compute centrality metrics for entity network."""
     with get_db() as conn:
         # Build adjacency from co-occurring entities
-        edges = conn.execute("""
+        edges = conn.execute(
+            """
             SELECT de1.entity_id as src, de2.entity_id as dst, COUNT(*) as weight
             FROM document_entities de1
             JOIN document_entities de2 ON de1.document_id = de2.document_id
@@ -3801,7 +4198,9 @@ def link_analysis(
             HAVING weight >= ?
             ORDER BY weight DESC
             LIMIT 5000
-        """, (min_connections,)).fetchall()
+        """,
+            (min_connections,),
+        ).fetchall()
 
         if not edges:
             return {"entities": [], "edge_count": 0}
@@ -3819,8 +4218,7 @@ def link_analysis(
 
         placeholders = ",".join("?" * len(top_ids))
         entities = conn.execute(
-            f"SELECT id, name, type FROM entities WHERE id IN ({placeholders})",
-            top_ids
+            f"SELECT id, name, type FROM entities WHERE id IN ({placeholders})", top_ids
         ).fetchall()
 
         entity_map = {e["id"]: dict(e) for e in entities}
@@ -3867,8 +4265,7 @@ def get_analyst_notes(doc_id: int):
     with get_db() as conn:
         _ensure_analyst_notes_table(conn)
         notes = conn.execute(
-            "SELECT * FROM analyst_notes WHERE document_id = ? ORDER BY created_at DESC",
-            (doc_id,)
+            "SELECT * FROM analyst_notes WHERE document_id = ? ORDER BY created_at DESC", (doc_id,)
         ).fetchall()
     return {"document_id": doc_id, "notes": [dict(n) for n in notes]}
 
@@ -3887,7 +4284,7 @@ async def add_analyst_note(doc_id: int, request: Request):
         _ensure_analyst_notes_table(conn)
         cur = conn.execute(
             "INSERT INTO analyst_notes (document_id, note, author) VALUES (?, ?, ?)",
-            (doc_id, note, author)
+            (doc_id, note, author),
         )
         _log_audit(conn, "add_note", "document", doc_id, note[:100])
     return {"id": cur.lastrowid, "document_id": doc_id, "note": note, "author": author}
@@ -3950,11 +4347,18 @@ def communication_flow(
             for key in ["source_id", "target_id"]:
                 eid = fd[key]
                 if eid not in communicators:
-                    communicators[eid] = {"id": eid, "name": fd["source_name"] if key == "source_id" else fd["target_name"], "connections": 0, "total_docs": 0}
+                    communicators[eid] = {
+                        "id": eid,
+                        "name": fd["source_name"] if key == "source_id" else fd["target_name"],
+                        "connections": 0,
+                        "total_docs": 0,
+                    }
                 communicators[eid]["connections"] += 1
                 communicators[eid]["total_docs"] += fd["doc_count"]
 
-        top_communicators = sorted(communicators.values(), key=lambda x: x["total_docs"], reverse=True)[:20]
+        top_communicators = sorted(
+            communicators.values(), key=lambda x: x["total_docs"], reverse=True
+        )[:20]
 
     return {
         "flows": [dict(f) for f in flows],
@@ -3972,7 +4376,9 @@ def communication_flow(
 def document_ocr_quality(doc_id: int):
     """Analyze OCR quality per page for a document."""
     with get_db() as conn:
-        doc = conn.execute("SELECT id, title, filename, raw_text, pages FROM documents WHERE id = ?", (doc_id,)).fetchone()
+        doc = conn.execute(
+            "SELECT id, title, filename, raw_text, pages FROM documents WHERE id = ?", (doc_id,)
+        ).fetchone()
         if not doc:
             raise HTTPException(404, "Document not found")
 
@@ -3981,7 +4387,7 @@ def document_ocr_quality(doc_id: int):
         if "\f" in raw:
             chunks = [c for c in raw.split("\f") if c.strip()]
         elif len(raw) > 3000:
-            chunks = [raw[i:i+3000] for i in range(0, len(raw), 3000)]
+            chunks = [raw[i : i + 3000] for i in range(0, len(raw), 3000)]
         else:
             chunks = [raw] if raw else []
 
@@ -3992,7 +4398,7 @@ def document_ocr_quality(doc_id: int):
 
             # Quality heuristics
             alpha_ratio = sum(1 for c in text if c.isalpha()) / max(chars, 1)
-            space_ratio = sum(1 for c in text if c == ' ') / max(chars, 1)
+            space_ratio = sum(1 for c in text if c == " ") / max(chars, 1)
             garbage_chars = sum(1 for c in text if ord(c) > 127 and not c.isalpha()) / max(chars, 1)
             word_count = len(text.split())
             avg_word_len = sum(len(w) for w in text.split()) / max(word_count, 1)
@@ -4013,20 +4419,26 @@ def document_ocr_quality(doc_id: int):
             score = round(min(max(score, 0), 1), 3)
             total_score += score
 
-            page_quality.append({
-                "page_number": idx + 1,
-                "char_count": chars,
-                "word_count": word_count,
-                "quality_score": score,
-                "alpha_ratio": round(alpha_ratio, 3),
-                "issues": (
-                    (["short_text"] if chars < 50 else []) +
-                    (["low_alpha"] if alpha_ratio < 0.4 else []) +
-                    (["garbage_chars"] if garbage_chars > 0.05 else []) +
-                    (["spacing_abnormal"] if space_ratio < 0.05 or space_ratio > 0.5 else []) +
-                    (["word_length_abnormal"] if avg_word_len > 15 or avg_word_len < 2 else [])
-                ),
-            })
+            page_quality.append(
+                {
+                    "page_number": idx + 1,
+                    "char_count": chars,
+                    "word_count": word_count,
+                    "quality_score": score,
+                    "alpha_ratio": round(alpha_ratio, 3),
+                    "issues": (
+                        (["short_text"] if chars < 50 else [])
+                        + (["low_alpha"] if alpha_ratio < 0.4 else [])
+                        + (["garbage_chars"] if garbage_chars > 0.05 else [])
+                        + (["spacing_abnormal"] if space_ratio < 0.05 or space_ratio > 0.5 else [])
+                        + (
+                            ["word_length_abnormal"]
+                            if avg_word_len > 15 or avg_word_len < 2
+                            else []
+                        )
+                    ),
+                }
+            )
 
         avg_score = round(total_score / max(len(chunks), 1), 3)
         problem_pages = [p for p in page_quality if p["quality_score"] < 0.5]
@@ -4044,7 +4456,8 @@ def document_ocr_quality(doc_id: int):
 def ocr_quality_overview(limit: int = Query(50, ge=10, le=200)):
     """Overview of OCR quality across all documents."""
     with get_db() as conn:
-        docs = conn.execute("""
+        docs = conn.execute(
+            """
             SELECT d.id, d.title, d.filename, d.category,
                    d.pages as page_count,
                    LENGTH(d.raw_text) as total_chars,
@@ -4053,7 +4466,9 @@ def ocr_quality_overview(limit: int = Query(50, ge=10, le=200)):
             WHERE d.raw_text IS NOT NULL
             ORDER BY avg_page_chars ASC
             LIMIT ?
-        """, (limit,)).fetchall()
+        """,
+            (limit,),
+        ).fetchall()
 
         result = []
         for d in docs:
@@ -4106,15 +4521,13 @@ def _ensure_case_files_table(conn):
 def list_case_files():
     with get_db() as conn:
         _ensure_case_files_table(conn)
-        cases = conn.execute(
-            "SELECT * FROM case_files ORDER BY updated_at DESC"
-        ).fetchall()
+        cases = conn.execute("SELECT * FROM case_files ORDER BY updated_at DESC").fetchall()
         result = []
         for c in cases:
             cd = dict(c)
             items = conn.execute(
                 "SELECT item_type, COUNT(*) as count FROM case_file_items WHERE case_file_id = ? GROUP BY item_type",
-                (cd["id"],)
+                (cd["id"],),
             ).fetchall()
             cd["item_counts"] = {i["item_type"]: i["count"] for i in items}
             cd["total_items"] = sum(i["count"] for i in items)
@@ -4131,9 +4544,7 @@ async def create_case_file(request: Request):
         raise HTTPException(400, "name required")
     with get_db() as conn:
         _ensure_case_files_table(conn)
-        cur = conn.execute(
-            "INSERT INTO case_files (name, description) VALUES (?, ?)", (name, desc)
-        )
+        cur = conn.execute("INSERT INTO case_files (name, description) VALUES (?, ?)", (name, desc))
         _log_audit(conn, "create_case_file", "case_file", cur.lastrowid, name)
     return {"id": cur.lastrowid, "name": name}
 
@@ -4147,20 +4558,28 @@ def get_case_file(case_id: int):
             raise HTTPException(404, "Case file not found")
         items = conn.execute(
             "SELECT * FROM case_file_items WHERE case_file_id = ? ORDER BY sort_order, added_at",
-            (case_id,)
+            (case_id,),
         ).fetchall()
 
         enriched = []
         for item in items:
             d = dict(item)
             if d["item_type"] == "document":
-                doc = conn.execute("SELECT id, title, filename, category FROM documents WHERE id = ?", (d["item_id"],)).fetchone()
+                doc = conn.execute(
+                    "SELECT id, title, filename, category FROM documents WHERE id = ?",
+                    (d["item_id"],),
+                ).fetchone()
                 d["detail"] = dict(doc) if doc else None
             elif d["item_type"] == "entity":
-                ent = conn.execute("SELECT id, name, type FROM entities WHERE id = ?", (d["item_id"],)).fetchone()
+                ent = conn.execute(
+                    "SELECT id, name, type FROM entities WHERE id = ?", (d["item_id"],)
+                ).fetchone()
                 d["detail"] = dict(ent) if ent else None
             elif d["item_type"] == "chain":
-                ch = conn.execute("SELECT id, name, description FROM evidence_chains WHERE id = ?", (d["item_id"],)).fetchone()
+                ch = conn.execute(
+                    "SELECT id, name, description FROM evidence_chains WHERE id = ?",
+                    (d["item_id"],),
+                ).fetchone()
                 d["detail"] = dict(ch) if ch else None
             else:
                 d["detail"] = None
@@ -4184,11 +4603,11 @@ async def add_case_file_item(case_id: int, request: Request):
             raise HTTPException(404, "Case file not found")
         max_order = conn.execute(
             "SELECT COALESCE(MAX(sort_order), 0) FROM case_file_items WHERE case_file_id = ?",
-            (case_id,)
+            (case_id,),
         ).fetchone()[0]
         conn.execute(
             "INSERT OR IGNORE INTO case_file_items (case_file_id, item_type, item_id, note, sort_order) VALUES (?, ?, ?, ?, ?)",
-            (case_id, item_type, item_id, note, max_order + 1)
+            (case_id, item_type, item_id, note, max_order + 1),
         )
         conn.execute("UPDATE case_files SET updated_at = datetime('now') WHERE id = ?", (case_id,))
     return {"added": True}
@@ -4221,7 +4640,7 @@ def export_case_file(case_id: int):
             raise HTTPException(404, "Case file not found")
         items = conn.execute(
             "SELECT * FROM case_file_items WHERE case_file_id = ? ORDER BY sort_order, added_at",
-            (case_id,)
+            (case_id,),
         ).fetchall()
 
         html = f"<h1>Case File: {cf['name']}</h1>"
@@ -4231,16 +4650,24 @@ def export_case_file(case_id: int):
         for item in items:
             d = dict(item)
             if d["item_type"] == "document":
-                doc = conn.execute("SELECT id, title, filename, category FROM documents WHERE id = ?", (d["item_id"],)).fetchone()
+                doc = conn.execute(
+                    "SELECT id, title, filename, category FROM documents WHERE id = ?",
+                    (d["item_id"],),
+                ).fetchone()
                 if doc:
                     html += f"<h3>Document: {doc['title'] or doc['filename']}</h3>"
                     html += f"<p>Category: {doc['category']} | ID: {doc['id']}</p>"
             elif d["item_type"] == "entity":
-                ent = conn.execute("SELECT id, name, type FROM entities WHERE id = ?", (d["item_id"],)).fetchone()
+                ent = conn.execute(
+                    "SELECT id, name, type FROM entities WHERE id = ?", (d["item_id"],)
+                ).fetchone()
                 if ent:
                     html += f"<h3>Entity: {ent['name']} ({ent['type']})</h3>"
             elif d["item_type"] == "chain":
-                ch = conn.execute("SELECT id, name, description FROM evidence_chains WHERE id = ?", (d["item_id"],)).fetchone()
+                ch = conn.execute(
+                    "SELECT id, name, description FROM evidence_chains WHERE id = ?",
+                    (d["item_id"],),
+                ).fetchone()
                 if ch:
                     html += f"<h3>Evidence Chain: {ch['name']}</h3>"
                     html += f"<p>{ch['description']}</p>"
@@ -4263,7 +4690,8 @@ def financial_trail(
     """Track financial indicators, amounts, and entity connections."""
     with get_db() as conn:
         # Financial indicators from forensics
-        indicators = conn.execute("""
+        indicators = conn.execute(
+            """
             SELECT fi.id, fi.document_id, fi.indicator_type, fi.value,
                    fi.context, fi.risk_score,
                    d.title, d.filename, d.category
@@ -4271,7 +4699,9 @@ def financial_trail(
             JOIN documents d ON d.id = fi.document_id
             ORDER BY fi.risk_score DESC
             LIMIT ?
-        """, (limit,)).fetchall()
+        """,
+            (limit,),
+        ).fetchall()
 
         # Entities associated with financial documents
         financial_entities = conn.execute("""
@@ -4319,7 +4749,8 @@ def export_entity_dossier(entity_id: int):
             raise HTTPException(404, "Entity not found")
 
         # Documents
-        docs = conn.execute("""
+        docs = conn.execute(
+            """
             SELECT d.id, d.title, d.filename, d.category, d.date,
                    SUM(de.count) as mentions
             FROM document_entities de
@@ -4327,10 +4758,13 @@ def export_entity_dossier(entity_id: int):
             WHERE de.entity_id = ?
             GROUP BY d.id
             ORDER BY mentions DESC
-        """, (entity_id,)).fetchall()
+        """,
+            (entity_id,),
+        ).fetchall()
 
         # Co-occurring entities
-        cooccurring = conn.execute("""
+        cooccurring = conn.execute(
+            """
             SELECT e2.name, e2.type, COUNT(DISTINCT de1.document_id) as shared
             FROM document_entities de1
             JOIN document_entities de2 ON de1.document_id = de2.document_id
@@ -4339,17 +4773,22 @@ def export_entity_dossier(entity_id: int):
             GROUP BY e2.id
             ORDER BY shared DESC
             LIMIT 30
-        """, (entity_id, entity_id)).fetchall()
+        """,
+            (entity_id, entity_id),
+        ).fetchall()
 
         # Timeline events
-        events = conn.execute("""
+        events = conn.execute(
+            """
             SELECT ev.event_date, ev.context, ev.precision
             FROM events ev
             JOIN document_entities de ON de.document_id = ev.document_id
             WHERE de.entity_id = ? AND ev.event_date IS NOT NULL
             ORDER BY ev.event_date
             LIMIT 100
-        """, (entity_id,)).fetchall()
+        """,
+            (entity_id,),
+        ).fetchall()
 
         # Aliases
         _ensure_aliases_table(conn)
@@ -4364,20 +4803,28 @@ def export_entity_dossier(entity_id: int):
 
         # Build HTML
         html = f"""<!DOCTYPE html><html><head><meta charset="UTF-8">
-        <title>Dossier: {entity['name']}</title>
+        <title>Dossier: {entity["name"]}</title>
         <style>body{{font-family:sans-serif;max-width:900px;margin:40px auto;padding:0 20px;color:#222;}}
         h1{{border-bottom:3px solid #c4473a;padding-bottom:8px;}}
         h2{{color:#c4473a;margin-top:30px;border-bottom:1px solid #ddd;padding-bottom:4px;}}
         .tag{{display:inline-block;background:#f0f0f0;padding:2px 8px;border-radius:4px;margin:2px;font-size:12px;}}
         table{{border-collapse:collapse;width:100%;margin:10px 0;}} th,td{{border:1px solid #ddd;padding:6px 10px;text-align:left;font-size:13px;}}
         th{{background:#f5f5f5;}} .meta{{color:#666;font-size:13px;}}</style></head><body>
-        <h1>{entity['name']}</h1>
-        <p class="meta">Type: {entity['type']} | Entity ID: {entity['id']} | Generated: {__import__('datetime').datetime.now().strftime('%Y-%m-%d %H:%M')}</p>"""
+        <h1>{entity["name"]}</h1>
+        <p class="meta">Type: {entity["type"]} | Entity ID: {entity["id"]} | Generated: {__import__("datetime").datetime.now().strftime("%Y-%m-%d %H:%M")}</p>"""
 
         if aliases:
-            html += "<p><strong>Aliases:</strong> " + ", ".join(a['alias_name'] for a in aliases) + "</p>"
+            html += (
+                "<p><strong>Aliases:</strong> "
+                + ", ".join(a["alias_name"] for a in aliases)
+                + "</p>"
+            )
         if tags:
-            html += "<p><strong>Tags:</strong> " + " ".join(f"<span class='tag'>{t['tag']}</span>" for t in tags) + "</p>"
+            html += (
+                "<p><strong>Tags:</strong> "
+                + " ".join(f"<span class='tag'>{t['tag']}</span>" for t in tags)
+                + "</p>"
+            )
 
         html += f"<h2>Documents ({len(docs)})</h2><table><tr><th>Title</th><th>Category</th><th>Date</th><th>Mentions</th></tr>"
         for d in docs:
@@ -4411,14 +4858,17 @@ def cluster_map(min_cluster_size: int = Query(3, ge=2, le=20)):
     """Get cluster data with inter-cluster similarity for visualization."""
     with get_db() as conn:
         # Get clusters
-        clusters_raw = conn.execute("""
+        clusters_raw = conn.execute(
+            """
             SELECT d.category, COUNT(*) as doc_count,
                    GROUP_CONCAT(d.id) as doc_ids
             FROM documents d
             GROUP BY d.category
             HAVING doc_count >= ?
             ORDER BY doc_count DESC
-        """, (min_cluster_size,)).fetchall()
+        """,
+            (min_cluster_size,),
+        ).fetchall()
 
         clusters = []
         for c in clusters_raw:
@@ -4426,7 +4876,8 @@ def cluster_map(min_cluster_size: int = Query(3, ge=2, le=20)):
             placeholders = ",".join("?" * len(doc_ids))
 
             # Get top entities in this cluster
-            top_entities = conn.execute(f"""
+            top_entities = conn.execute(
+                f"""
                 SELECT e.name, e.type, COUNT(*) as count
                 FROM document_entities de
                 JOIN entities e ON e.id = de.entity_id
@@ -4434,14 +4885,18 @@ def cluster_map(min_cluster_size: int = Query(3, ge=2, le=20)):
                 GROUP BY e.id
                 ORDER BY count DESC
                 LIMIT 10
-            """, doc_ids).fetchall()
+            """,
+                doc_ids,
+            ).fetchall()
 
-            clusters.append({
-                "category": c["category"],
-                "doc_count": c["doc_count"],
-                "top_entities": [dict(e) for e in top_entities],
-                "sample_doc_ids": doc_ids[:10],
-            })
+            clusters.append(
+                {
+                    "category": c["category"],
+                    "doc_count": c["doc_count"],
+                    "top_entities": [dict(e) for e in top_entities],
+                    "sample_doc_ids": doc_ids[:10],
+                }
+            )
 
         # Cross-cluster entity overlap
         overlaps = []
@@ -4451,12 +4906,14 @@ def cluster_map(min_cluster_size: int = Query(3, ge=2, le=20)):
                 ents_j = {e["name"] for e in clusters[j]["top_entities"]}
                 shared = ents_i & ents_j
                 if shared:
-                    overlaps.append({
-                        "cluster_a": clusters[i]["category"],
-                        "cluster_b": clusters[j]["category"],
-                        "shared_entities": list(shared)[:10],
-                        "overlap_count": len(shared),
-                    })
+                    overlaps.append(
+                        {
+                            "cluster_a": clusters[i]["category"],
+                            "cluster_b": clusters[j]["category"],
+                            "shared_entities": list(shared)[:10],
+                            "overlap_count": len(shared),
+                        }
+                    )
 
     return {"clusters": clusters, "overlaps": overlaps}
 
@@ -4471,7 +4928,8 @@ def witness_index(limit: int = Query(50, ge=10, le=200)):
     """Index of witnesses/deponents extracted from deposition documents."""
     with get_db() as conn:
         # People who appear in depositions
-        witnesses = conn.execute("""
+        witnesses = conn.execute(
+            """
             SELECT e.id, e.name, e.type,
                    COUNT(DISTINCT d.id) as deposition_count,
                    GROUP_CONCAT(DISTINCT d.id) as doc_ids,
@@ -4484,7 +4942,9 @@ def witness_index(limit: int = Query(50, ge=10, le=200)):
             GROUP BY e.id
             ORDER BY deposition_count DESC
             LIMIT ?
-        """, (limit,)).fetchall()
+        """,
+            (limit,),
+        ).fetchall()
 
         result = []
         for w in witnesses:
@@ -4493,7 +4953,8 @@ def witness_index(limit: int = Query(50, ge=10, le=200)):
             doc_ids = [int(x) for x in (wd["doc_ids"] or "").split(",") if x]
             if doc_ids:
                 placeholders = ",".join("?" * len(doc_ids))
-                co_deponents = conn.execute(f"""
+                co_deponents = conn.execute(
+                    f"""
                     SELECT e.id, e.name, COUNT(DISTINCT de.document_id) as shared
                     FROM document_entities de
                     JOIN entities e ON e.id = de.entity_id
@@ -4502,7 +4963,9 @@ def witness_index(limit: int = Query(50, ge=10, le=200)):
                     GROUP BY e.id
                     ORDER BY shared DESC
                     LIMIT 10
-                """, doc_ids + [wd["id"]]).fetchall()
+                """,
+                    doc_ids + [wd["id"]],
+                ).fetchall()
                 wd["co_deponents"] = [dict(c) for c in co_deponents]
             else:
                 wd["co_deponents"] = []
@@ -4575,7 +5038,7 @@ def activity_heatmap(year: int = Query(None)):
 
 
 @app.post("/api/bulk-tag")
-async def bulk_tag(request: Request):
+async def bulk_tag_documents(request: Request):
     """Apply tags or category to multiple documents at once."""
     body = await request.json()
     doc_ids = body.get("doc_ids", [])
@@ -4598,17 +5061,24 @@ async def bulk_tag(request: Request):
                 updated += 1
             if tag:
                 # Store as document-level tag in a simple approach: append to notes
-                existing = conn.execute("SELECT notes FROM documents WHERE id = ?", (doc_id,)).fetchone()
+                existing = conn.execute(
+                    "SELECT notes FROM documents WHERE id = ?", (doc_id,)
+                ).fetchone()
                 current_notes = existing["notes"] or ""
                 tag_marker = f"[tag:{tag}]"
                 if tag_marker not in current_notes:
                     conn.execute(
                         "UPDATE documents SET notes = ? WHERE id = ?",
-                        (current_notes + f" {tag_marker}" if current_notes else tag_marker, doc_id)
+                        (current_notes + f" {tag_marker}" if current_notes else tag_marker, doc_id),
                     )
                     updated += 1
-        _log_audit(conn, "bulk_tag", "documents", len(doc_ids),
-                   f"tag={tag}, category={category}, count={updated}")
+        _log_audit(
+            conn,
+            "bulk_tag",
+            "documents",
+            len(doc_ids),
+            f"tag={tag}, category={category}, count={updated}",
+        )
 
     return {"updated": updated, "total_requested": len(doc_ids)}
 
@@ -4622,19 +5092,20 @@ def bulk_tag_suggestions():
         ).fetchall()
 
         # Extract [tag:*] patterns from notes
-        tag_rows = conn.execute(
-            "SELECT notes FROM documents WHERE notes LIKE '%[tag:%'"
-        ).fetchall()
+        tag_rows = conn.execute("SELECT notes FROM documents WHERE notes LIKE '%[tag:%'").fetchall()
         import re
+
         tag_counts = {}
         for row in tag_rows:
-            for m in re.finditer(r'\[tag:([^\]]+)\]', row["notes"] or ""):
+            for m in re.finditer(r"\[tag:([^\]]+)\]", row["notes"] or ""):
                 t = m.group(1)
                 tag_counts[t] = tag_counts.get(t, 0) + 1
 
     return {
         "categories": [dict(c) for c in categories],
-        "tags": [{"tag": t, "count": c} for t, c in sorted(tag_counts.items(), key=lambda x: -x[1])],
+        "tags": [
+            {"tag": t, "count": c} for t, c in sorted(tag_counts.items(), key=lambda x: -x[1])
+        ],
     }
 
 

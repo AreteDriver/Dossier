@@ -145,7 +145,7 @@ def ingest_mbox_cmd():
     result = ingest_mbox(filepath, source=source, limit=limit)
 
     print(f"\n{'=' * 50}")
-    print(f"  MBOX INGEST COMPLETE")
+    print("  MBOX INGEST COMPLETE")
     print(f"  {'─' * 30}")
     print(f"  Total emails:   {result['total']}")
     print(f"  Ingested:       {result['ingested']}")
@@ -180,7 +180,7 @@ def scan_cmd():
     result = scan_path(target, source=source, recursive=recursive)
 
     print(f"\n{'=' * 50}")
-    print(f"  SCAN COMPLETE")
+    print("  SCAN COMPLETE")
     print(f"  {'─' * 30}")
     print(f"  Total files found:  {result['total_files']}")
     print(f"  Ingested:           {result['ingested']}")
@@ -189,15 +189,18 @@ def scan_cmd():
 
     # Show high-risk documents
     high_risk = [
-        r for r in result["results"]
+        r
+        for r in result["results"]
         if r.get("success") and r.get("stats", {}).get("risk_score", 0) > 0.3
     ]
     if high_risk:
         print(f"\n  HIGH-RISK DOCUMENTS ({len(high_risk)}):")
         for r in high_risk:
             stats = r["stats"]
-            print(f"    Doc #{r['document_id']}: risk={stats['risk_score']:.3f} "
-                  f"aml_flags={stats['aml_flags']} topics={stats['topics']}")
+            print(
+                f"    Doc #{r['document_id']}: risk={stats['risk_score']:.3f} "
+                f"aml_flags={stats['aml_flags']} topics={stats['topics']}"
+            )
 
     print(f"{'=' * 50}\n")
 
@@ -398,7 +401,7 @@ def forensics_cmd():
                 print("\n  No documents with elevated risk scores.\n")
                 return
 
-            print(f"\n  DOSSIER — High-Risk Documents")
+            print("\n  DOSSIER — High-Risk Documents")
             print(f"  {'─' * 60}")
             for row in rows:
                 bar = "█" * int(row["score"] * 20)
@@ -415,9 +418,9 @@ def forensics_cmd():
         high_risk = conn.execute(
             "SELECT COUNT(*) as c FROM document_forensics WHERE analysis_type = 'risk_score' AND score > 0.5"
         ).fetchone()["c"]
-        total_financial = conn.execute(
-            "SELECT COUNT(*) as c FROM financial_indicators"
-        ).fetchone()["c"]
+        total_financial = conn.execute("SELECT COUNT(*) as c FROM financial_indicators").fetchone()[
+            "c"
+        ]
         top_phrases = conn.execute(
             "SELECT phrase, doc_count, total_count FROM phrases ORDER BY doc_count DESC LIMIT 10"
         ).fetchall()
@@ -442,7 +445,7 @@ def forensics_cmd():
             LIMIT 10
         """).fetchall()
 
-        print(f"\n  DOSSIER — Forensic Overview")
+        print("\n  DOSSIER — Forensic Overview")
         print(f"  {'─' * 50}")
         print(f"  Documents analyzed:   {total_docs}")
         print(f"  AML-flagged docs:     {flagged}")
@@ -450,19 +453,23 @@ def forensics_cmd():
         print(f"  Financial indicators:  {total_financial}")
 
         if top_topics:
-            print(f"\n  Top Topics:")
+            print("\n  Top Topics:")
             for t in top_topics:
-                print(f"    {t['label']:20s}  {t['doc_count']:3d} docs  (avg score: {t['avg_score']:.3f})")
+                print(
+                    f"    {t['label']:20s}  {t['doc_count']:3d} docs  (avg score: {t['avg_score']:.3f})"
+                )
 
         if top_intents:
-            print(f"\n  Top Intents:")
+            print("\n  Top Intents:")
             for t in top_intents:
-                print(f"    {t['label']:20s}  {t['doc_count']:3d} docs  (avg score: {t['avg_score']:.3f})")
+                print(
+                    f"    {t['label']:20s}  {t['doc_count']:3d} docs  (avg score: {t['avg_score']:.3f})"
+                )
 
         if top_phrases:
-            print(f"\n  Top Repeated Phrases:")
+            print("\n  Top Repeated Phrases:")
             for p in top_phrases:
-                print(f"    {p['doc_count']:3d} docs  {p['total_count']:5d}x  \"{p['phrase']}\"")
+                print(f'    {p["doc_count"]:3d} docs  {p["total_count"]:5d}x  "{p["phrase"]}"')
 
         print()
 
@@ -501,7 +508,7 @@ def _show_doc_forensics(conn, doc_id: int):
         (doc_id,),
     ).fetchall()
     if intents:
-        print(f"\n  Intents:")
+        print("\n  Intents:")
         for i in intents:
             print(f"    {i['label']:20s} score={i['score']:.3f}")
 
@@ -511,7 +518,7 @@ def _show_doc_forensics(conn, doc_id: int):
         (doc_id,),
     ).fetchall()
     if topics:
-        print(f"\n  Topics:")
+        print("\n  Topics:")
         for t in topics:
             print(f"    {t['label']:20s} score={t['score']:.3f}")
 
@@ -521,7 +528,7 @@ def _show_doc_forensics(conn, doc_id: int):
         (doc_id,),
     ).fetchall()
     if aml:
-        print(f"\n  AML Flags:")
+        print("\n  AML Flags:")
         for a in aml:
             print(f"    [{a['severity']:6s}] {a['label']}")
             evidence = json.loads(a["evidence"]) if a["evidence"] else []
@@ -551,18 +558,21 @@ def _show_doc_forensics(conn, doc_id: int):
                 print(f"      {fi['context'][:100]}")
 
     # Phrases
-    phrases = conn.execute("""
+    phrases = conn.execute(
+        """
         SELECT p.phrase, dp.count
         FROM document_phrases dp
         JOIN phrases p ON p.id = dp.phrase_id
         WHERE dp.document_id = ?
         ORDER BY dp.count DESC
         LIMIT 15
-    """, (doc_id,)).fetchall()
+    """,
+        (doc_id,),
+    ).fetchall()
     if phrases:
-        print(f"\n  Top Repeated Phrases:")
+        print("\n  Top Repeated Phrases:")
         for p in phrases:
-            print(f"    {p['count']:4d}x  \"{p['phrase']}\"")
+            print(f'    {p["count"]:4d}x  "{p["phrase"]}"')
 
     print()
 
