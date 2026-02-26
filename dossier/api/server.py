@@ -7020,6 +7020,329 @@ def category_distribution():
     }
 
 
+# ── Witness Overlap ──────────────────────────────────
+
+
+@app.get("/api/witness-overlap")
+def witness_overlap(min_shared: int = 2):
+    """Entities that appear across multiple depositions/witness statements."""
+    with get_db() as conn:
+        # Find documents categorized as depositions or witness-related
+        depo_docs = conn.execute(
+            "SELECT id, title, filename FROM documents "
+            "WHERE category IN ('deposition', 'witness', 'testimony') "
+            "OR title LIKE '%deposition%' OR title LIKE '%testimony%' "
+            "OR title LIKE '%witness%' "
+            "ORDER BY title"
+        ).fetchall()
+        doc_ids = [d["id"] for d in depo_docs]
+        if not doc_ids:
+            return {"overlaps": [], "deposition_count": 0}
+
+        placeholders = ",".join("?" * len(doc_ids))
+        # Entities appearing in multiple deposition docs
+        rows = conn.execute(
+            f"SELECT e.id, e.name, e.type, COUNT(DISTINCT de.document_id) as doc_count, "
+            f"SUM(de.count) as total_mentions "
+            f"FROM entities e "
+            f"JOIN document_entities de ON de.entity_id = e.id "
+            f"WHERE de.document_id IN ({placeholders}) "
+            f"GROUP BY e.id HAVING doc_count >= ? "
+            f"ORDER BY doc_count DESC, total_mentions DESC",
+            doc_ids + [min_shared],
+        ).fetchall()
+
+        overlaps = []
+        for r in rows:
+            # Which specific depositions mention this entity
+            docs = conn.execute(
+                f"SELECT d.id, d.title, de.count FROM documents d "
+                f"JOIN document_entities de ON de.document_id = d.id "
+                f"WHERE de.entity_id = ? AND d.id IN ({placeholders}) "
+                f"ORDER BY de.count DESC",
+                [r["id"]] + doc_ids,
+            ).fetchall()
+            overlaps.append(
+                {
+                    "entity_id": r["id"],
+                    "name": r["name"],
+                    "type": r["type"],
+                    "deposition_count": r["doc_count"],
+                    "total_mentions": r["total_mentions"],
+                    "depositions": [dict(d) for d in docs],
+                }
+            )
+
+    return {"overlaps": overlaps, "deposition_count": len(depo_docs)}
+
+
+# ── Document Age Analysis ───────────────────────────
+
+
+@app.get("/api/document-age")
+def document_age():
+    """Analyze document age distribution."""
+    with get_db() as conn:
+        # Documents with dates
+        dated = conn.execute(
+            "SELECT id, title, filename, date, category, source, ingested_at "
+            "FROM documents WHERE date IS NOT NULL AND date != '' "
+            "ORDER BY date"
+        ).fetchall()
+        undated = conn.execute(
+            "SELECT COUNT(*) as cnt FROM documents WHERE date IS NULL OR date = ''"
+        ).fetchone()["cnt"]
+
+    docs = [dict(d) for d in dated]
+
+    # Decade distribution
+    decades = {}
+    for d in docs:
+        year_str = d["date"][:4] if d["date"] and len(d["date"]) >= 4 else None
+        if year_str and year_str.isdigit():
+            decade = (int(year_str) // 10) * 10
+            key = f"{decade}s"
+            decades[key] = decades.get(key, 0) + 1
+
+    # Oldest and newest
+    oldest = docs[:10] if docs else []
+    newest = docs[-10:][::-1] if docs else []
+
+    # By year
+    years = {}
+    for d in docs:
+        y = d["date"][:4] if d["date"] and len(d["date"]) >= 4 else "unknown"
+        years[y] = years.get(y, 0) + 1
+
+    return {
+        "total_dated": len(docs),
+        "total_undated": undated,
+        "oldest": oldest,
+        "newest": newest,
+        "decades": decades,
+        "by_year": dict(sorted(years.items())),
+    }
+
+
+# ── Entity Co-Appearances ───────────────────────────
+
+
+@app.get("/api/entity-coappearances")
+def entity_coappearances(limit: int = 50, entity_type: str = ""):
+    """Entity pairs that co-appear most frequently across documents."""
+    with get_db() as conn:
+        params: list = []
+        type_filter = ""
+        if entity_type:
+            type_filter = "AND e1.type = ? AND e2.type = ?"
+            params.extend([entity_type, entity_type])
+
+        rows = conn.execute(
+            f"SELECT e1.id as id_a, e1.name as name_a, e1.type as type_a, "
+            f"e2.id as id_b, e2.name as name_b, e2.type as type_b, "
+            f"COUNT(DISTINCT de1.document_id) as shared_docs, "
+            f"SUM(de1.count + de2.count) as combined_mentions "
+            f"FROM document_entities de1 "
+            f"JOIN document_entities de2 ON de1.document_id = de2.document_id AND de1.entity_id < de2.entity_id "
+            f"JOIN entities e1 ON e1.id = de1.entity_id "
+            f"JOIN entities e2 ON e2.id = de2.entity_id "
+            f"WHERE 1=1 {type_filter} "
+            f"GROUP BY de1.entity_id, de2.entity_id "
+            f"ORDER BY shared_docs DESC, combined_mentions DESC "
+            f"LIMIT ?",
+            params + [limit],
+        ).fetchall()
+
+    return {"pairs": [dict(r) for r in rows]}
+
+
+# ── Unresolved Entities ─────────────────────────────
+
+
+@app.get("/api/unresolved-entities")
+def unresolved_entities(entity_type: str = ""):
+    """Entities not yet resolved to a canonical form."""
+    with get_db() as conn:
+        params: list = []
+        type_filter = ""
+        if entity_type:
+            type_filter = "AND e.type = ?"
+            params.append(entity_type)
+
+        # Entities that have no entry in entity_resolutions as source
+        rows = conn.execute(
+            f"SELECT e.id, e.name, e.type, e.canonical, "
+            f"COUNT(de.document_id) as doc_count, "
+            f"COALESCE(SUM(de.count), 0) as total_mentions "
+            f"FROM entities e "
+            f"LEFT JOIN document_entities de ON de.entity_id = e.id "
+            f"WHERE e.id NOT IN (SELECT source_entity_id FROM entity_resolutions) "
+            f"AND e.id NOT IN (SELECT canonical_entity_id FROM entity_resolutions) "
+            f"{type_filter} "
+            f"GROUP BY e.id "
+            f"ORDER BY doc_count DESC, total_mentions DESC",
+            params,
+        ).fetchall()
+
+        # Also get resolved count
+        resolved_count = conn.execute(
+            "SELECT COUNT(DISTINCT source_entity_id) as cnt FROM entity_resolutions"
+        ).fetchone()["cnt"]
+
+    by_type = {}
+    for r in rows:
+        t = r["type"]
+        by_type[t] = by_type.get(t, 0) + 1
+
+    return {
+        "unresolved": [dict(r) for r in rows],
+        "total_unresolved": len(rows),
+        "total_resolved": resolved_count,
+        "by_type": by_type,
+    }
+
+
+# ── Document Completeness ───────────────────────────
+
+
+@app.get("/api/document-completeness")
+def document_completeness():
+    """Score documents by metadata completeness."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT id, filename, title, category, source, date, pages, raw_text, notes "
+            "FROM documents ORDER BY id"
+        ).fetchall()
+
+    docs = []
+    score_dist = {"excellent": 0, "good": 0, "fair": 0, "poor": 0}
+    field_coverage = {
+        "title": 0,
+        "category": 0,
+        "source": 0,
+        "date": 0,
+        "pages": 0,
+        "raw_text": 0,
+        "notes": 0,
+    }
+    total = len(rows)
+
+    for r in rows:
+        score = 0
+        fields = {}
+        for f in ["title", "category", "source", "date", "notes"]:
+            val = r[f]
+            has = val is not None and str(val).strip() != "" and val != "other"
+            fields[f] = has
+            if has:
+                score += 1
+                field_coverage[f] += 1
+        # pages > 0
+        has_pages = r["pages"] is not None and r["pages"] > 0
+        fields["pages"] = has_pages
+        if has_pages:
+            score += 1
+            field_coverage["pages"] += 1
+        # raw_text
+        has_text = r["raw_text"] is not None and len(r["raw_text"]) > 50
+        fields["raw_text"] = has_text
+        if has_text:
+            score += 1
+            field_coverage["raw_text"] += 1
+
+        pct = round(score / 7 * 100)
+        grade = (
+            "excellent" if pct >= 85 else "good" if pct >= 60 else "fair" if pct >= 40 else "poor"
+        )
+        score_dist[grade] += 1
+
+        docs.append(
+            {
+                "id": r["id"],
+                "filename": r["filename"],
+                "title": r["title"],
+                "score": pct,
+                "grade": grade,
+                "fields": fields,
+            }
+        )
+
+    # Sort by score ascending (worst first)
+    docs.sort(key=lambda x: x["score"])
+    avg = round(sum(d["score"] for d in docs) / total) if total else 0
+    coverage = {k: round(v / total * 100) if total else 0 for k, v in field_coverage.items()}
+
+    return {
+        "documents": docs[:100],
+        "total": total,
+        "average_score": avg,
+        "distribution": score_dist,
+        "field_coverage": coverage,
+    }
+
+
+# ── Key Date Summary ────────────────────────────────
+
+
+@app.get("/api/key-dates")
+def key_dates(limit: int = 50):
+    """Most significant dates across the investigation."""
+    with get_db() as conn:
+        # Aggregate events by date
+        rows = conn.execute(
+            "SELECT event_date, COUNT(*) as event_count, "
+            "GROUP_CONCAT(DISTINCT context) as contexts "
+            "FROM events "
+            "WHERE event_date IS NOT NULL AND event_date != '' "
+            "GROUP BY event_date "
+            "ORDER BY event_count DESC "
+            "LIMIT ?",
+            (limit,),
+        ).fetchall()
+
+        dates = []
+        for r in rows:
+            # Get entities involved on this date
+            ents = conn.execute(
+                "SELECT DISTINCT e.name, e.type FROM entities e "
+                "JOIN event_entities ee ON ee.entity_id = e.id "
+                "JOIN events ev ON ev.id = ee.event_id "
+                "WHERE ev.event_date = ? "
+                "ORDER BY e.type, e.name LIMIT 15",
+                (r["event_date"],),
+            ).fetchall()
+            # Get document count for this date
+            doc_count = conn.execute(
+                "SELECT COUNT(DISTINCT document_id) as cnt FROM events WHERE event_date = ?",
+                (r["event_date"],),
+            ).fetchone()["cnt"]
+
+            dates.append(
+                {
+                    "date": r["event_date"],
+                    "event_count": r["event_count"],
+                    "document_count": doc_count,
+                    "contexts": r["contexts"][:500] if r["contexts"] else "",
+                    "entities": [dict(e) for e in ents],
+                }
+            )
+
+        # Also get date range
+        bounds = conn.execute(
+            "SELECT MIN(event_date) as earliest, MAX(event_date) as latest "
+            "FROM events WHERE event_date IS NOT NULL AND event_date != ''"
+        ).fetchone()
+
+        total_events = conn.execute("SELECT COUNT(*) as cnt FROM events").fetchone()["cnt"]
+
+    return {
+        "dates": dates,
+        "earliest": bounds["earliest"] if bounds else None,
+        "latest": bounds["latest"] if bounds else None,
+        "total_events": total_events,
+    }
+
+
 # ═══════════════════════════════════════════
 # STATIC FILES (serve the frontend)
 # ═══════════════════════════════════════════
