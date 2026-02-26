@@ -1986,6 +1986,21 @@ body::before {
 .stat-card { padding: 14px; background: var(--bg-card); border-radius: var(--radius); border: 1px solid var(--border); text-align: center; }
 .stat-value { font-size: 22px; font-weight: 700; font-family: var(--font-mono); }
 .stat-label { font-family: var(--font-mono); font-size: 9px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin-top: 2px; }
+
+.influence-view, .entcluster-view, .covernames-view, .flights-view, .xrefmatrix-view, .invtimeline-view { display: none; flex-direction: column; gap: 16px; }
+.influence-view.active, .entcluster-view.active, .covernames-view.active, .flights-view.active, .xrefmatrix-view.active, .invtimeline-view.active { display: flex; }
+.influence-bar { height: 16px; background: linear-gradient(90deg, var(--entity-org), var(--accent)); border-radius: 3px; transition: width 0.3s ease; }
+.cluster-link { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: var(--bg-card); border-radius: var(--radius); border: 1px solid var(--border); margin-bottom: 6px; }
+.cover-candidate { display: flex; align-items: center; gap: 10px; padding: 8px 12px; background: var(--bg-card); border-radius: var(--radius); border: 1px solid var(--border); margin-bottom: 6px; }
+.flight-card { padding: 10px 14px; background: var(--bg-card); border-radius: var(--radius); border: 1px solid var(--border); margin-bottom: 6px; cursor: pointer; }
+.flight-card:hover { border-color: var(--entity-place); }
+.xref-cell { display: inline-block; width: 28px; height: 20px; border-radius: 2px; text-align: center; font-family: var(--font-mono); font-size: 9px; line-height: 20px; }
+.meta-event { display: flex; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--border); }
+.meta-badge { font-family: var(--font-mono); font-size: 9px; padding: 2px 6px; border-radius: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+.meta-badge.ingestion { background: var(--entity-place); color: #000; }
+.meta-badge.annotation { background: var(--entity-thing); color: #000; }
+.meta-badge.analyst_note { background: var(--entity-org); color: #fff; }
+.meta-badge.audit { background: var(--entity-date); color: #000; }
 </style>
 </head>
 <body>
@@ -2238,6 +2253,30 @@ body::before {
       <div class="sidebar-item" data-view="invstats" id="invstatsNav">
         <div class="sidebar-dot" style="background:var(--accent)"></div>
         Investigation Stats
+      </div>
+      <div class="sidebar-item" data-view="influence" id="influenceNav">
+        <div class="sidebar-dot" style="background:var(--entity-person)"></div>
+        Influence Scores
+      </div>
+      <div class="sidebar-item" data-view="entcluster" id="entclusterNav">
+        <div class="sidebar-dot" style="background:var(--entity-org)"></div>
+        Entity Clusters
+      </div>
+      <div class="sidebar-item" data-view="covernames" id="covernamesNav">
+        <div class="sidebar-dot" style="background:var(--entity-thing)"></div>
+        Cover Names
+      </div>
+      <div class="sidebar-item" data-view="flights" id="flightsNav">
+        <div class="sidebar-dot" style="background:var(--entity-place)"></div>
+        Flight Logs
+      </div>
+      <div class="sidebar-item" data-view="xrefmatrix" id="xrefmatrixNav">
+        <div class="sidebar-dot" style="background:var(--entity-date)"></div>
+        Cross-Reference
+      </div>
+      <div class="sidebar-item" data-view="invtimeline" id="invtimelineNav">
+        <div class="sidebar-dot" style="background:var(--accent)"></div>
+        Inv. Timeline
       </div>
     </div>
 
@@ -3103,6 +3142,55 @@ body::before {
       <div id="invstatsContent">Loading investigation metrics...</div>
     </div>
 
+    <!-- Influence Scores View -->
+    <div class="influence-view" id="influenceView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Influence Scores</div>
+      <div id="influenceContent">Loading influence rankings...</div>
+    </div>
+
+    <!-- Entity Clusters View -->
+    <div class="entcluster-view" id="entclusterView">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Entity Clusters</div>
+        <label style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted);">Min shared:
+          <input id="entclusterMin" type="number" value="3" min="1" style="width:50px;background:var(--bg-tertiary);border:1px solid var(--border);border-radius:var(--radius);padding:4px 8px;font-family:var(--font-mono);font-size:11px;color:var(--text-primary);outline:none;">
+        </label>
+        <button onclick="loadEntityClusters()" class="report-btn">Analyze</button>
+      </div>
+      <div id="entclusterContent">Loading entity clusters...</div>
+    </div>
+
+    <!-- Cover Names View -->
+    <div class="covernames-view" id="covernamesView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Cover Name Detection</div>
+      <div id="covernamesContent">Loading cover name candidates...</div>
+    </div>
+
+    <!-- Flight Logs View -->
+    <div class="flights-view" id="flightsView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Flight Log Analyzer</div>
+      <div id="flightsContent">Loading flight data...</div>
+    </div>
+
+    <!-- Cross-Reference Matrix View -->
+    <div class="xrefmatrix-view" id="xrefmatrixView">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Cross-Reference Matrix</div>
+        <select id="xrefType" onchange="loadXRefMatrix()" style="background:var(--bg-tertiary);border:1px solid var(--border);border-radius:var(--radius);padding:4px 8px;font-family:var(--font-mono);font-size:11px;color:var(--text-primary);outline:none;">
+          <option value="person">People</option>
+          <option value="org">Organizations</option>
+          <option value="place">Places</option>
+        </select>
+      </div>
+      <div id="xrefmatrixContent" style="overflow-x:auto;">Loading cross-reference matrix...</div>
+    </div>
+
+    <!-- Investigation Timeline View -->
+    <div class="invtimeline-view" id="invtimelineView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Investigation Timeline</div>
+      <div id="invtimelineContent">Loading investigation timeline...</div>
+    </div>
+
   </main>
 
   <!-- RIGHT PANEL -->
@@ -3745,6 +3833,12 @@ function hideAllViews() {
   document.getElementById('phrasetrendView').classList.remove('active');
   document.getElementById('disambigView').classList.remove('active');
   document.getElementById('invstatsView').classList.remove('active');
+  document.getElementById('influenceView').classList.remove('active');
+  document.getElementById('entclusterView').classList.remove('active');
+  document.getElementById('covernamesView').classList.remove('active');
+  document.getElementById('flightsView').classList.remove('active');
+  document.getElementById('xrefmatrixView').classList.remove('active');
+  document.getElementById('invtimelineView').classList.remove('active');
 }
 
 function showDocumentView() {
@@ -3840,6 +3934,12 @@ document.querySelectorAll('.sidebar-item[data-view]').forEach(item => {
     else if (view === 'phrasetrend') showPhraseTrendView();
     else if (view === 'disambig') showDisambigView();
     else if (view === 'invstats') showInvStatsView();
+    else if (view === 'influence') showInfluenceView();
+    else if (view === 'entcluster') showEntClusterView();
+    else if (view === 'covernames') showCoverNamesView();
+    else if (view === 'flights') showFlightsView();
+    else if (view === 'xrefmatrix') showXRefMatrixView();
+    else if (view === 'invtimeline') showInvTimelineView();
   });
 });
 
@@ -4933,6 +5033,12 @@ function goBackFromReader() {
   else if (readerPreviousView === 'phrasetrend') showPhraseTrendView();
   else if (readerPreviousView === 'disambig') showDisambigView();
   else if (readerPreviousView === 'invstats') showInvStatsView();
+  else if (readerPreviousView === 'influence') showInfluenceView();
+  else if (readerPreviousView === 'entcluster') showEntClusterView();
+  else if (readerPreviousView === 'covernames') showCoverNamesView();
+  else if (readerPreviousView === 'flights') showFlightsView();
+  else if (readerPreviousView === 'xrefmatrix') showXRefMatrixView();
+  else if (readerPreviousView === 'invtimeline') showInvTimelineView();
   else showDocumentView();
 }
 
@@ -8888,6 +8994,318 @@ async function loadInvStats() {
 
     el.innerHTML = html;
   } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load investigation stats</div>'; }
+}
+
+
+// ─── INFLUENCE SCORES ───
+
+function showInfluenceView() {
+  currentView = 'influence';
+  hideAllViews();
+  document.getElementById('influenceView').classList.add('active');
+  loadInfluenceScores();
+}
+
+async function loadInfluenceScores() {
+  const el = document.getElementById('influenceContent');
+  try {
+    const data = await api('/api/influence-scores?limit=50');
+    const entities = data.entities || [];
+    if (!entities.length) { el.innerHTML = '<div style="color:var(--text-muted);">No entities with sufficient data.</div>'; return; }
+
+    const maxScore = Math.max(...entities.map(e => e.influence_score));
+    let html = '<div style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted);margin-bottom:8px;">Score = 3×docs + 0.1×mentions + 0.5×connections + 2×events + 5×financial</div>';
+
+    entities.forEach((e, i) => {
+      const pct = (e.influence_score / maxScore) * 100;
+      html += `<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+        <span style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted);min-width:24px;text-align:right;">${i + 1}</span>
+        <span class="entity-tag ${e.type}" style="font-size:10px;min-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${e.name}</span>
+        <div style="flex:1;height:16px;background:var(--bg-tertiary);border-radius:3px;overflow:hidden;">
+          <div class="influence-bar" style="width:${pct}%;"></div>
+        </div>
+        <span style="font-family:var(--font-mono);font-size:10px;color:var(--accent);min-width:50px;text-align:right;">${e.influence_score}</span>
+        <span style="font-family:var(--font-mono);font-size:9px;color:var(--text-muted);min-width:120px;">${e.doc_count}d ${e.event_count}e ${e.financial_links}f</span>
+      </div>`;
+    });
+
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load influence scores</div>'; }
+}
+
+
+// ─── ENTITY CLUSTERS ───
+
+function showEntClusterView() {
+  currentView = 'entcluster';
+  hideAllViews();
+  document.getElementById('entclusterView').classList.add('active');
+  loadEntityClusters();
+}
+
+async function loadEntityClusters() {
+  const el = document.getElementById('entclusterContent');
+  const minShared = document.getElementById('entclusterMin').value || 3;
+  try {
+    const data = await api(`/api/entity-clusters?min_shared=${minShared}`);
+    const clusters = data.clusters || [];
+    if (!clusters.length) { el.innerHTML = '<div style="color:var(--text-muted);">No document clusters found with this threshold.</div>'; return; }
+
+    let html = `<div style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted);margin-bottom:8px;">${clusters.length} document pairs sharing ${minShared}+ entities</div>`;
+
+    clusters.forEach(c => {
+      const da = c.doc_a || {};
+      const db = c.doc_b || {};
+      html += `<div class="cluster-link">
+        <div style="flex:1;cursor:pointer;" onclick="openReader(${da.id},'entcluster')">
+          <div style="font-size:12px;">${da.title || da.filename || '?'}</div>
+          <div style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted);">${da.category || ''} · ${da.source || ''}</div>
+        </div>
+        <div style="text-align:center;min-width:60px;">
+          <div style="font-family:var(--font-mono);font-size:14px;font-weight:700;color:var(--accent);">${c.shared_count}</div>
+          <div style="font-family:var(--font-mono);font-size:9px;color:var(--text-muted);">shared</div>
+        </div>
+        <div style="flex:1;cursor:pointer;" onclick="openReader(${db.id},'entcluster')">
+          <div style="font-size:12px;">${db.title || db.filename || '?'}</div>
+          <div style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted);">${db.category || ''} · ${db.source || ''}</div>
+        </div>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:3px;margin-bottom:8px;padding-left:8px;">
+        ${c.shared_entities.map(s => '<span class="entity-tag ' + s.type + '" style="font-size:9px;">' + s.name + '</span>').join('')}
+      </div>`;
+    });
+
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load entity clusters</div>'; }
+}
+
+
+// ─── COVER NAMES ───
+
+function showCoverNamesView() {
+  currentView = 'covernames';
+  hideAllViews();
+  document.getElementById('covernamesView').classList.add('active');
+  loadCoverNames();
+}
+
+async function loadCoverNames() {
+  const el = document.getElementById('covernamesContent');
+  try {
+    const data = await api('/api/cover-names');
+    const aliases = data.potential_aliases || [];
+    const known = data.known_aliases || [];
+    const singles = data.single_name_entities || [];
+
+    let html = '';
+
+    // Known aliases
+    if (known.length) {
+      html += '<div style="margin-bottom:16px;"><div class="narrative-section-title">Known Aliases</div>';
+      html += '<div style="display:flex;flex-wrap:wrap;gap:6px;">';
+      known.forEach(k => {
+        html += `<span class="entity-tag ${k.type}" style="font-size:10px;">${k.entity_name} → ${k.alias_name}</span>`;
+      });
+      html += '</div></div>';
+    }
+
+    // Potential aliases (algorithmic detection)
+    if (aliases.length) {
+      html += '<div style="margin-bottom:16px;"><div class="narrative-section-title">Potential Cover Names / Aliases</div>';
+      html += '<div style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted);margin-bottom:8px;">Entities that almost exclusively appear alongside a specific person</div>';
+      aliases.forEach(a => {
+        const overlap = a.alias_total_docs > 0 ? Math.round((a.shared_docs / a.alias_total_docs) * 100) : 0;
+        html += `<div class="cover-candidate">
+          <span class="entity-tag person" style="font-size:10px;">${a.primary_name}</span>
+          <span style="font-family:var(--font-mono);font-size:11px;color:var(--accent);">←?→</span>
+          <span class="entity-tag person" style="font-size:10px;">${a.alias_candidate}</span>
+          <span style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted);">${a.shared_docs}/${a.alias_total_docs} docs (${overlap}%)</span>
+        </div>`;
+      });
+      html += '</div>';
+    }
+
+    // Single-name entities (possible nicknames)
+    if (singles.length) {
+      html += '<div><div class="narrative-section-title">Single-Name Entities (Potential Nicknames)</div>';
+      html += '<div style="display:flex;flex-wrap:wrap;gap:6px;">';
+      singles.forEach(s => {
+        html += `<span class="entity-tag ${s.type}" style="font-size:10px;">${s.name} (${s.doc_count})</span>`;
+      });
+      html += '</div></div>';
+    }
+
+    if (!aliases.length && !known.length && !singles.length) {
+      html = '<div style="color:var(--text-muted);">No cover name candidates detected.</div>';
+    }
+
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load cover names</div>'; }
+}
+
+
+// ─── FLIGHT LOGS ───
+
+function showFlightsView() {
+  currentView = 'flights';
+  hideAllViews();
+  document.getElementById('flightsView').classList.add('active');
+  loadFlightAnalysis();
+}
+
+async function loadFlightAnalysis() {
+  const el = document.getElementById('flightsContent');
+  try {
+    const data = await api('/api/flight-analysis');
+    const docs = data.flight_documents || [];
+    const passengers = data.top_passengers || [];
+    const destinations = data.top_destinations || [];
+
+    let html = `<div style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted);margin-bottom:12px;">${data.total_flight_docs || 0} flight-related documents</div>`;
+
+    // Top passengers
+    if (passengers.length) {
+      const maxF = Math.max(...passengers.map(p => p.flights));
+      html += '<div style="margin-bottom:16px;"><div class="narrative-section-title">Frequent Flyers</div>';
+      passengers.slice(0, 15).forEach(p => {
+        const pct = (p.flights / maxF) * 100;
+        html += `<div style="display:flex;align-items:center;gap:8px;margin-bottom:3px;">
+          <span style="font-size:12px;min-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${p.name}</span>
+          <div style="flex:1;height:12px;background:var(--bg-tertiary);border-radius:3px;overflow:hidden;">
+            <div style="width:${pct}%;height:100%;background:var(--entity-person);border-radius:3px;"></div>
+          </div>
+          <span style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted);min-width:30px;text-align:right;">${p.flights}</span>
+        </div>`;
+      });
+      html += '</div>';
+    }
+
+    // Top destinations
+    if (destinations.length) {
+      html += '<div style="margin-bottom:16px;"><div class="narrative-section-title">Destinations</div>';
+      html += '<div style="display:flex;flex-wrap:wrap;gap:6px;">';
+      destinations.forEach(d => {
+        html += `<span class="entity-tag place" style="font-size:10px;">${d.name} (${d.mentions})</span>`;
+      });
+      html += '</div></div>';
+    }
+
+    // Flight documents
+    if (docs.length) {
+      html += '<div><div class="narrative-section-title">Flight Documents</div>';
+      docs.forEach(d => {
+        html += `<div class="flight-card" onclick="openReader(${d.doc_id},'flights')">
+          <div style="display:flex;justify-content:space-between;">
+            <span style="font-weight:500;">${d.title}</span>
+            <span style="font-family:var(--font-mono);font-size:10px;color:var(--entity-date);">${d.date || 'Undated'}</span>
+          </div>
+          <div style="display:flex;flex-wrap:wrap;gap:3px;margin-top:4px;">
+            ${d.people.slice(0, 5).map(p => '<span class="entity-tag person" style="font-size:9px;">' + p.name + '</span>').join('')}
+            ${d.places.map(p => '<span class="entity-tag place" style="font-size:9px;">' + p.name + '</span>').join('')}
+          </div>
+        </div>`;
+      });
+      html += '</div>';
+    }
+
+    if (!docs.length) {
+      html = '<div style="color:var(--text-muted);">No flight log documents found. Documents need category "flight" or flight-related keywords in title.</div>';
+    }
+
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load flight data</div>'; }
+}
+
+
+// ─── CROSS-REFERENCE MATRIX ───
+
+function showXRefMatrixView() {
+  currentView = 'xrefmatrix';
+  hideAllViews();
+  document.getElementById('xrefmatrixView').classList.add('active');
+  loadXRefMatrix();
+}
+
+async function loadXRefMatrix() {
+  const el = document.getElementById('xrefmatrixContent');
+  const entityType = document.getElementById('xrefType').value || 'person';
+  try {
+    const data = await api(`/api/xref-matrix?entity_type=${entityType}&limit=25`);
+    const matrix = data.matrix || [];
+    const sources = data.sources || [];
+
+    if (!matrix.length || !sources.length) { el.innerHTML = '<div style="color:var(--text-muted);">No cross-reference data available.</div>'; return; }
+
+    // Find max value for color scaling
+    let maxVal = 1;
+    matrix.forEach(row => {
+      sources.forEach(s => {
+        if (row.by_source[s] > maxVal) maxVal = row.by_source[s];
+      });
+    });
+
+    let html = '<div style="overflow-x:auto;"><table style="border-collapse:collapse;font-size:11px;">';
+    // Header
+    html += '<tr><th style="padding:4px 8px;text-align:left;font-family:var(--font-mono);font-size:9px;color:var(--text-muted);position:sticky;left:0;background:var(--bg-primary);">Entity</th>';
+    sources.forEach(s => {
+      const short = s.length > 12 ? s.substring(0, 12) + '...' : s;
+      html += `<th style="padding:4px 4px;font-family:var(--font-mono);font-size:8px;color:var(--text-muted);writing-mode:vertical-lr;transform:rotate(180deg);max-height:100px;" title="${s}">${short}</th>`;
+    });
+    html += '</tr>';
+
+    // Data rows
+    matrix.forEach(row => {
+      html += `<tr><td style="padding:3px 8px;font-size:11px;white-space:nowrap;position:sticky;left:0;background:var(--bg-primary);border-bottom:1px solid var(--border);">${row.entity}</td>`;
+      sources.forEach(s => {
+        const val = row.by_source[s] || 0;
+        const intensity = val > 0 ? Math.max(0.15, val / maxVal) : 0;
+        const bg = val > 0 ? `rgba(196, 71, 58, ${intensity})` : 'transparent';
+        html += `<td style="padding:0;"><div class="xref-cell" style="background:${bg};" title="${row.entity} × ${s}: ${val}">${val || ''}</div></td>`;
+      });
+      html += '</tr>';
+    });
+
+    html += '</table></div>';
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load cross-reference matrix</div>'; }
+}
+
+
+// ─── INVESTIGATION TIMELINE ───
+
+function showInvTimelineView() {
+  currentView = 'invtimeline';
+  hideAllViews();
+  document.getElementById('invtimelineView').classList.add('active');
+  loadInvTimeline();
+}
+
+async function loadInvTimeline() {
+  const el = document.getElementById('invtimelineContent');
+  try {
+    const data = await api('/api/investigation-timeline');
+    const events = data.events || [];
+
+    if (!events.length) { el.innerHTML = '<div style="color:var(--text-muted);">No investigation events recorded yet.</div>'; return; }
+
+    let html = `<div style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted);margin-bottom:12px;">${events.length} investigation events</div>`;
+
+    events.forEach(e => {
+      const dateStr = e.date ? new Date(e.date).toLocaleString() : 'Unknown';
+      html += `<div class="meta-event">
+        <div style="min-width:140px;">
+          <div style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted);">${dateStr}</div>
+          <span class="meta-badge ${e.type}">${e.type.replace('_', ' ')}</span>
+        </div>
+        <div style="flex:1;">
+          <div style="font-size:12px;${e.ref_id ? 'cursor:pointer;' : ''}" ${e.ref_id && e.type !== 'audit' ? 'onclick="openReader(' + e.ref_id + ',\'invtimeline\')"' : ''}>${e.description}</div>
+          ${e.detail ? '<div style="font-size:11px;color:var(--text-muted);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:500px;">' + e.detail + '</div>' : ''}
+        </div>
+      </div>`;
+    });
+
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load investigation timeline</div>'; }
 }
 
 

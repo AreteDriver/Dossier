@@ -5970,6 +5970,420 @@ def investigation_stats():
 
 
 # ═══════════════════════════════════════════
+# INFLUENCE SCORE (composite entity ranking)
+# ═══════════════════════════════════════════
+
+
+@app.get("/api/influence-scores")
+def influence_scores(limit: int = Query(50)):
+    """Rank entities by composite influence: doc coverage, connections, events, financial links."""
+    with get_db() as conn:
+        entities = conn.execute(
+            """SELECT e.id, e.name, e.type,
+                      COUNT(DISTINCT de.document_id) as doc_count,
+                      COALESCE(SUM(de.count), 0) as total_mentions
+               FROM entities e
+               LEFT JOIN document_entities de ON de.entity_id = e.id
+               GROUP BY e.id
+               HAVING doc_count >= 2
+               ORDER BY doc_count DESC
+               LIMIT 500"""
+        ).fetchall()
+
+        results = []
+        for ent in entities:
+            eid = ent["id"]
+            conn_weight = conn.execute(
+                """SELECT COALESCE(SUM(weight), 0)
+                   FROM entity_connections
+                   WHERE entity_a_id = ? OR entity_b_id = ?""",
+                (eid, eid),
+            ).fetchone()[0]
+
+            event_count = conn.execute(
+                "SELECT COUNT(*) FROM event_entities WHERE entity_id = ?", (eid,)
+            ).fetchone()[0]
+
+            fin_links = conn.execute(
+                """SELECT COUNT(DISTINCT fi.id)
+                   FROM financial_indicators fi
+                   JOIN documents d ON d.id = fi.document_id
+                   JOIN document_entities de ON de.document_id = d.id
+                   WHERE de.entity_id = ?""",
+                (eid,),
+            ).fetchone()[0]
+
+            # Composite score: weighted sum
+            score = (
+                ent["doc_count"] * 3
+                + ent["total_mentions"] * 0.1
+                + conn_weight * 0.5
+                + event_count * 2
+                + fin_links * 5
+            )
+
+            results.append(
+                {
+                    "id": eid,
+                    "name": ent["name"],
+                    "type": ent["type"],
+                    "doc_count": ent["doc_count"],
+                    "mentions": ent["total_mentions"],
+                    "connection_weight": conn_weight,
+                    "event_count": event_count,
+                    "financial_links": fin_links,
+                    "influence_score": round(score, 1),
+                }
+            )
+
+        results.sort(key=lambda x: x["influence_score"], reverse=True)
+
+    return {"entities": results[:limit]}
+
+
+# ═══════════════════════════════════════════
+# DOCUMENT CLUSTERS BY ENTITY (shared entity signatures)
+# ═══════════════════════════════════════════
+
+
+@app.get("/api/entity-clusters")
+def entity_clusters(min_shared: int = Query(3), limit: int = Query(30)):
+    """Cluster documents by shared entity signatures."""
+    with get_db() as conn:
+        # Find document pairs sharing many entities
+        pairs = conn.execute(
+            """SELECT de1.document_id as doc_a, de2.document_id as doc_b,
+                      COUNT(DISTINCT de1.entity_id) as shared_entities
+               FROM document_entities de1
+               JOIN document_entities de2 ON de2.entity_id = de1.entity_id
+                 AND de2.document_id > de1.document_id
+               GROUP BY de1.document_id, de2.document_id
+               HAVING shared_entities >= ?
+               ORDER BY shared_entities DESC
+               LIMIT ?""",
+            (min_shared, limit),
+        ).fetchall()
+
+        # Get doc details for the pairs
+        doc_ids = set()
+        for p in pairs:
+            doc_ids.add(p["doc_a"])
+            doc_ids.add(p["doc_b"])
+
+        doc_info = {}
+        if doc_ids:
+            placeholders = ",".join("?" * len(doc_ids))
+            docs = conn.execute(
+                f"SELECT id, title, filename, category, source FROM documents WHERE id IN ({placeholders})",
+                list(doc_ids),
+            ).fetchall()
+            for d in docs:
+                doc_info[d["id"]] = dict(d)
+
+        result_pairs = []
+        for p in pairs:
+            da = doc_info.get(p["doc_a"], {})
+            db = doc_info.get(p["doc_b"], {})
+            # Get the shared entities for this pair
+            shared = conn.execute(
+                """SELECT e.name, e.type
+                   FROM document_entities de1
+                   JOIN document_entities de2 ON de2.entity_id = de1.entity_id
+                     AND de2.document_id = ?
+                   JOIN entities e ON e.id = de1.entity_id
+                   WHERE de1.document_id = ?
+                   LIMIT 8""",
+                (p["doc_b"], p["doc_a"]),
+            ).fetchall()
+            result_pairs.append(
+                {
+                    "doc_a": da,
+                    "doc_b": db,
+                    "shared_count": p["shared_entities"],
+                    "shared_entities": [dict(s) for s in shared],
+                }
+            )
+
+    return {"clusters": result_pairs}
+
+
+# ═══════════════════════════════════════════
+# COVER NAME DETECTION (potential aliases)
+# ═══════════════════════════════════════════
+
+
+@app.get("/api/cover-names")
+def cover_name_detection():
+    """Detect potential cover names / code names from entity patterns."""
+    with get_db() as conn:
+        # Entities that always co-occur with a specific person (possible alias)
+        # Find person entities that appear in a subset of another person's documents
+        cooccur = conn.execute(
+            """WITH person_docs AS (
+                 SELECT e.id, e.name, de.document_id
+                 FROM entities e
+                 JOIN document_entities de ON de.entity_id = e.id
+                 WHERE e.type = 'person'
+               )
+               SELECT p1.name as primary_name, p1.id as primary_id,
+                      p2.name as alias_candidate, p2.id as alias_id,
+                      COUNT(DISTINCT p1.document_id) as shared_docs,
+                      (SELECT COUNT(DISTINCT document_id) FROM document_entities WHERE entity_id = p2.id) as alias_total_docs
+               FROM person_docs p1
+               JOIN person_docs p2 ON p2.document_id = p1.document_id AND p2.id != p1.id
+               WHERE LENGTH(p2.name) >= 2
+               GROUP BY p1.id, p2.id
+               HAVING shared_docs >= 3
+                 AND alias_total_docs <= shared_docs * 1.2
+                 AND alias_total_docs <= 10
+               ORDER BY CAST(shared_docs AS FLOAT) / alias_total_docs DESC
+               LIMIT 40"""
+        ).fetchall()
+
+        # Existing aliases from entity_aliases table
+        known_aliases = conn.execute(
+            """SELECT ea.alias_name, e.name as entity_name, e.type
+               FROM entity_aliases ea
+               JOIN entities e ON e.id = ea.entity_id
+               ORDER BY e.name
+               LIMIT 50"""
+        ).fetchall()
+
+        # Single-word entities that might be nicknames
+        nicknames = conn.execute(
+            """SELECT e.id, e.name, e.type,
+                      COUNT(DISTINCT de.document_id) as doc_count
+               FROM entities e
+               JOIN document_entities de ON de.entity_id = e.id
+               WHERE e.type = 'person'
+                 AND e.name NOT LIKE '% %'
+                 AND LENGTH(e.name) >= 3
+                 AND LENGTH(e.name) <= 15
+               GROUP BY e.id
+               HAVING doc_count >= 2
+               ORDER BY doc_count DESC LIMIT 30"""
+        ).fetchall()
+
+    return {
+        "potential_aliases": [dict(c) for c in cooccur],
+        "known_aliases": [dict(k) for k in known_aliases],
+        "single_name_entities": [dict(n) for n in nicknames],
+    }
+
+
+# ═══════════════════════════════════════════
+# FLIGHT LOG ANALYZER
+# ═══════════════════════════════════════════
+
+
+@app.get("/api/flight-analysis")
+def flight_analysis():
+    """Analyze flight-log documents for routes, passengers, and patterns."""
+    with get_db() as conn:
+        # Find flight-related documents
+        flight_docs = conn.execute(
+            """SELECT d.id, d.title, d.filename, d.date, d.source, d.pages
+               FROM documents d
+               WHERE d.category = 'flight'
+                  OR LOWER(d.title) LIKE '%flight%'
+                  OR LOWER(d.title) LIKE '%passenger%'
+                  OR LOWER(d.title) LIKE '%manifest%'
+                  OR LOWER(d.filename) LIKE '%flight%'
+               ORDER BY d.date"""
+        ).fetchall()
+
+        flight_people = {}
+        flight_places = {}
+        doc_details = []
+
+        for doc in flight_docs:
+            people = conn.execute(
+                """SELECT e.id, e.name, de.count
+                   FROM entities e
+                   JOIN document_entities de ON de.entity_id = e.id
+                   WHERE de.document_id = ? AND e.type = 'person'
+                   ORDER BY de.count DESC LIMIT 10""",
+                (doc["id"],),
+            ).fetchall()
+
+            places = conn.execute(
+                """SELECT e.name, de.count
+                   FROM entities e
+                   JOIN document_entities de ON de.entity_id = e.id
+                   WHERE de.document_id = ? AND e.type = 'place'
+                   ORDER BY de.count DESC LIMIT 5""",
+                (doc["id"],),
+            ).fetchall()
+
+            for p in people:
+                flight_people[p["name"]] = flight_people.get(p["name"], 0) + 1
+            for p in places:
+                flight_places[p["name"]] = flight_places.get(p["name"], 0) + 1
+
+            doc_details.append(
+                {
+                    "doc_id": doc["id"],
+                    "title": doc["title"] or doc["filename"],
+                    "date": doc["date"],
+                    "people": [dict(p) for p in people],
+                    "places": [dict(p) for p in places],
+                }
+            )
+
+        # Sort by frequency
+        top_passengers = sorted(flight_people.items(), key=lambda x: -x[1])[:30]
+        top_destinations = sorted(flight_places.items(), key=lambda x: -x[1])[:20]
+
+    return {
+        "flight_documents": doc_details,
+        "top_passengers": [{"name": n, "flights": c} for n, c in top_passengers],
+        "top_destinations": [{"name": n, "mentions": c} for n, c in top_destinations],
+        "total_flight_docs": len(flight_docs),
+    }
+
+
+# ═══════════════════════════════════════════
+# CROSS-REFERENCE MATRIX (entity × source)
+# ═══════════════════════════════════════════
+
+
+@app.get("/api/xref-matrix")
+def xref_matrix(entity_type: str = Query("person"), limit: int = Query(30)):
+    """Entity-to-source cross-reference matrix."""
+    with get_db() as conn:
+        # Get top entities by doc count
+        entities = conn.execute(
+            """SELECT e.id, e.name, COUNT(DISTINCT de.document_id) as doc_count
+               FROM entities e
+               JOIN document_entities de ON de.entity_id = e.id
+               WHERE e.type = ?
+               GROUP BY e.id
+               ORDER BY doc_count DESC LIMIT ?""",
+            (entity_type, limit),
+        ).fetchall()
+
+        # Get all sources
+        sources = conn.execute(
+            """SELECT DISTINCT source FROM documents
+               WHERE source IS NOT NULL AND source != ''
+               ORDER BY source"""
+        ).fetchall()
+        source_names = [s["source"] for s in sources]
+
+        # Build matrix
+        matrix = []
+        for ent in entities:
+            row = conn.execute(
+                """SELECT d.source, COUNT(DISTINCT d.id) as count
+                   FROM document_entities de
+                   JOIN documents d ON d.id = de.document_id
+                   WHERE de.entity_id = ?
+                     AND d.source IS NOT NULL AND d.source != ''
+                   GROUP BY d.source""",
+                (ent["id"],),
+            ).fetchall()
+            source_counts = {r["source"]: r["count"] for r in row}
+            matrix.append(
+                {
+                    "entity": ent["name"],
+                    "entity_id": ent["id"],
+                    "total": ent["doc_count"],
+                    "by_source": {s: source_counts.get(s, 0) for s in source_names},
+                }
+            )
+
+    return {"matrix": matrix, "sources": source_names, "entity_type": entity_type}
+
+
+# ═══════════════════════════════════════════
+# INVESTIGATION TIMELINE (meta-timeline)
+# ═══════════════════════════════════════════
+
+
+@app.get("/api/investigation-timeline")
+def investigation_timeline():
+    """Meta-timeline of the investigation: ingestion, analysis, and annotation events."""
+    with get_db() as conn:
+        events = []
+
+        # Document ingestion events
+        ingested = conn.execute(
+            """SELECT id, title, filename, ingested_at, source, category
+               FROM documents
+               WHERE ingested_at IS NOT NULL
+               ORDER BY ingested_at DESC LIMIT 50"""
+        ).fetchall()
+        for d in ingested:
+            events.append(
+                {
+                    "type": "ingestion",
+                    "date": d["ingested_at"],
+                    "description": f"Ingested: {d['title'] or d['filename']}",
+                    "detail": f"{d['category']} from {d['source'] or 'unknown'}",
+                    "ref_id": d["id"],
+                }
+            )
+
+        # Annotation events
+        annotations = conn.execute(
+            """SELECT a.created_at, a.note, a.text, d.title, d.id as doc_id
+               FROM annotations a
+               JOIN documents d ON d.id = a.document_id
+               ORDER BY a.created_at DESC LIMIT 30"""
+        ).fetchall()
+        for a in annotations:
+            events.append(
+                {
+                    "type": "annotation",
+                    "date": a["created_at"],
+                    "description": f"Annotation on: {a['title'] or 'Untitled'}",
+                    "detail": a["note"] or a["text"] or "",
+                    "ref_id": a["doc_id"],
+                }
+            )
+
+        # Analyst notes
+        notes = conn.execute(
+            """SELECT an.created_at, an.note, an.author, d.title, d.id as doc_id
+               FROM analyst_notes an
+               JOIN documents d ON d.id = an.document_id
+               ORDER BY an.created_at DESC LIMIT 30"""
+        ).fetchall()
+        for n in notes:
+            events.append(
+                {
+                    "type": "analyst_note",
+                    "date": n["created_at"],
+                    "description": f"Note on: {n['title'] or 'Untitled'}",
+                    "detail": f"{n['author'] or 'analyst'}: {n['note'][:100] if n['note'] else ''}",
+                    "ref_id": n["doc_id"],
+                }
+            )
+
+        # Audit log entries
+        audit = conn.execute(
+            """SELECT action, target_type, target_id, details, created_at
+               FROM audit_log
+               ORDER BY created_at DESC LIMIT 30"""
+        ).fetchall()
+        for a in audit:
+            events.append(
+                {
+                    "type": "audit",
+                    "date": a["created_at"],
+                    "description": f"{a['action']}: {a['target_type']} #{a['target_id']}",
+                    "detail": a["details"] or "",
+                    "ref_id": a["target_id"],
+                }
+            )
+
+        # Sort all events by date descending
+        events.sort(key=lambda x: x["date"] or "", reverse=True)
+
+    return {"events": events[:100]}
+
+
+# ═══════════════════════════════════════════
 # STATIC FILES (serve the frontend)
 # ═══════════════════════════════════════════
 
