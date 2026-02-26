@@ -1772,6 +1772,64 @@ body::before {
   background: var(--bg-tertiary); color: var(--text-secondary); margin-left: 6px;
 }
 .export-card button:hover { border-color: var(--accent-dim); color: var(--accent); }
+
+/* ─── REDACTION ─── */
+.redaction-mark { background: rgba(224,85,85,0.25); text-decoration: line-through; text-decoration-color: #e05555; }
+.redaction-chip {
+  display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: var(--radius);
+  font-family: var(--font-mono); font-size: 10px; background: rgba(224,85,85,0.12); color: #e05555;
+  margin: 2px;
+}
+
+/* ─── AUDIT TRAIL ─── */
+.audit-view { display: none; flex-direction: column; gap: 16px; }
+.audit-view.active { display: flex; }
+.audit-entry {
+  display: flex; align-items: center; gap: 12px; padding: 8px 12px;
+  border-bottom: 1px solid var(--border); font-size: 12px;
+}
+.audit-action {
+  font-family: var(--font-mono); font-size: 10px; padding: 3px 8px; border-radius: var(--radius);
+  background: var(--bg-tertiary); color: var(--text-secondary); white-space: nowrap;
+}
+
+/* ─── ENTITY MERGE ─── */
+.merge-view { display: none; flex-direction: column; gap: 16px; }
+.merge-view.active { display: flex; }
+.merge-card {
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 18px;
+  flex: 1;
+}
+.merge-arrow { font-size: 24px; color: var(--accent); align-self: center; }
+
+/* ─── DOCUMENT CLUSTERS ─── */
+.clusters-view { display: none; flex-direction: column; gap: 16px; }
+.clusters-view.active { display: flex; }
+.cluster-card {
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 16px;
+}
+.cluster-keyword {
+  font-family: var(--font-mono); font-size: 16px; font-weight: 600; color: var(--accent);
+  margin-bottom: 6px;
+}
+.cluster-meta {
+  font-family: var(--font-mono); font-size: 10px; color: var(--text-muted); text-transform: uppercase;
+  letter-spacing: 1px; margin-bottom: 10px;
+}
+
+/* ─── SAVED QUERIES ─── */
+.saved-query-chip {
+  display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 20px;
+  font-family: var(--font-mono); font-size: 11px; background: var(--bg-tertiary); border: 1px solid var(--border);
+  color: var(--text-secondary); cursor: pointer; margin: 3px; transition: all var(--transition);
+}
+.saved-query-chip:hover { border-color: var(--accent-dim); color: var(--accent); }
+
+/* ─── CROSS-REFERENCE ─── */
+.xref-panel {
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 14px;
+  margin-top: 12px;
+}
 </style>
 </head>
 <body>
@@ -1909,6 +1967,18 @@ body::before {
         <div class="sidebar-dot" style="background:var(--text-muted)"></div>
         Export Data
       </div>
+      <div class="sidebar-item" data-view="clusters" id="clustersNav">
+        <div class="sidebar-dot" style="background:var(--entity-thing)"></div>
+        Document Clusters
+      </div>
+      <div class="sidebar-item" data-view="merge" id="mergeNav">
+        <div class="sidebar-dot" style="background:var(--entity-person)"></div>
+        Entity Merge
+      </div>
+      <div class="sidebar-item" data-view="audit" id="auditNav">
+        <div class="sidebar-dot" style="background:var(--text-muted)"></div>
+        Audit Trail
+      </div>
     </div>
 
     <div class="sidebar-section">
@@ -2013,7 +2083,9 @@ body::before {
         <div class="filter-chip" data-type="orgs">Organizations</div>
         <div class="filter-chip" data-type="dates">Dates</div>
         <div class="filter-chip" data-type="keywords">Keywords</div>
+        <div class="filter-chip" onclick="saveCurrentQuery()" style="margin-left:auto;border-color:var(--accent-dim);color:var(--accent);">Save Query</div>
       </div>
+      <div id="savedQueriesBar" style="display:flex;gap:4px;flex-wrap:wrap;margin-top:4px;"></div>
     </div>
 
     <!-- Processing Bar -->
@@ -2237,6 +2309,8 @@ body::before {
         <button class="export-btn" onclick="toggleFlag(readerDocId)" id="readerFlagBtn">Flag</button>
         <button class="export-btn" onclick="showDocForensicDetail(readerDocId)">Forensics</button>
         <button class="export-btn" onclick="addAnnotation()">Annotate</button>
+        <button class="export-btn" onclick="addRedaction()" style="color:#e05555;">Redact</button>
+        <button class="export-btn" onclick="crossReference()">X-Ref</button>
       </div>
       <div class="reader-body" id="readerBody">Loading...</div>
       <div style="margin-top:12px;">
@@ -2446,6 +2520,45 @@ body::before {
       <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Risk Scoring Dashboard</div>
       <div id="riskContent">Loading risk data...</div>
     </div>
+
+    <!-- AUDIT TRAIL VIEW -->
+    <div class="audit-view" id="auditView">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Audit Trail</div>
+        <select id="auditFilter" onchange="loadAuditLog()" style="background:var(--bg-tertiary);border:1px solid var(--border);border-radius:var(--radius);padding:5px 10px;font-family:var(--font-mono);font-size:11px;color:var(--text-primary);">
+          <option value="">All Actions</option>
+          <option value="search">Search</option>
+          <option value="read_document">Read Doc</option>
+          <option value="flag">Flag</option>
+          <option value="annotate">Annotate</option>
+          <option value="tag">Tag</option>
+          <option value="entity_merge">Merge</option>
+          <option value="redact">Redact</option>
+          <option value="export">Export</option>
+        </select>
+      </div>
+      <div id="auditContent">Loading audit log...</div>
+    </div>
+
+    <!-- ENTITY MERGE VIEW -->
+    <div class="merge-view" id="mergeView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Entity Merge</div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <input id="mergeSourceInput" placeholder="Search source entity..." style="flex:1;min-width:180px;background:var(--bg-tertiary);border:1px solid var(--border);border-radius:var(--radius);padding:8px 12px;font-family:var(--font-mono);font-size:12px;color:var(--text-primary);outline:none;">
+        <span style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted);">→ merge into →</span>
+        <input id="mergeTargetInput" placeholder="Search target entity..." style="flex:1;min-width:180px;background:var(--bg-tertiary);border:1px solid var(--border);border-radius:var(--radius);padding:8px 12px;font-family:var(--font-mono);font-size:12px;color:var(--text-primary);outline:none;">
+        <button onclick="previewMerge()" style="background:var(--bg-tertiary);border:1px solid var(--border);border-radius:var(--radius);padding:8px 14px;font-family:var(--font-mono);font-size:11px;color:var(--text-secondary);cursor:pointer;">Preview</button>
+      </div>
+      <div id="mergeContent"></div>
+    </div>
+
+    <!-- DOCUMENT CLUSTERS VIEW -->
+    <div class="clusters-view" id="clustersView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Document Clusters</div>
+      <div id="clustersContent">Loading clusters...</div>
+    </div>
+
+    <!-- SAVED QUERIES (embedded in search area, but needs a sidebar section) -->
 
     <!-- EXPORT VIEW -->
     <div class="export-view" id="exportsView">
@@ -3095,6 +3208,9 @@ function hideAllViews() {
   document.getElementById('taganalyticsView').classList.remove('active');
   document.getElementById('riskView').classList.remove('active');
   document.getElementById('exportsView').classList.remove('active');
+  document.getElementById('auditView').classList.remove('active');
+  document.getElementById('mergeView').classList.remove('active');
+  document.getElementById('clustersView').classList.remove('active');
 }
 
 function showDocumentView() {
@@ -3161,6 +3277,9 @@ document.querySelectorAll('.sidebar-item[data-view]').forEach(item => {
     else if (view === 'taganalytics') showTagAnalyticsView();
     else if (view === 'risk') showRiskView();
     else if (view === 'exports') showExportsView();
+    else if (view === 'clusters') showClustersView();
+    else if (view === 'merge') showMergeView();
+    else if (view === 'audit') showAuditView();
   });
 });
 
@@ -4218,6 +4337,7 @@ function openReader(docId) {
   hideAllViews();
   document.getElementById('readerView').classList.add('active');
   loadReader(docId);
+  logAudit('read_document', 'document', docId, '');
 }
 
 function goBackFromReader() {
@@ -4232,6 +4352,7 @@ function goBackFromReader() {
   else if (readerPreviousView === 'communities') showCommunitiesView();
   else if (readerPreviousView === 'duplicates') showDuplicatesView();
   else if (readerPreviousView === 'risk') showRiskView();
+  else if (readerPreviousView === 'clusters') showClustersView();
   else showDocumentView();
 }
 
@@ -4260,8 +4381,12 @@ async function loadReader(docId) {
     document.getElementById('readerFlagBtn').textContent = notesData.flagged ? 'Unflag' : 'Flag';
     document.getElementById('readerFlagBtn').style.borderColor = notesData.flagged ? '#e05555' : '';
 
-    // Load annotations
+    // Load annotations and redactions
     loadAnnotations(docId);
+    loadRedactions(docId);
+    // Clear cross-reference panel
+    const xref = document.getElementById('readerXRef');
+    if (xref) xref.innerHTML = '';
   } catch (e) {
     console.error('Failed to load document text:', e);
     document.getElementById('readerBody').textContent = 'Failed to load document text.';
@@ -5808,12 +5933,366 @@ async function generateReport() {
 }
 
 
+// ─── REDACTION TOOL ───
+
+async function addRedaction() {
+  const sel = window.getSelection();
+  if (!sel || sel.isCollapsed || !selectedDocId) { alert('Select text in the document first'); return; }
+  const text = sel.toString().trim();
+  if (!text) return;
+
+  const body = document.getElementById('readerBody');
+  const range = sel.getRangeAt(0);
+  const preRange = document.createRange();
+  preRange.selectNodeContents(body);
+  preRange.setEnd(range.startContainer, range.startOffset);
+  const startOffset = preRange.toString().length;
+  const endOffset = startOffset + text.length;
+
+  const reason = prompt('Reason for redaction (optional):') || '';
+  try {
+    await fetch(`/api/documents/${selectedDocId}/redactions`, {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({start_offset: startOffset, end_offset: endOffset, reason})
+    });
+    logAudit('redact', 'document', selectedDocId, `Redacted ${text.length} chars`);
+    loadRedactions(selectedDocId);
+  } catch (err) { console.error('Add redaction failed:', err); }
+}
+
+async function loadRedactions(docId) {
+  try {
+    const data = await api(`/api/documents/${docId}/redactions`);
+    renderRedactions(data.redactions);
+  } catch (err) { console.error('Load redactions failed:', err); }
+}
+
+function renderRedactions(redactions) {
+  let container = document.getElementById('readerRedactions');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'readerRedactions';
+    container.style.cssText = 'padding:8px 12px;border-top:1px solid var(--border);';
+    const readerView = document.getElementById('readerView');
+    const annotations = document.getElementById('readerAnnotations');
+    if (annotations) readerView.insertBefore(container, annotations);
+    else readerView.appendChild(container);
+  }
+  if (!redactions.length) {
+    container.innerHTML = '';
+    return;
+  }
+  let html = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+    <span style="font-family:var(--font-mono);font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:2px;color:#e05555;">Redactions (${redactions.length})</span>
+    <button onclick="previewRedacted()" style="background:rgba(224,85,85,0.12);border:1px solid rgba(224,85,85,0.3);border-radius:var(--radius);padding:4px 10px;font-family:var(--font-mono);font-size:10px;color:#e05555;cursor:pointer;">Preview Redacted</button>
+  </div>`;
+  redactions.forEach(r => {
+    html += `<span class="redaction-chip">${r.reason || 'chars ' + r.start_offset + '-' + r.end_offset}
+      <span style="cursor:pointer;" onclick="deleteRedaction(${r.id})">×</span></span>`;
+  });
+  container.innerHTML = html;
+}
+
+async function deleteRedaction(id) {
+  try {
+    await fetch(`/api/redactions/${id}`, {method: 'DELETE'});
+    if (selectedDocId) loadRedactions(selectedDocId);
+  } catch (err) { console.error('Delete redaction failed:', err); }
+}
+
+async function previewRedacted() {
+  if (!selectedDocId) return;
+  try {
+    const data = await api(`/api/documents/${selectedDocId}/redacted-text`);
+    const win = window.open('', '_blank');
+    win.document.write(`<!DOCTYPE html><html><head><title>REDACTED: ${data.title}</title>
+      <style>body{font-family:monospace;max-width:800px;margin:40px auto;padding:20px;line-height:1.8;white-space:pre-wrap;background:#111;color:#ccc;}
+      .stamp{color:#e05555;font-weight:bold;text-align:center;font-size:18px;border:2px solid #e05555;padding:10px;margin-bottom:20px;}</style></head><body>
+      <div class="stamp">REDACTED COPY — ${data.redaction_count} redaction(s) applied</div>${data.redacted_text}</body></html>`);
+    win.document.close();
+  } catch (err) { console.error('Preview redacted failed:', err); }
+}
+
+
+// ─── AUDIT TRAIL ───
+
+function showAuditView() {
+  currentView = 'audit';
+  hideAllViews();
+  document.getElementById('auditView').classList.add('active');
+  loadAuditLog();
+}
+
+async function loadAuditLog() {
+  const el = document.getElementById('auditContent');
+  el.innerHTML = 'Loading audit log...';
+  const filter = document.getElementById('auditFilter').value;
+  try {
+    const url = filter ? `/api/audit?action=${encodeURIComponent(filter)}&limit=100` : '/api/audit?limit=100';
+    const data = await api(url);
+    if (!data.entries.length) {
+      el.innerHTML = '<div style="color:var(--text-muted);font-size:13px;padding:20px 0;">No audit entries yet. Actions are logged as you use the system.</div>';
+      return;
+    }
+    let html = `<div style="font-size:11px;color:var(--text-muted);font-family:var(--font-mono);margin-bottom:8px;">${data.total} total entries</div>`;
+    data.entries.forEach(e => {
+      html += `<div class="audit-entry">
+        <span style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted);min-width:130px;">${(e.created_at || '').replace('T',' ')}</span>
+        <span class="audit-action">${e.action}</span>
+        <span style="flex:1;font-size:12px;color:var(--text-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${e.details || ''}</span>
+        ${e.target_type ? `<span style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted);">${e.target_type} #${e.target_id}</span>` : ''}
+      </div>`;
+    });
+    el.innerHTML = html;
+  } catch (err) {
+    console.error('Audit log failed:', err);
+    el.innerHTML = '<div style="color:#e05555;padding:20px;">Failed to load audit log</div>';
+  }
+}
+
+function logAudit(action, targetType, targetId, details) {
+  fetch('/api/audit', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({action, target_type: targetType || '', target_id: targetId || 0, details: details || ''})
+  }).catch(() => {});
+}
+
+
+// ─── ENTITY MERGE ───
+
+function showMergeView() {
+  currentView = 'merge';
+  hideAllViews();
+  document.getElementById('mergeView').classList.add('active');
+}
+
+async function previewMerge() {
+  const srcName = document.getElementById('mergeSourceInput').value.trim();
+  const tgtName = document.getElementById('mergeTargetInput').value.trim();
+  if (!srcName || !tgtName) { alert('Enter both source and target entity names'); return; }
+
+  const el = document.getElementById('mergeContent');
+  el.innerHTML = 'Searching entities...';
+
+  try {
+    const [srcData, tgtData] = await Promise.all([
+      api(`/api/entities/search?q=${encodeURIComponent(srcName)}&limit=1`),
+      api(`/api/entities/search?q=${encodeURIComponent(tgtName)}&limit=1`),
+    ]);
+    if (!srcData.entities.length) { el.innerHTML = `<div style="color:#e05555;">Source entity "${srcName}" not found</div>`; return; }
+    if (!tgtData.entities.length) { el.innerHTML = `<div style="color:#e05555;">Target entity "${tgtName}" not found</div>`; return; }
+
+    const srcId = srcData.entities[0].id;
+    const tgtId = tgtData.entities[0].id;
+    if (srcId === tgtId) { el.innerHTML = '<div style="color:#e05555;">Source and target are the same entity</div>'; return; }
+
+    const preview = await api(`/api/entities/merge-preview?source_id=${srcId}&target_id=${tgtId}`);
+    const s = preview.source;
+    const t = preview.target;
+
+    let html = `<div style="display:flex;gap:16px;align-items:stretch;">
+      <div class="merge-card" style="border-color:#e05555;">
+        <div style="font-family:var(--font-mono);font-size:9px;text-transform:uppercase;letter-spacing:2px;color:#e05555;margin-bottom:8px;">Source (will be deleted)</div>
+        <div style="font-size:16px;font-weight:600;">${s.name}</div>
+        <div style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted);margin-top:4px;">${s.type} · ${s.doc_count} docs · ${s.mentions} mentions · ${s.connections} connections</div>
+        ${s.tags.length ? `<div style="margin-top:6px;">${s.tags.map(t => `<span class="entity-tag-chip">${t}</span>`).join('')}</div>` : ''}
+      </div>
+      <div class="merge-arrow">→</div>
+      <div class="merge-card" style="border-color:var(--entity-date);">
+        <div style="font-family:var(--font-mono);font-size:9px;text-transform:uppercase;letter-spacing:2px;color:var(--entity-date);margin-bottom:8px;">Target (will absorb)</div>
+        <div style="font-size:16px;font-weight:600;">${t.name}</div>
+        <div style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted);margin-top:4px;">${t.type} · ${t.doc_count} docs · ${t.mentions} mentions · ${t.connections} connections</div>
+        ${t.tags.length ? `<div style="margin-top:6px;">${t.tags.map(t => `<span class="entity-tag-chip">${t}</span>`).join('')}</div>` : ''}
+      </div>
+    </div>
+    <div class="entity-section" style="margin-top:12px;">
+      <div class="entity-section-title">Merge Preview</div>
+      <div class="anomaly-row"><span>Shared documents:</span><span style="flex:1;"></span><span style="font-family:var(--font-mono);font-size:12px;">${preview.shared_documents}</span></div>
+      <div class="anomaly-row"><span>Merged doc count:</span><span style="flex:1;"></span><span style="font-family:var(--font-mono);font-size:12px;">${preview.merged_doc_count}</span></div>
+      <div class="anomaly-row"><span>Merged tags:</span><span style="flex:1;"></span><span style="font-size:12px;">${preview.merged_tags.join(', ') || 'none'}</span></div>
+    </div>
+    <div style="margin-top:12px;text-align:right;">
+      <button onclick="executeMerge(${srcId},${tgtId})" class="report-btn" style="background:rgba(224,85,85,0.15);border-color:#e05555;color:#e05555;">Confirm Merge (Irreversible)</button>
+    </div>`;
+    el.innerHTML = html;
+  } catch (err) {
+    console.error('Merge preview failed:', err);
+    el.innerHTML = '<div style="color:#e05555;padding:20px;">Failed to load merge preview</div>';
+  }
+}
+
+async function executeMerge(sourceId, targetId) {
+  if (!confirm('This will permanently delete the source entity and transfer all its data. Continue?')) return;
+  try {
+    const resp = await fetch('/api/entities/merge', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({source_id: sourceId, target_id: targetId})
+    });
+    const data = await resp.json();
+    if (data.merged) {
+      document.getElementById('mergeContent').innerHTML = `<div style="color:var(--entity-date);padding:20px;font-size:14px;">Merge complete. Source entity deleted, data transferred to "${data.target_name}".</div>`;
+      document.getElementById('mergeSourceInput').value = '';
+      document.getElementById('mergeTargetInput').value = '';
+    }
+  } catch (err) {
+    console.error('Merge failed:', err);
+    alert('Merge failed');
+  }
+}
+
+
+// ─── DOCUMENT CLUSTERS ───
+
+function showClustersView() {
+  currentView = 'clusters';
+  hideAllViews();
+  document.getElementById('clustersView').classList.add('active');
+  loadClusters();
+}
+
+async function loadClusters() {
+  const el = document.getElementById('clustersContent');
+  el.innerHTML = 'Analyzing document clusters...';
+  try {
+    const data = await api('/api/clusters?min_cluster_size=3&limit=20');
+    if (!data.clusters.length) {
+      el.innerHTML = '<div style="color:var(--text-muted);font-size:13px;padding:20px 0;">No document clusters found.</div>';
+      return;
+    }
+    let html = `<div style="font-size:11px;color:var(--text-muted);font-family:var(--font-mono);margin-bottom:8px;">${data.total} topic clusters detected</div>`;
+    data.clusters.forEach((c, i) => {
+      const hue = (i * 37) % 360;
+      html += `<div class="cluster-card">
+        <div class="cluster-keyword" style="color:hsl(${hue},65%,65%);">${c.keyword}</div>
+        <div class="cluster-meta">${c.size} documents</div>`;
+
+      // Shared entities
+      if (c.shared_entities.length) {
+        html += '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px;">';
+        c.shared_entities.forEach(e => {
+          html += `<span class="entity-tag ${e.type}" style="font-size:10px;">${e.name} (${e.doc_count})</span>`;
+        });
+        html += '</div>';
+      }
+
+      // Sample documents
+      c.documents.forEach(d => {
+        html += `<div class="anomaly-row" style="cursor:pointer;" onclick="readerPreviousView='clusters';openReader(${d.id})">
+          <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;">${d.title || d.filename}</span>
+          <span class="doc-badge ${d.category}" style="font-size:9px;">${d.category}</span>
+        </div>`;
+      });
+      if (c.size > c.documents.length) html += `<div style="color:var(--text-muted);font-size:10px;padding:4px 10px;">+ ${c.size - c.documents.length} more docs</div>`;
+      html += '</div>';
+    });
+    el.innerHTML = html;
+  } catch (err) {
+    console.error('Clusters failed:', err);
+    el.innerHTML = '<div style="color:#e05555;padding:20px;">Failed to load clusters</div>';
+  }
+}
+
+
+// ─── SAVED QUERIES ───
+
+async function loadSavedQueries() {
+  try {
+    const data = await api('/api/saved-queries');
+    const bar = document.getElementById('savedQueriesBar');
+    if (!data.queries.length) { bar.innerHTML = ''; return; }
+    bar.innerHTML = data.queries.map(q =>
+      `<span class="saved-query-chip" onclick="runSavedQuery(${q.id},'${(q.query_text||'').replace(/'/g,"\\'")}','${q.category||''}','${q.entity_type||''}','${q.source||''}')">
+        ${q.name}
+        <span style="color:var(--text-muted);cursor:pointer;" onclick="event.stopPropagation();deleteSavedQuery(${q.id})">×</span>
+      </span>`
+    ).join('');
+  } catch (err) { console.error('Load saved queries failed:', err); }
+}
+
+async function saveCurrentQuery() {
+  const q = document.getElementById('searchInput').value.trim();
+  const name = prompt('Name this saved query:', q || 'My Query');
+  if (!name) return;
+  try {
+    await fetch('/api/saved-queries', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({name, query_text: q})
+    });
+    logAudit('save_query', 'query', 0, name);
+    loadSavedQueries();
+  } catch (err) { console.error('Save query failed:', err); }
+}
+
+function runSavedQuery(id, queryText, category, entityType, source) {
+  document.getElementById('searchInput').value = queryText;
+  if (currentView !== 'documents') showDocumentView();
+  performSearch();
+  logAudit('run_saved_query', 'query', id, queryText);
+}
+
+async function deleteSavedQuery(id) {
+  try {
+    await fetch(`/api/saved-queries/${id}`, {method: 'DELETE'});
+    loadSavedQueries();
+  } catch (err) { console.error('Delete saved query failed:', err); }
+}
+
+
+// ─── CROSS-REFERENCE VIEWER ───
+
+async function crossReference() {
+  const sel = window.getSelection();
+  if (!sel || sel.isCollapsed || !selectedDocId) { alert('Select text in the document first'); return; }
+  const text = sel.toString().trim();
+  if (!text) return;
+
+  logAudit('cross_reference', 'document', selectedDocId, text.substring(0, 100));
+
+  let container = document.getElementById('readerXRef');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'readerXRef';
+    const readerView = document.getElementById('readerView');
+    const redactions = document.getElementById('readerRedactions');
+    if (redactions) readerView.insertBefore(container, redactions);
+    else readerView.appendChild(container);
+  }
+  container.innerHTML = '<div class="xref-panel">Searching cross-references...</div>';
+
+  try {
+    const data = await api(`/api/documents/${selectedDocId}/cross-references?text=${encodeURIComponent(text)}&limit=10`);
+    if (!data.cross_references.length) {
+      container.innerHTML = '<div class="xref-panel"><div style="color:var(--text-muted);font-size:12px;">No cross-references found for this passage.</div></div>';
+      return;
+    }
+    let html = `<div class="xref-panel">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <span style="font-family:var(--font-mono);font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:2px;color:var(--accent);">Cross-References (${data.cross_references.length})</span>
+        <span style="font-size:10px;color:var(--text-muted);cursor:pointer;" onclick="document.getElementById('readerXRef').innerHTML='';">Close</span>
+      </div>
+      <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px;font-style:italic;">"${text.substring(0, 80)}${text.length > 80 ? '...' : ''}"</div>`;
+    data.cross_references.forEach(r => {
+      html += `<div class="anomaly-row" style="cursor:pointer;" onclick="openReader(${r.id})">
+        ${r.matching_entities > 0 ? `<span class="anomaly-badge" style="background:rgba(74,224,168,0.15);color:var(--entity-date);">${r.matching_entities} entities</span>` : '<span class="anomaly-badge" style="background:rgba(74,157,224,0.15);color:var(--entity-place);">text</span>'}
+        <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${r.title || r.filename}</span>
+        ${r.matched_names ? `<span style="font-size:10px;color:var(--text-muted);max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${r.matched_names}</span>` : ''}
+      </div>`;
+    });
+    html += '</div>';
+    container.innerHTML = html;
+  } catch (err) {
+    console.error('Cross-reference failed:', err);
+    container.innerHTML = '<div class="xref-panel"><div style="color:#e05555;">Cross-reference search failed</div></div>';
+  }
+}
+
+
 // ─── INIT ───
 
 document.getElementById('searchInput').addEventListener('input', debounce(performSearch, 250));
 
 async function init() {
-  await Promise.all([loadStats(), loadKeywords(), loadPeople(), loadPlaces(), loadNetwork(), loadSources()]);
+  await Promise.all([loadStats(), loadKeywords(), loadPeople(), loadPlaces(), loadNetwork(), loadSources(), loadSavedQueries()]);
   // Show dashboard as default landing
   showDashboardView();
 }

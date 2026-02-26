@@ -2719,6 +2719,480 @@ def risk_dashboard():
 
 
 # ═══════════════════════════════════════════
+# REDACTION TOOL
+# ═══════════════════════════════════════════
+
+
+def _ensure_redactions_table(conn):
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS redactions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            document_id INTEGER NOT NULL,
+            start_offset INTEGER NOT NULL,
+            end_offset INTEGER NOT NULL,
+            reason TEXT DEFAULT '',
+            created_at TEXT DEFAULT (datetime('now'))
+        )
+    """)
+
+
+@app.get("/api/documents/{doc_id}/redactions")
+def get_redactions(doc_id: int):
+    """Get all redaction spans for a document."""
+    with get_db() as conn:
+        _ensure_redactions_table(conn)
+        rows = conn.execute(
+            "SELECT * FROM redactions WHERE document_id = ? ORDER BY start_offset",
+            (doc_id,),
+        ).fetchall()
+    return {"document_id": doc_id, "redactions": [dict(r) for r in rows]}
+
+
+@app.post("/api/documents/{doc_id}/redactions")
+async def add_redaction(doc_id: int, request: Request):
+    """Add a redaction span to a document."""
+    body = await request.json()
+    start = body.get("start_offset")
+    end = body.get("end_offset")
+    reason = body.get("reason", "")
+    if start is None or end is None:
+        raise HTTPException(400, "start_offset and end_offset required")
+
+    with get_db() as conn:
+        doc = conn.execute("SELECT id FROM documents WHERE id = ?", (doc_id,)).fetchone()
+        if not doc:
+            raise HTTPException(404, "Document not found")
+        _ensure_redactions_table(conn)
+        cur = conn.execute(
+            "INSERT INTO redactions (document_id, start_offset, end_offset, reason) VALUES (?, ?, ?, ?)",
+            (doc_id, start, end, reason),
+        )
+    return {"id": cur.lastrowid, "document_id": doc_id, "added": True}
+
+
+@app.delete("/api/redactions/{redaction_id}")
+def delete_redaction(redaction_id: int):
+    """Delete a redaction span."""
+    with get_db() as conn:
+        _ensure_redactions_table(conn)
+        conn.execute("DELETE FROM redactions WHERE id = ?", (redaction_id,))
+    return {"id": redaction_id, "deleted": True}
+
+
+@app.get("/api/documents/{doc_id}/redacted-text")
+def get_redacted_text(doc_id: int):
+    """Get document text with redactions applied."""
+    with get_db() as conn:
+        doc = conn.execute("SELECT id, title, filename, raw_text FROM documents WHERE id = ?", (doc_id,)).fetchone()
+        if not doc:
+            raise HTTPException(404, "Document not found")
+        _ensure_redactions_table(conn)
+        redactions = conn.execute(
+            "SELECT start_offset, end_offset, reason FROM redactions WHERE document_id = ? ORDER BY start_offset DESC",
+            (doc_id,),
+        ).fetchall()
+
+        text = doc["raw_text"] or ""
+        for r in redactions:
+            start = max(0, r["start_offset"])
+            end = min(len(text), r["end_offset"])
+            text = text[:start] + "[REDACTED]" + text[end:]
+
+    return {"document_id": doc_id, "title": doc["title"] or doc["filename"], "redacted_text": text, "redaction_count": len(redactions)}
+
+
+# ═══════════════════════════════════════════
+# AUDIT TRAIL
+# ═══════════════════════════════════════════
+
+
+def _ensure_audit_table(conn):
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS audit_log (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            action TEXT NOT NULL,
+            target_type TEXT,
+            target_id INTEGER,
+            details TEXT DEFAULT '',
+            created_at TEXT DEFAULT (datetime('now'))
+        )
+    """)
+
+
+def _log_audit(conn, action: str, target_type: str = "", target_id: int = 0, details: str = ""):
+    """Record an audit trail entry."""
+    _ensure_audit_table(conn)
+    conn.execute(
+        "INSERT INTO audit_log (action, target_type, target_id, details) VALUES (?, ?, ?, ?)",
+        (action, target_type, target_id, details),
+    )
+
+
+@app.get("/api/audit")
+def get_audit_log(
+    action: Optional[str] = Query(None),
+    limit: int = Query(100, ge=1, le=500),
+    offset: int = Query(0, ge=0),
+):
+    """Get audit trail entries."""
+    with get_db() as conn:
+        _ensure_audit_table(conn)
+        sql = "SELECT * FROM audit_log"
+        params: list = []
+        if action:
+            sql += " WHERE action = ?"
+            params.append(action)
+        sql += " ORDER BY created_at DESC LIMIT ? OFFSET ?"
+        params.extend([limit, offset])
+        rows = conn.execute(sql, params).fetchall()
+        total = conn.execute(
+            "SELECT COUNT(*) FROM audit_log" + (" WHERE action = ?" if action else ""),
+            [action] if action else [],
+        ).fetchone()[0]
+    return {"entries": [dict(r) for r in rows], "total": total}
+
+
+@app.post("/api/audit")
+async def add_audit_entry(request: Request):
+    """Manually add an audit entry (for frontend-tracked actions)."""
+    body = await request.json()
+    action = body.get("action", "")
+    if not action:
+        raise HTTPException(400, "action required")
+    with get_db() as conn:
+        _log_audit(conn, action, body.get("target_type", ""), body.get("target_id", 0), body.get("details", ""))
+    return {"logged": True}
+
+
+# ═══════════════════════════════════════════
+# ENTITY MERGE
+# ═══════════════════════════════════════════
+
+
+@app.get("/api/entities/merge-preview")
+def merge_preview(
+    source_id: int = Query(...),
+    target_id: int = Query(...),
+):
+    """Preview what merging two entities would look like."""
+    with get_db() as conn:
+        src = conn.execute("SELECT id, name, type, canonical FROM entities WHERE id = ?", (source_id,)).fetchone()
+        tgt = conn.execute("SELECT id, name, type, canonical FROM entities WHERE id = ?", (target_id,)).fetchone()
+        if not src or not tgt:
+            raise HTTPException(404, "Entity not found")
+
+        # Count docs and mentions for each
+        src_stats = conn.execute("""
+            SELECT COUNT(DISTINCT document_id) as doc_count, SUM(count) as mentions
+            FROM document_entities WHERE entity_id = ?
+        """, (source_id,)).fetchone()
+        tgt_stats = conn.execute("""
+            SELECT COUNT(DISTINCT document_id) as doc_count, SUM(count) as mentions
+            FROM document_entities WHERE entity_id = ?
+        """, (target_id,)).fetchone()
+
+        # Shared documents
+        shared = conn.execute("""
+            SELECT COUNT(DISTINCT de1.document_id)
+            FROM document_entities de1
+            JOIN document_entities de2 ON de1.document_id = de2.document_id
+            WHERE de1.entity_id = ? AND de2.entity_id = ?
+        """, (source_id, target_id)).fetchone()[0]
+
+        # Tags
+        _ensure_tags_table(conn)
+        src_tags = [r["tag"] for r in conn.execute("SELECT tag FROM entity_tags WHERE entity_id = ?", (source_id,)).fetchall()]
+        tgt_tags = [r["tag"] for r in conn.execute("SELECT tag FROM entity_tags WHERE entity_id = ?", (target_id,)).fetchall()]
+
+        # Connections
+        src_conns = conn.execute("SELECT COUNT(*) FROM entity_connections WHERE entity_a_id = ? OR entity_b_id = ?", (source_id, source_id)).fetchone()[0]
+        tgt_conns = conn.execute("SELECT COUNT(*) FROM entity_connections WHERE entity_a_id = ? OR entity_b_id = ?", (target_id, target_id)).fetchone()[0]
+
+    return {
+        "source": {**dict(src), "doc_count": src_stats["doc_count"], "mentions": src_stats["mentions"], "tags": src_tags, "connections": src_conns},
+        "target": {**dict(tgt), "doc_count": tgt_stats["doc_count"], "mentions": tgt_stats["mentions"], "tags": tgt_tags, "connections": tgt_conns},
+        "shared_documents": shared,
+        "merged_tags": sorted(set(src_tags + tgt_tags)),
+        "merged_doc_count": src_stats["doc_count"] + tgt_stats["doc_count"] - shared,
+    }
+
+
+@app.post("/api/entities/merge")
+async def merge_entities(request: Request):
+    """Merge source entity into target. Transfers docs, connections, tags, watchlist."""
+    body = await request.json()
+    source_id = body.get("source_id")
+    target_id = body.get("target_id")
+    if not source_id or not target_id or source_id == target_id:
+        raise HTTPException(400, "source_id and target_id required and must differ")
+
+    with get_db() as conn:
+        src = conn.execute("SELECT id, name FROM entities WHERE id = ?", (source_id,)).fetchone()
+        tgt = conn.execute("SELECT id, name FROM entities WHERE id = ?", (target_id,)).fetchone()
+        if not src or not tgt:
+            raise HTTPException(404, "Entity not found")
+
+        # Transfer document_entities (merge counts for shared docs)
+        shared_docs = conn.execute("""
+            SELECT de1.document_id, de1.count as src_count, de2.count as tgt_count
+            FROM document_entities de1
+            JOIN document_entities de2 ON de1.document_id = de2.document_id
+            WHERE de1.entity_id = ? AND de2.entity_id = ?
+        """, (source_id, target_id)).fetchall()
+
+        for sd in shared_docs:
+            conn.execute(
+                "UPDATE document_entities SET count = ? WHERE entity_id = ? AND document_id = ?",
+                (sd["src_count"] + sd["tgt_count"], target_id, sd["document_id"]),
+            )
+            conn.execute(
+                "DELETE FROM document_entities WHERE entity_id = ? AND document_id = ?",
+                (source_id, sd["document_id"]),
+            )
+
+        # Transfer remaining non-shared document_entities
+        conn.execute(
+            "UPDATE document_entities SET entity_id = ? WHERE entity_id = ?",
+            (target_id, source_id),
+        )
+
+        # Transfer connections (update references, skip self-loops)
+        conn.execute(
+            "UPDATE OR IGNORE entity_connections SET entity_a_id = ? WHERE entity_a_id = ? AND entity_b_id != ?",
+            (target_id, source_id, target_id),
+        )
+        conn.execute(
+            "UPDATE OR IGNORE entity_connections SET entity_b_id = ? WHERE entity_b_id = ? AND entity_a_id != ?",
+            (target_id, source_id, target_id),
+        )
+        conn.execute("DELETE FROM entity_connections WHERE entity_a_id = ? OR entity_b_id = ?", (source_id, source_id))
+
+        # Transfer tags
+        _ensure_tags_table(conn)
+        src_tags = conn.execute("SELECT tag FROM entity_tags WHERE entity_id = ?", (source_id,)).fetchall()
+        for t in src_tags:
+            conn.execute("INSERT OR IGNORE INTO entity_tags (entity_id, tag) VALUES (?, ?)", (target_id, t["tag"]))
+        conn.execute("DELETE FROM entity_tags WHERE entity_id = ?", (source_id,))
+
+        # Transfer watchlist
+        _ensure_watchlist_table(conn)
+        watched = conn.execute("SELECT notes FROM watchlist WHERE entity_id = ?", (source_id,)).fetchone()
+        if watched:
+            conn.execute("INSERT OR IGNORE INTO watchlist (entity_id, notes) VALUES (?, ?)", (target_id, watched["notes"]))
+            conn.execute("DELETE FROM watchlist WHERE entity_id = ?", (source_id,))
+
+        # Delete source entity
+        conn.execute("DELETE FROM entities WHERE id = ?", (source_id,))
+
+        # Audit
+        _log_audit(conn, "entity_merge", "entity", target_id,
+                   f"Merged '{src['name']}' (#{source_id}) into '{tgt['name']}' (#{target_id})")
+
+    return {"merged": True, "source_id": source_id, "target_id": target_id, "target_name": tgt["name"]}
+
+
+# ═══════════════════════════════════════════
+# DOCUMENT CLUSTERS
+# ═══════════════════════════════════════════
+
+
+@app.get("/api/clusters")
+def document_clusters(
+    min_cluster_size: int = Query(3, ge=2, le=20),
+    limit: int = Query(20, ge=1, le=50),
+):
+    """Auto-group documents by shared keyword/entity fingerprints."""
+    with get_db() as conn:
+        # Build a doc-keyword matrix using top keywords per doc
+        docs = conn.execute("""
+            SELECT dk.document_id, k.word, dk.count
+            FROM document_keywords dk
+            JOIN keywords k ON k.id = dk.keyword_id
+            ORDER BY dk.document_id, dk.count DESC
+        """).fetchall()
+
+        # Build keyword vectors
+        doc_keywords: dict[int, dict[str, int]] = {}
+        for r in docs:
+            did = r["document_id"]
+            if did not in doc_keywords:
+                doc_keywords[did] = {}
+            if len(doc_keywords[did]) < 30:  # Top 30 keywords per doc
+                doc_keywords[did][r["word"]] = r["count"]
+
+        # Simple clustering: group docs by their top keyword
+        keyword_groups: dict[str, list[int]] = {}
+        for did, kws in doc_keywords.items():
+            if kws:
+                top_kw = max(kws, key=kws.get)
+                keyword_groups.setdefault(top_kw, []).append(did)
+
+        # Filter to clusters with enough members and get doc details
+        clusters = []
+        for kw, doc_ids in sorted(keyword_groups.items(), key=lambda x: -len(x[1])):
+            if len(doc_ids) < min_cluster_size:
+                continue
+            if len(clusters) >= limit:
+                break
+
+            ph = ",".join("?" * min(len(doc_ids), 10))
+            sample_ids = doc_ids[:10]
+            doc_rows = conn.execute(f"""
+                SELECT id, title, filename, category, source, pages
+                FROM documents WHERE id IN ({ph})
+            """, sample_ids).fetchall()
+
+            # Get shared entities across cluster
+            all_ph = ",".join("?" * len(doc_ids))
+            shared_entities = conn.execute(f"""
+                SELECT e.name, e.type, COUNT(DISTINCT de.document_id) as doc_count
+                FROM document_entities de
+                JOIN entities e ON e.id = de.entity_id
+                WHERE de.document_id IN ({all_ph})
+                GROUP BY e.id
+                HAVING COUNT(DISTINCT de.document_id) >= ?
+                ORDER BY doc_count DESC LIMIT 10
+            """, doc_ids + [max(2, len(doc_ids) // 3)]).fetchall()
+
+            clusters.append({
+                "keyword": kw,
+                "size": len(doc_ids),
+                "documents": [dict(r) for r in doc_rows],
+                "shared_entities": [dict(e) for e in shared_entities],
+            })
+
+    return {"clusters": clusters, "total": len(clusters)}
+
+
+# ═══════════════════════════════════════════
+# SAVED QUERIES
+# ═══════════════════════════════════════════
+
+
+def _ensure_saved_queries_table(conn):
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS saved_queries (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            query_text TEXT DEFAULT '',
+            category TEXT DEFAULT '',
+            entity_type TEXT DEFAULT '',
+            source TEXT DEFAULT '',
+            created_at TEXT DEFAULT (datetime('now'))
+        )
+    """)
+
+
+@app.get("/api/saved-queries")
+def list_saved_queries():
+    """Get all saved queries."""
+    with get_db() as conn:
+        _ensure_saved_queries_table(conn)
+        rows = conn.execute("SELECT * FROM saved_queries ORDER BY created_at DESC").fetchall()
+    return {"queries": [dict(r) for r in rows]}
+
+
+@app.post("/api/saved-queries")
+async def save_query(request: Request):
+    """Save a search query."""
+    body = await request.json()
+    name = body.get("name", "").strip()
+    if not name:
+        raise HTTPException(400, "name required")
+    with get_db() as conn:
+        _ensure_saved_queries_table(conn)
+        cur = conn.execute(
+            "INSERT INTO saved_queries (name, query_text, category, entity_type, source) VALUES (?, ?, ?, ?, ?)",
+            (name, body.get("query_text", ""), body.get("category", ""), body.get("entity_type", ""), body.get("source", "")),
+        )
+    return {"id": cur.lastrowid, "name": name, "saved": True}
+
+
+@app.delete("/api/saved-queries/{query_id}")
+def delete_saved_query(query_id: int):
+    """Delete a saved query."""
+    with get_db() as conn:
+        _ensure_saved_queries_table(conn)
+        conn.execute("DELETE FROM saved_queries WHERE id = ?", (query_id,))
+    return {"id": query_id, "deleted": True}
+
+
+# ═══════════════════════════════════════════
+# CROSS-REFERENCE
+# ═══════════════════════════════════════════
+
+
+@app.get("/api/documents/{doc_id}/cross-references")
+def cross_references(
+    doc_id: int,
+    text: str = Query("", description="Selected text passage"),
+    limit: int = Query(10, ge=1, le=30),
+):
+    """Find other documents containing the same entities/phrases from a text selection."""
+    with get_db() as conn:
+        doc = conn.execute("SELECT id FROM documents WHERE id = ?", (doc_id,)).fetchone()
+        if not doc:
+            raise HTTPException(404, "Document not found")
+
+        results = []
+
+        if text.strip():
+            # Extract entity names from the selected text by matching known entities
+            text_lower = text.lower()
+            entity_matches = conn.execute("""
+                SELECT DISTINCT e.id, e.name, e.type
+                FROM entities e
+                WHERE LENGTH(e.name) >= 3 AND LOWER(e.name) != ''
+                  AND ? LIKE '%' || LOWER(e.name) || '%'
+                ORDER BY LENGTH(e.name) DESC
+                LIMIT 20
+            """, (text_lower,)).fetchall()
+
+            if entity_matches:
+                entity_ids = [e["id"] for e in entity_matches]
+                ph = ",".join("?" * len(entity_ids))
+                xrefs = conn.execute(f"""
+                    SELECT d.id, d.title, d.filename, d.category, d.source,
+                           COUNT(DISTINCT de.entity_id) as matching_entities,
+                           GROUP_CONCAT(DISTINCT e.name) as matched_names
+                    FROM document_entities de
+                    JOIN documents d ON d.id = de.document_id
+                    JOIN entities e ON e.id = de.entity_id
+                    WHERE de.entity_id IN ({ph}) AND d.id != ?
+                    GROUP BY d.id
+                    ORDER BY matching_entities DESC
+                    LIMIT ?
+                """, entity_ids + [doc_id, limit]).fetchall()
+                results = [dict(r) for r in xrefs]
+
+            # Also try FTS if text is meaningful enough
+            if len(text.strip()) >= 5 and len(results) < limit:
+                fts_query = re.sub(r'["\*\(\)\{\}\[\]:^~]', " ", text.strip())[:100]
+                try:
+                    fts_results = conn.execute("""
+                        SELECT d.id, d.title, d.filename, d.category, d.source,
+                               snippet(documents_fts, 1, '<mark>', '</mark>', '...', 20) as excerpt
+                        FROM documents_fts
+                        JOIN documents d ON d.id = documents_fts.rowid
+                        WHERE documents_fts MATCH ? AND d.id != ?
+                        LIMIT ?
+                    """, (f'"{fts_query}"', doc_id, limit)).fetchall()
+
+                    existing_ids = {r["id"] for r in results}
+                    for fr in fts_results:
+                        if fr["id"] not in existing_ids:
+                            results.append({**dict(fr), "matching_entities": 0, "matched_names": "", "fts_match": True})
+                except Exception:
+                    pass  # FTS match may fail on certain inputs
+
+        return {
+            "doc_id": doc_id,
+            "cross_references": results[:limit],
+            "query_text": text[:200],
+        }
+
+
+# ═══════════════════════════════════════════
 # HELPERS
 # ═══════════════════════════════════════════
 
