@@ -2033,6 +2033,8 @@ body::before {
 .resaudit-view.active, .docshared-view.active, .srcrange-view.active, .searchhist-view.active, .catentmatrix-view.active, .eventrank-view.active { display: flex; }
 .aliaslist-view, .catstats-view, .redactsrc-view, .paircodocs-view, .eventtypes-view, .finsummary-view { display: none; flex-direction: column; gap: 16px; }
 .aliaslist-view.active, .catstats-view.active, .redactsrc-view.active, .paircodocs-view.active, .eventtypes-view.active, .finsummary-view.active { display: flex; }
+.entdoccount-view, .srcoverlap-view, .eventctx-view, .datecluster-view, .redactpattern-view, .entiso-view { display: none; flex-direction: column; gap: 16px; }
+.entdoccount-view.active, .srcoverlap-view.active, .eventctx-view.active, .datecluster-view.active, .redactpattern-view.active, .entiso-view.active { display: flex; }
 .rel-edge { display: flex; align-items: center; gap: 8px; padding: 4px 0; border-bottom: 1px solid var(--border); }
 .sbs-col { flex: 1; padding: 12px; background: var(--bg-card); border-radius: var(--radius); border: 1px solid var(--border); overflow: hidden; }
 .sbs-header { font-family: var(--font-mono); font-size: 12px; font-weight: 600; color: var(--text-primary); margin-bottom: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -2557,6 +2559,30 @@ body::before {
       <div class="sidebar-item" data-view="finsummary" id="finsummaryNav">
         <div class="sidebar-dot" style="background:var(--entity-place)"></div>
         Financial Summary
+      </div>
+      <div class="sidebar-item" data-view="entdoccount" id="entdoccountNav">
+        <div class="sidebar-dot" style="background:var(--entity-person)"></div>
+        Entity Doc Count
+      </div>
+      <div class="sidebar-item" data-view="srcoverlap" id="srcoverlapNav">
+        <div class="sidebar-dot" style="background:var(--entity-org)"></div>
+        Source Overlap
+      </div>
+      <div class="sidebar-item" data-view="eventctx" id="eventctxNav">
+        <div class="sidebar-dot" style="background:var(--entity-date)"></div>
+        Event Context
+      </div>
+      <div class="sidebar-item" data-view="datecluster" id="dateclusterNav">
+        <div class="sidebar-dot" style="background:var(--entity-place)"></div>
+        Date Clusters
+      </div>
+      <div class="sidebar-item" data-view="redactpattern" id="redactpatternNav">
+        <div class="sidebar-dot" style="background:var(--entity-person)"></div>
+        Redaction Patterns
+      </div>
+      <div class="sidebar-item" data-view="entiso" id="entisoNav">
+        <div class="sidebar-dot" style="background:var(--entity-org)"></div>
+        Entity Isolation
       </div>
     </div>
 
@@ -3842,6 +3868,36 @@ body::before {
       <div id="finsummaryContent">Loading financial summary...</div>
     </div>
 
+    <div class="entdoccount-view" id="entdoccountView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Entity Document Count</div>
+      <div id="entdoccountContent">Loading entity doc counts...</div>
+    </div>
+
+    <div class="srcoverlap-view" id="srcoverlapView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Source Overlap</div>
+      <div id="srcoverlapContent">Loading source overlap...</div>
+    </div>
+
+    <div class="eventctx-view" id="eventctxView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Event Context</div>
+      <div id="eventctxContent">Loading event context...</div>
+    </div>
+
+    <div class="datecluster-view" id="dateclusterView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Document Date Clusters</div>
+      <div id="dateclusterContent">Loading date clusters...</div>
+    </div>
+
+    <div class="redactpattern-view" id="redactpatternView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Redaction Patterns</div>
+      <div id="redactpatternContent">Loading redaction patterns...</div>
+    </div>
+
+    <div class="entiso-view" id="entisoView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Entity Isolation</div>
+      <div id="entisoContent">Loading entity isolation...</div>
+    </div>
+
   </main>
 
   <!-- RIGHT PANEL -->
@@ -4550,6 +4606,12 @@ function hideAllViews() {
   document.getElementById('paircodocView').classList.remove('active');
   document.getElementById('eventtypesView').classList.remove('active');
   document.getElementById('finsummaryView').classList.remove('active');
+  document.getElementById('entdoccountView').classList.remove('active');
+  document.getElementById('srcoverlapView').classList.remove('active');
+  document.getElementById('eventctxView').classList.remove('active');
+  document.getElementById('dateclusterView').classList.remove('active');
+  document.getElementById('redactpatternView').classList.remove('active');
+  document.getElementById('entisoView').classList.remove('active');
 }
 
 function showDocumentView() {
@@ -4711,6 +4773,12 @@ document.querySelectorAll('.sidebar-item[data-view]').forEach(item => {
     else if (view === 'paircodocs') showPairCoDocsView();
     else if (view === 'eventtypes') showEventTypesView();
     else if (view === 'finsummary') showFinSummaryView();
+    else if (view === 'entdoccount') showEntDocCountView();
+    else if (view === 'srcoverlap') showSrcOverlapView();
+    else if (view === 'eventctx') showEventCtxView();
+    else if (view === 'datecluster') showDateClusterView();
+    else if (view === 'redactpattern') showRedactPatternView();
+    else if (view === 'entiso') showEntIsoView();
   });
 });
 
@@ -5870,6 +5938,12 @@ function goBackFromReader() {
   else if (readerPreviousView === 'paircodocs') showPairCoDocsView();
   else if (readerPreviousView === 'eventtypes') showEventTypesView();
   else if (readerPreviousView === 'finsummary') showFinSummaryView();
+  else if (readerPreviousView === 'entdoccount') showEntDocCountView();
+  else if (readerPreviousView === 'srcoverlap') showSrcOverlapView();
+  else if (readerPreviousView === 'eventctx') showEventCtxView();
+  else if (readerPreviousView === 'datecluster') showDateClusterView();
+  else if (readerPreviousView === 'redactpattern') showRedactPatternView();
+  else if (readerPreviousView === 'entiso') showEntIsoView();
   else showDocumentView();
 }
 
@@ -12669,6 +12743,213 @@ async function loadFinSummary() {
     }
     el.innerHTML = html;
   } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load financial summary</div>'; }
+}
+
+
+// ── Entity Document Count ──
+
+function showEntDocCountView() {
+  currentView = 'entdoccount';
+  hideAllViews();
+  document.getElementById('entdoccountView').classList.add('active');
+  loadEntDocCount();
+}
+
+async function loadEntDocCount() {
+  const el = document.getElementById('entdoccountContent');
+  el.innerHTML = 'Loading entity doc counts...';
+  try {
+    const data = await fetchJSON('/api/entity-document-count');
+    let html = `<div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:12px;">`;
+    html += `<div class="stat-card"><div class="stat-value">${data.total}</div><div class="stat-label">Entities</div></div>`;
+    html += `<div class="stat-card"><div class="stat-value">${data.avg_docs}</div><div class="stat-label">Avg Docs</div></div>`;
+    html += `<div class="stat-card"><div class="stat-value">${data.max_docs}</div><div class="stat-label">Max Docs</div></div>`;
+    html += `</div>`;
+
+    if (data.entities.length) {
+      const maxD = data.entities[0].doc_count;
+      html += '<table class="data-table"><thead><tr><th>Entity</th><th>Type</th><th>Docs</th><th>Mentions</th><th>Bar</th></tr></thead><tbody>';
+      data.entities.forEach(e => {
+        const pct = maxD ? (e.doc_count / maxD * 100) : 0;
+        html += `<tr><td>${e.name}</td><td><span class="entity-tag ${e.type}" style="font-size:9px;">${e.type}</span></td>`;
+        html += `<td>${e.doc_count}</td><td>${(e.total_mentions||0).toLocaleString()}</td>`;
+        html += `<td style="width:120px;"><div style="height:8px;background:var(--accent);width:${pct}%;border-radius:3px;"></div></td></tr>`;
+      });
+      html += '</tbody></table>';
+    }
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load entity doc counts</div>'; }
+}
+
+// ── Source Overlap ──
+
+function showSrcOverlapView() {
+  currentView = 'srcoverlap';
+  hideAllViews();
+  document.getElementById('srcoverlapView').classList.add('active');
+  loadSrcOverlap();
+}
+
+async function loadSrcOverlap() {
+  const el = document.getElementById('srcoverlapContent');
+  el.innerHTML = 'Loading source overlap...';
+  try {
+    const data = await fetchJSON('/api/source-overlap');
+    let html = `<div class="stat-card" style="margin-bottom:12px;"><div class="stat-value">${data.total}</div><div class="stat-label">Source Pairs</div></div>`;
+
+    if (data.pairs.length) {
+      html += '<table class="data-table"><thead><tr><th>Source A</th><th>Source B</th><th>Shared Entities</th></tr></thead><tbody>';
+      data.pairs.forEach(p => {
+        html += `<tr><td>${p.source_a}</td><td>${p.source_b}</td>`;
+        html += `<td style="font-weight:600;color:var(--accent);">${p.shared_entities.toLocaleString()}</td></tr>`;
+      });
+      html += '</tbody></table>';
+    } else {
+      html += '<div style="color:var(--text-muted);">No overlapping sources.</div>';
+    }
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load source overlap</div>'; }
+}
+
+// ── Event Context ──
+
+function showEventCtxView() {
+  currentView = 'eventctx';
+  hideAllViews();
+  document.getElementById('eventctxView').classList.add('active');
+  loadEventCtx();
+}
+
+async function loadEventCtx() {
+  const el = document.getElementById('eventctxContent');
+  el.innerHTML = 'Loading event context...';
+  try {
+    const data = await fetchJSON('/api/event-context');
+    let html = `<div class="stat-card" style="margin-bottom:12px;"><div class="stat-value">${data.total.toLocaleString()}</div><div class="stat-label">Events with Context</div></div>`;
+
+    if (data.contexts.length) {
+      html += '<table class="data-table"><thead><tr><th>Context</th><th>Count</th></tr></thead><tbody>';
+      data.contexts.forEach(c => {
+        html += `<tr><td style="font-size:12px;">${c.context.substring(0,120)}</td><td>${c.cnt}</td></tr>`;
+      });
+      html += '</tbody></table>';
+    } else {
+      html += '<div style="color:var(--text-muted);">No event contexts found.</div>';
+    }
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load event context</div>'; }
+}
+
+// ── Date Clusters ──
+
+function showDateClusterView() {
+  currentView = 'datecluster';
+  hideAllViews();
+  document.getElementById('dateclusterView').classList.add('active');
+  loadDateCluster();
+}
+
+async function loadDateCluster() {
+  const el = document.getElementById('dateclusterContent');
+  el.innerHTML = 'Loading date clusters...';
+  try {
+    const data = await fetchJSON('/api/document-date-clusters');
+    let html = `<div class="stat-card" style="margin-bottom:12px;"><div class="stat-value">${data.total}</div><div class="stat-label">Year Groups</div></div>`;
+
+    if (data.clusters.length) {
+      const maxC = Math.max(...data.clusters.map(c => c.doc_count));
+      html += '<div style="display:flex;gap:3px;align-items:end;height:80px;margin-bottom:12px;">';
+      data.clusters.forEach(c => {
+        const pct = maxC ? (c.doc_count / maxC * 100) : 0;
+        html += `<div title="${c.year}: ${c.doc_count} docs" style="flex:1;background:var(--accent);min-height:2px;height:${pct}%;border-radius:2px;"></div>`;
+      });
+      html += '</div>';
+
+      html += '<table class="data-table"><thead><tr><th>Year</th><th>Docs</th><th>Pages</th><th>Sources</th></tr></thead><tbody>';
+      data.clusters.forEach(c => {
+        html += `<tr><td style="font-weight:600;">${c.year}</td><td>${c.doc_count}</td>`;
+        html += `<td>${(c.total_pages||0).toLocaleString()}</td><td>${c.source_count}</td></tr>`;
+      });
+      html += '</tbody></table>';
+    }
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load date clusters</div>'; }
+}
+
+// ── Redaction Patterns ──
+
+function showRedactPatternView() {
+  currentView = 'redactpattern';
+  hideAllViews();
+  document.getElementById('redactpatternView').classList.add('active');
+  loadRedactPattern();
+}
+
+async function loadRedactPattern() {
+  const el = document.getElementById('redactpatternContent');
+  el.innerHTML = 'Loading redaction patterns...';
+  try {
+    const data = await fetchJSON('/api/redaction-patterns');
+    let html = `<div class="stat-card" style="margin-bottom:12px;"><div class="stat-value">${data.total}</div><div class="stat-label">Total Redactions</div></div>`;
+
+    if (data.by_size && data.by_size.length) {
+      html += '<div style="font-size:12px;font-weight:600;margin-bottom:6px;color:var(--text-secondary);">By Size</div>';
+      html += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">';
+      data.by_size.forEach(s => html += `<span style="font-size:11px;background:var(--bg-card);padding:3px 8px;border-radius:3px;">${s.size_bucket}: ${s.cnt}</span>`);
+      html += '</div>';
+    }
+
+    if (data.by_reason.length) {
+      html += '<div style="font-size:12px;font-weight:600;margin-bottom:6px;color:var(--text-secondary);">By Reason</div>';
+      html += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">';
+      data.by_reason.forEach(r => html += `<span style="font-size:11px;background:var(--bg-card);padding:3px 8px;border-radius:3px;">${r.reason}: ${r.cnt}</span>`);
+      html += '</div>';
+    }
+
+    if (data.top_docs.length) {
+      html += '<div style="font-size:12px;font-weight:600;margin:12px 0 6px;color:var(--text-secondary);">Most Redacted Documents</div>';
+      html += '<table class="data-table"><thead><tr><th>Document</th><th>Source</th><th>Redactions</th></tr></thead><tbody>';
+      data.top_docs.forEach(d => {
+        html += `<tr><td><a href="#" onclick="openReader(${d.id});return false;">${(d.title||d.filename).substring(0,40)}</a></td>`;
+        html += `<td>${d.source||''}</td><td>${d.redaction_count}</td></tr>`;
+      });
+      html += '</tbody></table>';
+    }
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load redaction patterns</div>'; }
+}
+
+// ── Entity Isolation ──
+
+function showEntIsoView() {
+  currentView = 'entiso';
+  hideAllViews();
+  document.getElementById('entisoView').classList.add('active');
+  loadEntIso();
+}
+
+async function loadEntIso() {
+  const el = document.getElementById('entisoContent');
+  el.innerHTML = 'Loading entity isolation...';
+  try {
+    const data = await fetchJSON('/api/entity-isolation');
+    let html = `<div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:12px;">`;
+    html += `<div class="stat-card"><div class="stat-value">${data.total}</div><div class="stat-label">Isolated Entities</div></div>`;
+    html += `<div class="stat-card"><div class="stat-value">${data.zero_connections}</div><div class="stat-label">Zero Connections</div></div>`;
+    html += `</div>`;
+
+    if (data.entities.length) {
+      html += '<table class="data-table"><thead><tr><th>Entity</th><th>Type</th><th>Connections</th><th>Documents</th></tr></thead><tbody>';
+      data.entities.forEach(e => {
+        html += `<tr><td>${e.name}</td><td><span class="entity-tag ${e.type}" style="font-size:9px;">${e.type}</span></td>`;
+        html += `<td>${e.connections}</td><td>${e.documents}</td></tr>`;
+      });
+      html += '</tbody></table>';
+    } else {
+      html += '<div style="color:var(--text-muted);">No isolated entities found.</div>';
+    }
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load entity isolation</div>'; }
 }
 
 

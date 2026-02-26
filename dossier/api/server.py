@@ -9039,6 +9039,182 @@ def financial_summary():
     }
 
 
+# ── Entity Document Count ────────────────────────
+
+
+@app.get("/api/entity-document-count")
+def entity_document_count():
+    """Entities ranked by number of documents they appear in."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT e.id, e.name, e.type, COUNT(DISTINCT de.document_id) as doc_count, "
+            "SUM(de.count) as total_mentions "
+            "FROM entities e "
+            "JOIN document_entities de ON de.entity_id = e.id "
+            "GROUP BY e.id "
+            "ORDER BY doc_count DESC "
+            "LIMIT 100"
+        ).fetchall()
+
+    entities = [dict(r) for r in rows]
+    doc_counts = [e["doc_count"] for e in entities]
+
+    return {
+        "entities": entities,
+        "total": len(entities),
+        "avg_docs": round(sum(doc_counts) / len(doc_counts), 1) if doc_counts else 0,
+        "max_docs": max(doc_counts) if doc_counts else 0,
+    }
+
+
+# ── Source Overlap ───────────────────────────────
+
+
+@app.get("/api/source-overlap")
+def source_overlap():
+    """Sources sharing the most entities in common."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT d1.source as source_a, d2.source as source_b, "
+            "COUNT(DISTINCT de1.entity_id) as shared_entities "
+            "FROM document_entities de1 "
+            "JOIN documents d1 ON d1.id = de1.document_id "
+            "JOIN document_entities de2 ON de1.entity_id = de2.entity_id AND de1.document_id != de2.document_id "
+            "JOIN documents d2 ON d2.id = de2.document_id "
+            "WHERE d1.source IS NOT NULL AND d2.source IS NOT NULL "
+            "AND d1.source < d2.source "
+            "GROUP BY d1.source, d2.source "
+            "ORDER BY shared_entities DESC "
+            "LIMIT 50"
+        ).fetchall()
+
+    return {"pairs": [dict(r) for r in rows], "total": len(rows)}
+
+
+# ── Event Context Cloud ──────────────────────────
+
+
+@app.get("/api/event-context")
+def event_context():
+    """Most common context snippets in timeline events."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT context, COUNT(*) as cnt "
+            "FROM events "
+            "WHERE context IS NOT NULL AND context != '' "
+            "GROUP BY context "
+            "ORDER BY cnt DESC "
+            "LIMIT 100"
+        ).fetchall()
+
+        total = conn.execute(
+            "SELECT COUNT(*) as c FROM events WHERE context IS NOT NULL AND context != ''"
+        ).fetchone()["c"]
+
+    return {"contexts": [dict(r) for r in rows], "total": total}
+
+
+# ── Document Date Clusters ───────────────────────
+
+
+@app.get("/api/document-date-clusters")
+def document_date_clusters():
+    """Documents grouped by year."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT SUBSTR(date, 1, 4) as year, COUNT(*) as doc_count, "
+            "SUM(pages) as total_pages, "
+            "COUNT(DISTINCT source) as source_count "
+            "FROM documents "
+            "WHERE date IS NOT NULL AND date != '' AND LENGTH(date) >= 4 "
+            "GROUP BY year "
+            "ORDER BY year"
+        ).fetchall()
+
+    return {"clusters": [dict(r) for r in rows], "total": len(rows)}
+
+
+# ── Redaction Patterns ───────────────────────────
+
+
+@app.get("/api/redaction-patterns")
+def redaction_patterns():
+    """Redaction reason breakdown and size distribution."""
+    with get_db() as conn:
+        total = conn.execute("SELECT COUNT(*) as c FROM redactions").fetchone()["c"]
+
+        by_reason = conn.execute(
+            "SELECT reason, COUNT(*) as cnt "
+            "FROM redactions "
+            "WHERE reason IS NOT NULL AND reason != '' "
+            "GROUP BY reason ORDER BY cnt DESC "
+            "LIMIT 30"
+        ).fetchall()
+
+        by_size = conn.execute(
+            "SELECT CASE "
+            "  WHEN (end_offset - start_offset) < 50 THEN 'small (<50)' "
+            "  WHEN (end_offset - start_offset) < 200 THEN 'medium (50-200)' "
+            "  ELSE 'large (200+)' "
+            "END as size_bucket, COUNT(*) as cnt "
+            "FROM redactions "
+            "GROUP BY size_bucket ORDER BY cnt DESC"
+        ).fetchall()
+
+        top_docs = conn.execute(
+            "SELECT d.id, d.title, d.filename, d.source, COUNT(r.id) as redaction_count "
+            "FROM redactions r "
+            "JOIN documents d ON d.id = r.document_id "
+            "GROUP BY r.document_id "
+            "ORDER BY redaction_count DESC LIMIT 20"
+        ).fetchall()
+
+    return {
+        "total": total,
+        "by_reason": [dict(r) for r in by_reason],
+        "by_size": [dict(r) for r in by_size],
+        "top_docs": [dict(r) for r in top_docs],
+    }
+
+
+# ── Entity Isolation Score ───────────────────────
+
+
+@app.get("/api/entity-isolation")
+def entity_isolation():
+    """Entities with fewest connections (isolated nodes)."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT e.id, e.name, e.type, "
+            "COALESCE(conn_count, 0) as connections, "
+            "COALESCE(doc_count, 0) as documents "
+            "FROM entities e "
+            "LEFT JOIN ("
+            "  SELECT entity_id, COUNT(DISTINCT document_id) as doc_count "
+            "  FROM document_entities GROUP BY entity_id"
+            ") de ON de.entity_id = e.id "
+            "LEFT JOIN ("
+            "  SELECT entity_id, COUNT(*) as conn_count FROM ("
+            "    SELECT entity_a_id as entity_id FROM entity_connections "
+            "    UNION ALL "
+            "    SELECT entity_b_id as entity_id FROM entity_connections"
+            "  ) GROUP BY entity_id"
+            ") ec ON ec.entity_id = e.id "
+            "WHERE COALESCE(conn_count, 0) <= 2 "
+            "ORDER BY connections ASC, documents DESC "
+            "LIMIT 100"
+        ).fetchall()
+
+    entities = [dict(r) for r in rows]
+    zero_conn = sum(1 for e in entities if e["connections"] == 0)
+
+    return {
+        "entities": entities,
+        "total": len(entities),
+        "zero_connections": zero_conn,
+    }
+
+
 # ═══════════════════════════════════════════
 # STATIC FILES (serve the frontend)
 # ═══════════════════════════════════════════
