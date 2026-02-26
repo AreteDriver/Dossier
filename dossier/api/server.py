@@ -7648,6 +7648,230 @@ def redaction_density():
     }
 
 
+# ── Entity Timeline Density ──────────────────────────
+
+
+@app.get("/api/entity-timeline-density")
+def entity_timeline_density(limit: int = 50, entity_type: str = ""):
+    """Entities ranked by how many distinct dates they appear on."""
+    with get_db() as conn:
+        params: list = []
+        type_filter = ""
+        if entity_type:
+            type_filter = "AND e.type = ?"
+            params.append(entity_type)
+
+        rows = conn.execute(
+            f"SELECT e.id, e.name, e.type, "
+            f"COUNT(DISTINCT ev.event_date) as unique_dates, "
+            f"COUNT(ev.id) as total_events, "
+            f"MIN(ev.event_date) as first_date, "
+            f"MAX(ev.event_date) as last_date "
+            f"FROM entities e "
+            f"JOIN event_entities ee ON ee.entity_id = e.id "
+            f"JOIN events ev ON ev.id = ee.event_id "
+            f"WHERE ev.event_date IS NOT NULL AND ev.event_date != '' "
+            f"{type_filter} "
+            f"GROUP BY e.id "
+            f"ORDER BY unique_dates DESC "
+            f"LIMIT ?",
+            params + [limit],
+        ).fetchall()
+
+    return {"entities": [dict(r) for r in rows]}
+
+
+# ── Document Duplicates Finder ──────────────────────
+
+
+@app.get("/api/document-duplicates")
+def document_duplicates():
+    """Find near-duplicate documents by title or hash similarity."""
+    with get_db() as conn:
+        # Exact hash duplicates
+        hash_dupes = conn.execute(
+            "SELECT file_hash, GROUP_CONCAT(id) as doc_ids, "
+            "GROUP_CONCAT(filename, ' | ') as filenames, COUNT(*) as cnt "
+            "FROM documents "
+            "WHERE file_hash IS NOT NULL AND file_hash != '' "
+            "GROUP BY file_hash HAVING cnt > 1 "
+            "ORDER BY cnt DESC"
+        ).fetchall()
+
+        # Title duplicates (exact match)
+        title_dupes = conn.execute(
+            "SELECT title, GROUP_CONCAT(id) as doc_ids, "
+            "GROUP_CONCAT(filename, ' | ') as filenames, COUNT(*) as cnt "
+            "FROM documents "
+            "WHERE title IS NOT NULL AND title != '' "
+            "GROUP BY title HAVING cnt > 1 "
+            "ORDER BY cnt DESC"
+        ).fetchall()
+
+        total = conn.execute("SELECT COUNT(*) as cnt FROM documents").fetchone()["cnt"]
+
+    return {
+        "hash_duplicates": [dict(r) for r in hash_dupes],
+        "title_duplicates": [dict(r) for r in title_dupes],
+        "total_hash_dupes": sum(r["cnt"] for r in hash_dupes),
+        "total_title_dupes": sum(r["cnt"] for r in title_dupes),
+        "total_documents": total,
+    }
+
+
+# ── Connection Strength ─────────────────────────────
+
+
+@app.get("/api/connection-strength")
+def connection_strength(limit: int = 50, entity_type: str = ""):
+    """Strongest entity-to-entity connections by weight."""
+    with get_db() as conn:
+        params: list = []
+        type_filter = ""
+        if entity_type:
+            type_filter = "AND ea.type = ? AND eb.type = ?"
+            params.extend([entity_type, entity_type])
+
+        rows = conn.execute(
+            f"SELECT ec.entity_a_id, ec.entity_b_id, ec.weight, "
+            f"ea.name as name_a, ea.type as type_a, "
+            f"eb.name as name_b, eb.type as type_b "
+            f"FROM entity_connections ec "
+            f"JOIN entities ea ON ea.id = ec.entity_a_id "
+            f"JOIN entities eb ON eb.id = ec.entity_b_id "
+            f"WHERE 1=1 {type_filter} "
+            f"ORDER BY ec.weight DESC "
+            f"LIMIT ?",
+            params + [limit],
+        ).fetchall()
+
+    return {"connections": [dict(r) for r in rows]}
+
+
+# ── Category Timeline ────────────────────────────────
+
+
+@app.get("/api/category-timeline")
+def category_timeline():
+    """Document categories over time."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT category, SUBSTR(date, 1, 7) as month, COUNT(*) as cnt "
+            "FROM documents "
+            "WHERE date IS NOT NULL AND date != '' AND LENGTH(date) >= 7 "
+            "GROUP BY category, month "
+            "ORDER BY month, category"
+        ).fetchall()
+
+    # Build timeline data
+    months = {}
+    categories = set()
+    for r in rows:
+        m = r["month"]
+        cat = r["category"] or "other"
+        categories.add(cat)
+        if m not in months:
+            months[m] = {}
+        months[m][cat] = r["cnt"]
+
+    timeline = []
+    for m in sorted(months.keys()):
+        entry = {"month": m}
+        for cat in sorted(categories):
+            entry[cat] = months[m].get(cat, 0)
+        timeline.append(entry)
+
+    return {
+        "timeline": timeline,
+        "categories": sorted(categories),
+        "total_months": len(months),
+    }
+
+
+# ── Orphan Documents ────────────────────────────────
+
+
+@app.get("/api/orphan-documents")
+def orphan_documents():
+    """Documents with no extracted entities."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT d.id, d.filename, d.title, d.category, d.source, d.date, "
+            "d.pages, LENGTH(d.raw_text) as text_length "
+            "FROM documents d "
+            "WHERE NOT EXISTS ("
+            "  SELECT 1 FROM document_entities de WHERE de.document_id = d.id"
+            ") "
+            "ORDER BY d.id"
+        ).fetchall()
+
+        total = conn.execute("SELECT COUNT(*) as cnt FROM documents").fetchone()["cnt"]
+
+    return {
+        "orphans": [dict(r) for r in rows],
+        "total_orphans": len(rows),
+        "total_documents": total,
+        "pct_orphans": round(len(rows) / total * 100, 1) if total else 0,
+    }
+
+
+# ── Entity First/Last Seen ──────────────────────────
+
+
+@app.get("/api/entity-first-last")
+def entity_first_last(limit: int = 100, entity_type: str = ""):
+    """When each entity first and last appears in the corpus."""
+    with get_db() as conn:
+        params: list = []
+        type_filter = ""
+        if entity_type:
+            type_filter = "AND e.type = ?"
+            params.append(entity_type)
+
+        rows = conn.execute(
+            f"SELECT e.id, e.name, e.type, "
+            f"MIN(d.date) as first_seen, MAX(d.date) as last_seen, "
+            f"COUNT(DISTINCT d.id) as doc_count "
+            f"FROM entities e "
+            f"JOIN document_entities de ON de.entity_id = e.id "
+            f"JOIN documents d ON d.id = de.document_id "
+            f"WHERE d.date IS NOT NULL AND d.date != '' "
+            f"{type_filter} "
+            f"GROUP BY e.id "
+            f"ORDER BY doc_count DESC "
+            f"LIMIT ?",
+            params + [limit],
+        ).fetchall()
+
+    entities = []
+    for r in rows:
+        first = r["first_seen"] or ""
+        last = r["last_seen"] or ""
+        span_days = 0
+        if first and last and len(first) >= 10 and len(last) >= 10:
+            try:
+                from datetime import datetime
+
+                d1 = datetime.strptime(first[:10], "%Y-%m-%d")
+                d2 = datetime.strptime(last[:10], "%Y-%m-%d")
+                span_days = (d2 - d1).days
+            except ValueError:
+                pass
+        entities.append(
+            {
+                "id": r["id"],
+                "name": r["name"],
+                "type": r["type"],
+                "first_seen": first,
+                "last_seen": last,
+                "doc_count": r["doc_count"],
+                "span_days": span_days,
+            }
+        )
+
+    return {"entities": entities}
+
+
 # ═══════════════════════════════════════════
 # STATIC FILES (serve the frontend)
 # ═══════════════════════════════════════════
