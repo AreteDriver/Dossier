@@ -2209,6 +2209,516 @@ def communities_labeled(min_size: int = Query(3, ge=2)):
 
 
 # ═══════════════════════════════════════════
+# DUPLICATE DETECTION
+# ═══════════════════════════════════════════
+
+
+@app.get("/api/duplicates")
+def detect_duplicates(
+    threshold: float = Query(0.6, ge=0.1, le=1.0),
+    limit: int = Query(50, ge=1, le=200),
+):
+    """Find potential duplicate document pairs based on title similarity and shared entities."""
+    with get_db() as conn:
+        # Find document pairs with very similar entity fingerprints
+        pairs = conn.execute("""
+            SELECT d1.id as id_a, d1.title as title_a, d1.filename as filename_a,
+                   d1.category as category_a, d1.pages as pages_a,
+                   d2.id as id_b, d2.title as title_b, d2.filename as filename_b,
+                   d2.category as category_b, d2.pages as pages_b,
+                   COUNT(DISTINCT de1.entity_id) as shared_entities,
+                   (SELECT COUNT(DISTINCT entity_id) FROM document_entities WHERE document_id = d1.id) as total_a,
+                   (SELECT COUNT(DISTINCT entity_id) FROM document_entities WHERE document_id = d2.id) as total_b
+            FROM document_entities de1
+            JOIN document_entities de2 ON de1.entity_id = de2.entity_id AND de2.document_id > de1.document_id
+            JOIN documents d1 ON d1.id = de1.document_id
+            JOIN documents d2 ON d2.id = de2.document_id
+            WHERE de1.document_id < de2.document_id
+            GROUP BY de1.document_id, de2.document_id
+            HAVING CAST(COUNT(DISTINCT de1.entity_id) AS REAL) /
+                   MAX(1, MIN(
+                     (SELECT COUNT(DISTINCT entity_id) FROM document_entities WHERE document_id = d1.id),
+                     (SELECT COUNT(DISTINCT entity_id) FROM document_entities WHERE document_id = d2.id)
+                   )) >= ?
+            ORDER BY shared_entities DESC
+            LIMIT ?
+        """, (threshold, limit)).fetchall()
+
+        results = []
+        for r in pairs:
+            d = dict(r)
+            min_total = min(d["total_a"] or 1, d["total_b"] or 1)
+            d["similarity"] = round(d["shared_entities"] / max(min_total, 1), 3)
+            results.append(d)
+
+    return {"duplicates": results, "threshold": threshold}
+
+
+@app.post("/api/duplicates/dismiss")
+async def dismiss_duplicate(request: Request):
+    """Dismiss a duplicate pair (store in a dismissals table)."""
+    body = await request.json()
+    id_a = body.get("id_a")
+    id_b = body.get("id_b")
+    if not id_a or not id_b:
+        raise HTTPException(400, "id_a and id_b required")
+
+    with get_db() as conn:
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS duplicate_dismissals (
+                id_a INTEGER NOT NULL,
+                id_b INTEGER NOT NULL,
+                dismissed_at TEXT DEFAULT (datetime('now')),
+                PRIMARY KEY (id_a, id_b)
+            )
+        """)
+        lo, hi = min(id_a, id_b), max(id_a, id_b)
+        conn.execute(
+            "INSERT OR IGNORE INTO duplicate_dismissals (id_a, id_b) VALUES (?, ?)",
+            (lo, hi),
+        )
+    return {"dismissed": True, "id_a": lo, "id_b": hi}
+
+
+# ═══════════════════════════════════════════
+# ENTITY TIMELINE OVERLAY
+# ═══════════════════════════════════════════
+
+
+@app.get("/api/timeline/overlay")
+def timeline_overlay(
+    entity_ids: str = Query(..., description="Comma-separated entity IDs"),
+    limit: int = Query(200, ge=1, le=1000),
+):
+    """Get timeline events for multiple entities, grouped by entity for overlay comparison."""
+    ids = [int(x.strip()) for x in entity_ids.split(",") if x.strip().isdigit()]
+    if not ids:
+        raise HTTPException(400, "At least one entity_id required")
+
+    with get_db() as conn:
+        ph = ",".join("?" * len(ids))
+        rows = conn.execute(f"""
+            SELECT DISTINCT e.id as entity_id, e.name as entity_name, e.type as entity_type,
+                   ev.event_date, ev.precision, ev.confidence, ev.context,
+                   ev.document_id, d.title as doc_title
+            FROM events ev
+            JOIN document_entities de ON de.document_id = ev.document_id
+            JOIN entities e ON e.id = de.entity_id
+            JOIN documents d ON d.id = ev.document_id
+            WHERE e.id IN ({ph})
+              AND ev.event_date IS NOT NULL
+              AND ev.confidence >= 0.5
+            ORDER BY ev.event_date, e.id
+            LIMIT ?
+        """, ids + [limit]).fetchall()
+
+        # Group by entity
+        by_entity: dict[int, dict] = {}
+        for r in rows:
+            eid = r["entity_id"]
+            if eid not in by_entity:
+                by_entity[eid] = {
+                    "entity_id": eid,
+                    "entity_name": r["entity_name"],
+                    "entity_type": r["entity_type"],
+                    "events": [],
+                }
+            by_entity[eid]["events"].append({
+                "date": r["event_date"],
+                "precision": r["precision"],
+                "context": r["context"],
+                "doc_id": r["document_id"],
+                "doc_title": r["doc_title"],
+            })
+
+    return {"entities": list(by_entity.values()), "total_events": len(rows)}
+
+
+# ═══════════════════════════════════════════
+# DOCUMENT ANNOTATIONS
+# ═══════════════════════════════════════════
+
+
+def _ensure_annotations_table(conn):
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS annotations (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            document_id INTEGER NOT NULL,
+            start_offset INTEGER NOT NULL,
+            end_offset INTEGER NOT NULL,
+            text TEXT NOT NULL,
+            note TEXT DEFAULT '',
+            color TEXT DEFAULT 'yellow',
+            created_at TEXT DEFAULT (datetime('now'))
+        )
+    """)
+
+
+@app.get("/api/documents/{doc_id}/annotations")
+def get_annotations(doc_id: int):
+    """Get all annotations for a document."""
+    with get_db() as conn:
+        _ensure_annotations_table(conn)
+        rows = conn.execute(
+            "SELECT * FROM annotations WHERE document_id = ? ORDER BY start_offset",
+            (doc_id,),
+        ).fetchall()
+    return {"document_id": doc_id, "annotations": [dict(r) for r in rows]}
+
+
+@app.post("/api/documents/{doc_id}/annotations")
+async def add_annotation(doc_id: int, request: Request):
+    """Add an annotation to a document."""
+    body = await request.json()
+    start = body.get("start_offset")
+    end = body.get("end_offset")
+    text = body.get("text", "")
+    note = body.get("note", "")
+    color = body.get("color", "yellow")
+
+    if start is None or end is None:
+        raise HTTPException(400, "start_offset and end_offset required")
+
+    with get_db() as conn:
+        doc = conn.execute("SELECT id FROM documents WHERE id = ?", (doc_id,)).fetchone()
+        if not doc:
+            raise HTTPException(404, "Document not found")
+        _ensure_annotations_table(conn)
+        cur = conn.execute(
+            "INSERT INTO annotations (document_id, start_offset, end_offset, text, note, color) VALUES (?, ?, ?, ?, ?, ?)",
+            (doc_id, start, end, text, note, color),
+        )
+    return {"id": cur.lastrowid, "document_id": doc_id, "added": True}
+
+
+@app.delete("/api/annotations/{annotation_id}")
+def delete_annotation(annotation_id: int):
+    """Delete an annotation."""
+    with get_db() as conn:
+        _ensure_annotations_table(conn)
+        conn.execute("DELETE FROM annotations WHERE id = ?", (annotation_id,))
+    return {"id": annotation_id, "deleted": True}
+
+
+@app.get("/api/annotations/search")
+def search_annotations(q: str = Query("", description="Search annotation notes")):
+    """Search across all annotations."""
+    with get_db() as conn:
+        _ensure_annotations_table(conn)
+        rows = conn.execute("""
+            SELECT a.*, d.title as doc_title, d.filename as doc_filename
+            FROM annotations a
+            JOIN documents d ON d.id = a.document_id
+            WHERE a.note LIKE ? OR a.text LIKE ?
+            ORDER BY a.created_at DESC
+            LIMIT 50
+        """, (f"%{q}%", f"%{q}%")).fetchall()
+    return {"annotations": [dict(r) for r in rows], "query": q}
+
+
+# ═══════════════════════════════════════════
+# TAG ANALYTICS
+# ═══════════════════════════════════════════
+
+
+@app.get("/api/tags/analytics")
+def tag_analytics():
+    """Tag usage analytics: counts, co-occurrence, entity type distribution."""
+    with get_db() as conn:
+        _ensure_tags_table(conn)
+
+        # Tag counts with entity type breakdown
+        tag_rows = conn.execute("""
+            SELECT et.tag, e.type, COUNT(*) as count
+            FROM entity_tags et
+            JOIN entities e ON e.id = et.entity_id
+            GROUP BY et.tag, e.type
+            ORDER BY et.tag, count DESC
+        """).fetchall()
+
+        tags: dict[str, dict] = {}
+        for r in tag_rows:
+            tag = r["tag"]
+            if tag not in tags:
+                tags[tag] = {"tag": tag, "total": 0, "by_type": {}}
+            tags[tag]["total"] += r["count"]
+            tags[tag]["by_type"][r["type"]] = r["count"]
+
+        # Tag co-occurrence: entities that share multiple tags
+        cooccurrence = conn.execute("""
+            SELECT t1.tag as tag_a, t2.tag as tag_b, COUNT(*) as shared_entities
+            FROM entity_tags t1
+            JOIN entity_tags t2 ON t1.entity_id = t2.entity_id AND t1.tag < t2.tag
+            GROUP BY t1.tag, t2.tag
+            ORDER BY shared_entities DESC
+            LIMIT 50
+        """).fetchall()
+
+        # Top tagged entities
+        top_tagged = conn.execute("""
+            SELECT e.id, e.name, e.type, COUNT(et.tag) as tag_count,
+                   GROUP_CONCAT(et.tag, ', ') as tags
+            FROM entity_tags et
+            JOIN entities e ON e.id = et.entity_id
+            GROUP BY e.id
+            ORDER BY tag_count DESC
+            LIMIT 20
+        """).fetchall()
+
+    return {
+        "tags": sorted(tags.values(), key=lambda t: t["total"], reverse=True),
+        "cooccurrence": [dict(r) for r in cooccurrence],
+        "top_tagged": [dict(r) for r in top_tagged],
+    }
+
+
+@app.post("/api/tags/bulk")
+async def bulk_tag(request: Request):
+    """Bulk tag entities matching a filter. Body: {tag, entity_type?, min_mentions?}"""
+    body = await request.json()
+    tag = body.get("tag", "").strip().lower()
+    if not tag:
+        raise HTTPException(400, "tag required")
+
+    entity_type = body.get("entity_type")
+    min_mentions = body.get("min_mentions", 1)
+
+    with get_db() as conn:
+        _ensure_tags_table(conn)
+        sql = """
+            SELECT e.id FROM entities e
+            JOIN document_entities de ON de.entity_id = e.id
+        """
+        params: list = []
+        conditions = []
+        if entity_type:
+            conditions.append("e.type = ?")
+            params.append(entity_type)
+        if conditions:
+            sql += " WHERE " + " AND ".join(conditions)
+        sql += " GROUP BY e.id HAVING SUM(de.count) >= ?"
+        params.append(min_mentions)
+
+        entities = conn.execute(sql, params).fetchall()
+        count = 0
+        for row in entities:
+            conn.execute(
+                "INSERT OR IGNORE INTO entity_tags (entity_id, tag) VALUES (?, ?)",
+                (row["id"], tag),
+            )
+            count += 1
+
+    return {"tag": tag, "tagged_count": count}
+
+
+# ═══════════════════════════════════════════
+# EXPORT ENDPOINTS
+# ═══════════════════════════════════════════
+
+
+@app.get("/api/export/entities")
+def export_entities(
+    type: Optional[str] = Query(None),
+    format: str = Query("json", description="json or csv"),
+    limit: int = Query(500, ge=1, le=5000),
+):
+    """Export entities as JSON or CSV."""
+    with get_db() as conn:
+        sql = """
+            SELECT e.id, e.name, e.type, e.canonical,
+                   SUM(de.count) as total_mentions,
+                   COUNT(DISTINCT de.document_id) as doc_count
+            FROM entities e
+            JOIN document_entities de ON de.entity_id = e.id
+        """
+        params: list = []
+        if type:
+            sql += " WHERE e.type = ?"
+            params.append(type)
+        sql += " GROUP BY e.id ORDER BY total_mentions DESC LIMIT ?"
+        params.append(limit)
+        rows = conn.execute(sql, params).fetchall()
+
+    entities = [dict(r) for r in rows]
+
+    if format == "csv":
+        import csv
+        import io
+        out = io.StringIO()
+        if entities:
+            writer = csv.DictWriter(out, fieldnames=entities[0].keys())
+            writer.writeheader()
+            writer.writerows(entities)
+        return JSONResponse(content={"csv": out.getvalue(), "count": len(entities)})
+
+    return {"entities": entities, "count": len(entities)}
+
+
+@app.get("/api/export/connections")
+def export_connections(
+    min_weight: int = Query(1, ge=1),
+    format: str = Query("json"),
+    limit: int = Query(500, ge=1, le=5000),
+):
+    """Export entity connections as JSON or CSV."""
+    with get_db() as conn:
+        rows = conn.execute("""
+            SELECT ec.entity_a_id, ea.name as entity_a_name, ea.type as entity_a_type,
+                   ec.entity_b_id, eb.name as entity_b_name, eb.type as entity_b_type,
+                   ec.weight, ec.co_document_count
+            FROM entity_connections ec
+            JOIN entities ea ON ea.id = ec.entity_a_id
+            JOIN entities eb ON eb.id = ec.entity_b_id
+            WHERE ec.weight >= ?
+            ORDER BY ec.weight DESC
+            LIMIT ?
+        """, (min_weight, limit)).fetchall()
+
+    connections = [dict(r) for r in rows]
+
+    if format == "csv":
+        import csv
+        import io
+        out = io.StringIO()
+        if connections:
+            writer = csv.DictWriter(out, fieldnames=connections[0].keys())
+            writer.writeheader()
+            writer.writerows(connections)
+        return JSONResponse(content={"csv": out.getvalue(), "count": len(connections)})
+
+    return {"connections": connections, "count": len(connections)}
+
+
+@app.get("/api/export/timeline")
+def export_timeline(
+    format: str = Query("json"),
+    limit: int = Query(1000, ge=1, le=10000),
+):
+    """Export timeline events as JSON or CSV."""
+    with get_db() as conn:
+        rows = conn.execute("""
+            SELECT ev.id, ev.event_date, ev.precision, ev.confidence,
+                   ev.context, ev.document_id, d.title as doc_title
+            FROM events ev
+            JOIN documents d ON d.id = ev.document_id
+            WHERE ev.event_date IS NOT NULL AND ev.confidence >= 0.5
+            ORDER BY ev.event_date
+            LIMIT ?
+        """, (limit,)).fetchall()
+
+    events = [dict(r) for r in rows]
+
+    if format == "csv":
+        import csv
+        import io
+        out = io.StringIO()
+        if events:
+            writer = csv.DictWriter(out, fieldnames=events[0].keys())
+            writer.writeheader()
+            writer.writerows(events)
+        return JSONResponse(content={"csv": out.getvalue(), "count": len(events)})
+
+    return {"events": events, "count": len(events)}
+
+
+# ═══════════════════════════════════════════
+# RISK SCORING DASHBOARD
+# ═══════════════════════════════════════════
+
+
+@app.get("/api/risk/dashboard")
+def risk_dashboard():
+    """Aggregate risk view: distribution, by source, top clusters, trends."""
+    with get_db() as conn:
+        # Risk distribution histogram
+        buckets = conn.execute("""
+            SELECT
+                CASE
+                    WHEN score >= 0.9 THEN 'critical'
+                    WHEN score >= 0.7 THEN 'high'
+                    WHEN score >= 0.5 THEN 'medium'
+                    WHEN score >= 0.3 THEN 'low'
+                    ELSE 'minimal'
+                END as level,
+                COUNT(*) as count,
+                ROUND(AVG(score), 3) as avg_score
+            FROM document_forensics
+            WHERE analysis_type = 'risk_score'
+            GROUP BY level
+            ORDER BY avg_score DESC
+        """).fetchall()
+
+        # Risk by source
+        by_source = conn.execute("""
+            SELECT d.source, COUNT(*) as doc_count,
+                   ROUND(AVG(df.score), 3) as avg_risk,
+                   ROUND(MAX(df.score), 3) as max_risk,
+                   SUM(CASE WHEN df.score >= 0.7 THEN 1 ELSE 0 END) as high_risk_count
+            FROM document_forensics df
+            JOIN documents d ON d.id = df.document_id
+            WHERE df.analysis_type = 'risk_score'
+            GROUP BY d.source
+            ORDER BY avg_risk DESC
+        """).fetchall()
+
+        # Top risk documents
+        top_docs = conn.execute("""
+            SELECT d.id, d.title, d.filename, d.category, d.source,
+                   df.score, d.pages
+            FROM document_forensics df
+            JOIN documents d ON d.id = df.document_id
+            WHERE df.analysis_type = 'risk_score'
+            ORDER BY df.score DESC
+            LIMIT 25
+        """).fetchall()
+
+        # Risk clusters by category
+        by_category = conn.execute("""
+            SELECT d.category, COUNT(*) as doc_count,
+                   ROUND(AVG(df.score), 3) as avg_risk,
+                   SUM(CASE WHEN df.score >= 0.7 THEN 1 ELSE 0 END) as high_risk_count
+            FROM document_forensics df
+            JOIN documents d ON d.id = df.document_id
+            WHERE df.analysis_type = 'risk_score'
+            GROUP BY d.category
+            ORDER BY avg_risk DESC
+        """).fetchall()
+
+        # Risk trend by ingestion date
+        trend = conn.execute("""
+            SELECT DATE(d.ingested_at) as date,
+                   COUNT(*) as doc_count,
+                   ROUND(AVG(df.score), 3) as avg_risk,
+                   SUM(CASE WHEN df.score >= 0.7 THEN 1 ELSE 0 END) as high_risk_count
+            FROM document_forensics df
+            JOIN documents d ON d.id = df.document_id
+            WHERE df.analysis_type = 'risk_score'
+            GROUP BY DATE(d.ingested_at)
+            ORDER BY date
+        """).fetchall()
+
+        # Overall stats
+        overall = conn.execute("""
+            SELECT COUNT(*) as total_scored,
+                   ROUND(AVG(score), 3) as avg_risk,
+                   ROUND(MAX(score), 3) as max_risk,
+                   SUM(CASE WHEN score >= 0.7 THEN 1 ELSE 0 END) as high_risk_total,
+                   SUM(CASE WHEN score >= 0.5 THEN 1 ELSE 0 END) as medium_plus_total
+            FROM document_forensics
+            WHERE analysis_type = 'risk_score'
+        """).fetchone()
+
+    return {
+        "overall": dict(overall) if overall else {},
+        "distribution": [dict(r) for r in buckets],
+        "by_source": [dict(r) for r in by_source],
+        "by_category": [dict(r) for r in by_category],
+        "top_documents": [dict(r) for r in top_docs],
+        "trend": [dict(r) for r in trend],
+    }
+
+
+# ═══════════════════════════════════════════
 # HELPERS
 # ═══════════════════════════════════════════
 

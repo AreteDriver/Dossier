@@ -1696,6 +1696,82 @@ body::before {
   background: var(--accent-glow); color: var(--accent); transition: all var(--transition);
 }
 .report-btn:hover { background: var(--accent-dim); color: #fff; }
+
+/* ─── DUPLICATE DETECTION ─── */
+.duplicates-view { display: none; flex-direction: column; gap: 16px; }
+.duplicates-view.active { display: flex; }
+.dup-card {
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 16px;
+  display: flex; gap: 16px; align-items: center;
+}
+.dup-doc {
+  flex: 1; padding: 10px; background: var(--bg-tertiary); border-radius: var(--radius); cursor: pointer;
+}
+.dup-doc:hover { background: var(--bg-hover); }
+.dup-vs { font-family: var(--font-mono); font-size: 10px; color: var(--text-muted); text-transform: uppercase; }
+.dup-actions { display: flex; flex-direction: column; gap: 6px; }
+.dup-actions button {
+  padding: 5px 12px; border-radius: var(--radius); font-family: var(--font-mono); font-size: 10px;
+  cursor: pointer; border: 1px solid var(--border); background: var(--bg-tertiary); color: var(--text-secondary);
+}
+.dup-actions button:hover { border-color: var(--border-active); }
+
+/* ─── TIMELINE OVERLAY ─── */
+.overlay-view { display: none; flex-direction: column; gap: 16px; }
+.overlay-view.active { display: flex; }
+.overlay-lane {
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 14px;
+  margin-bottom: 4px;
+}
+.overlay-lane-header {
+  display: flex; align-items: center; gap: 10px; margin-bottom: 10px;
+}
+.overlay-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.overlay-event {
+  display: flex; gap: 10px; padding: 4px 8px; font-size: 12px; color: var(--text-secondary);
+  border-left: 2px solid var(--border); margin-left: 4px; margin-bottom: 2px;
+}
+
+/* ─── TAG ANALYTICS ─── */
+.taganalytics-view { display: none; flex-direction: column; gap: 16px; }
+.taganalytics-view.active { display: flex; }
+.tag-cloud { display: flex; flex-wrap: wrap; gap: 8px; padding: 16px; }
+.tag-cloud-item {
+  padding: 6px 14px; border-radius: 20px; font-family: var(--font-mono);
+  background: var(--bg-tertiary); border: 1px solid var(--border); cursor: pointer;
+  transition: all var(--transition);
+}
+.tag-cloud-item:hover { border-color: var(--accent-dim); color: var(--accent); }
+
+/* ─── RISK DASHBOARD ─── */
+.risk-view { display: none; flex-direction: column; gap: 16px; }
+.risk-view.active { display: flex; }
+.risk-bar-track {
+  height: 24px; background: var(--bg-tertiary); border-radius: var(--radius); overflow: hidden;
+  display: flex;
+}
+.risk-bar-seg {
+  height: 100%; display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-mono); font-size: 10px; color: #fff; font-weight: 600;
+  transition: width 0.4s ease;
+}
+
+/* ─── EXPORT VIEW ─── */
+.export-view { display: none; flex-direction: column; gap: 16px; }
+.export-view.active { display: flex; }
+.export-card {
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 20px;
+  display: flex; align-items: center; gap: 16px;
+}
+.export-card-info { flex: 1; }
+.export-card-title { font-weight: 600; font-size: 14px; margin-bottom: 4px; }
+.export-card-desc { font-size: 12px; color: var(--text-secondary); }
+.export-card button {
+  padding: 8px 18px; border-radius: var(--radius); font-family: var(--font-mono); font-size: 11px;
+  text-transform: uppercase; letter-spacing: 1px; cursor: pointer; border: 1px solid var(--border);
+  background: var(--bg-tertiary); color: var(--text-secondary); margin-left: 6px;
+}
+.export-card button:hover { border-color: var(--accent-dim); color: var(--accent); }
 </style>
 </head>
 <body>
@@ -1812,6 +1888,26 @@ body::before {
       <div class="sidebar-item" data-view="communities" id="communitiesNav">
         <div class="sidebar-dot" style="background:var(--entity-org)"></div>
         Network Communities
+      </div>
+      <div class="sidebar-item" data-view="duplicates" id="duplicatesNav">
+        <div class="sidebar-dot" style="background:var(--entity-thing)"></div>
+        Duplicate Detection
+      </div>
+      <div class="sidebar-item" data-view="overlay" id="overlayNav">
+        <div class="sidebar-dot" style="background:var(--entity-date)"></div>
+        Timeline Overlay
+      </div>
+      <div class="sidebar-item" data-view="taganalytics" id="taganalyticsNav">
+        <div class="sidebar-dot" style="background:var(--entity-person)"></div>
+        Tag Analytics
+      </div>
+      <div class="sidebar-item" data-view="risk" id="riskNav">
+        <div class="sidebar-dot" style="background:#e05555"></div>
+        Risk Dashboard
+      </div>
+      <div class="sidebar-item" data-view="exports" id="exportsNav">
+        <div class="sidebar-dot" style="background:var(--text-muted)"></div>
+        Export Data
       </div>
     </div>
 
@@ -2140,6 +2236,7 @@ body::before {
         </div>
         <button class="export-btn" onclick="toggleFlag(readerDocId)" id="readerFlagBtn">Flag</button>
         <button class="export-btn" onclick="showDocForensicDetail(readerDocId)">Forensics</button>
+        <button class="export-btn" onclick="addAnnotation()">Annotate</button>
       </div>
       <div class="reader-body" id="readerBody">Loading...</div>
       <div style="margin-top:12px;">
@@ -2300,6 +2397,90 @@ body::before {
     <div class="communities-view" id="communitiesView">
       <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Network Communities</div>
       <div id="communitiesContent">Loading communities...</div>
+    </div>
+
+    <!-- DUPLICATE DETECTION VIEW -->
+    <div class="duplicates-view" id="duplicatesView">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Duplicate Detection</div>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <label style="font-size:11px;color:var(--text-muted);font-family:var(--font-mono);">Threshold:</label>
+          <input id="dupThreshold" type="range" min="30" max="95" value="60" style="width:100px;" onchange="loadDuplicates()">
+          <span id="dupThresholdVal" style="font-family:var(--font-mono);font-size:11px;color:var(--text-secondary);">60%</span>
+        </div>
+      </div>
+      <div id="duplicatesContent">Loading duplicates...</div>
+    </div>
+
+    <!-- TIMELINE OVERLAY VIEW -->
+    <div class="overlay-view" id="overlayView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Timeline Overlay</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+        <input id="overlayEntityInput" placeholder="Search entity to add..." style="flex:1;min-width:200px;background:var(--bg-tertiary);border:1px solid var(--border);border-radius:var(--radius);padding:8px 12px;font-family:var(--font-mono);font-size:12px;color:var(--text-primary);outline:none;">
+        <button onclick="addOverlayEntity()" style="background:var(--bg-tertiary);border:1px solid var(--border);border-radius:var(--radius);padding:8px 14px;font-family:var(--font-mono);font-size:11px;color:var(--text-secondary);cursor:pointer;">+ Add</button>
+      </div>
+      <div id="overlaySelectedEntities" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
+      <div id="overlayContent"></div>
+    </div>
+
+    <!-- TAG ANALYTICS VIEW -->
+    <div class="taganalytics-view" id="taganalyticsView">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Tag Analytics</div>
+        <div style="display:flex;gap:8px;">
+          <input id="bulkTagInput" placeholder="Bulk tag name..." style="background:var(--bg-tertiary);border:1px solid var(--border);border-radius:var(--radius);padding:6px 10px;font-family:var(--font-mono);font-size:11px;color:var(--text-primary);outline:none;">
+          <select id="bulkTagType" style="background:var(--bg-tertiary);border:1px solid var(--border);border-radius:var(--radius);padding:6px 8px;font-family:var(--font-mono);font-size:11px;color:var(--text-primary);">
+            <option value="">All types</option>
+            <option value="person">Person</option>
+            <option value="org">Org</option>
+            <option value="place">Place</option>
+          </select>
+          <button onclick="doBulkTag()" style="background:var(--accent-glow);border:1px solid var(--accent-dim);border-radius:var(--radius);padding:6px 14px;font-family:var(--font-mono);font-size:11px;color:var(--accent);cursor:pointer;">Bulk Tag</button>
+        </div>
+      </div>
+      <div id="taganalyticsContent">Loading tag analytics...</div>
+    </div>
+
+    <!-- RISK DASHBOARD VIEW -->
+    <div class="risk-view" id="riskView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Risk Scoring Dashboard</div>
+      <div id="riskContent">Loading risk data...</div>
+    </div>
+
+    <!-- EXPORT VIEW -->
+    <div class="export-view" id="exportsView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Export Data</div>
+      <div class="export-card">
+        <div class="export-card-info">
+          <div class="export-card-title">Entities</div>
+          <div class="export-card-desc">Export all entities with mention counts and document counts</div>
+        </div>
+        <button onclick="exportData('entities','json')">JSON</button>
+        <button onclick="exportData('entities','csv')">CSV</button>
+      </div>
+      <div class="export-card">
+        <div class="export-card-info">
+          <div class="export-card-title">Connections</div>
+          <div class="export-card-desc">Export entity connection graph with weights</div>
+        </div>
+        <button onclick="exportData('connections','json')">JSON</button>
+        <button onclick="exportData('connections','csv')">CSV</button>
+      </div>
+      <div class="export-card">
+        <div class="export-card-info">
+          <div class="export-card-title">Timeline Events</div>
+          <div class="export-card-desc">Export all dated events with confidence scores</div>
+        </div>
+        <button onclick="exportData('timeline','json')">JSON</button>
+        <button onclick="exportData('timeline','csv')">CSV</button>
+      </div>
+      <div class="export-card">
+        <div class="export-card-info">
+          <div class="export-card-title">Investigation Report</div>
+          <div class="export-card-desc">Generate comprehensive HTML report with all findings</div>
+        </div>
+        <button onclick="generateReport()">HTML Report</button>
+      </div>
     </div>
   </main>
 
@@ -2909,6 +3090,11 @@ function hideAllViews() {
   document.getElementById('entityView').classList.remove('active');
   document.getElementById('watchlistView').classList.remove('active');
   document.getElementById('communitiesView').classList.remove('active');
+  document.getElementById('duplicatesView').classList.remove('active');
+  document.getElementById('overlayView').classList.remove('active');
+  document.getElementById('taganalyticsView').classList.remove('active');
+  document.getElementById('riskView').classList.remove('active');
+  document.getElementById('exportsView').classList.remove('active');
 }
 
 function showDocumentView() {
@@ -2970,6 +3156,11 @@ document.querySelectorAll('.sidebar-item[data-view]').forEach(item => {
     else if (view === 'anomalies') showAnomalyView();
     else if (view === 'watchlist') showWatchlistView();
     else if (view === 'communities') showCommunitiesView();
+    else if (view === 'duplicates') showDuplicatesView();
+    else if (view === 'overlay') showOverlayView();
+    else if (view === 'taganalytics') showTagAnalyticsView();
+    else if (view === 'risk') showRiskView();
+    else if (view === 'exports') showExportsView();
   });
 });
 
@@ -4039,6 +4230,8 @@ function goBackFromReader() {
   else if (readerPreviousView === 'entity') showEntityView(lastEntityId);
   else if (readerPreviousView === 'watchlist') showWatchlistView();
   else if (readerPreviousView === 'communities') showCommunitiesView();
+  else if (readerPreviousView === 'duplicates') showDuplicatesView();
+  else if (readerPreviousView === 'risk') showRiskView();
   else showDocumentView();
 }
 
@@ -4066,6 +4259,9 @@ async function loadReader(docId) {
     document.getElementById('readerNotes').value = notesData.notes || '';
     document.getElementById('readerFlagBtn').textContent = notesData.flagged ? 'Unflag' : 'Flag';
     document.getElementById('readerFlagBtn').style.borderColor = notesData.flagged ? '#e05555' : '';
+
+    // Load annotations
+    loadAnnotations(docId);
   } catch (e) {
     console.error('Failed to load document text:', e);
     document.getElementById('readerBody').textContent = 'Failed to load document text.';
@@ -4890,7 +5086,8 @@ async function loadEntityProfile(entityId) {
   el.innerHTML = 'Loading entity profile...';
   try {
     const data = await api(`/api/entities/${entityId}/profile`);
-    const e = data;
+    const ent = data.entity || {};
+    const e = {...ent, documents: data.documents, doc_count: data.document_count, total_mentions: data.total_mentions, risk_exposure: (data.risk_exposure || {}).avg_risk || 0, timeline: data.timeline, cooccurring: data.cooccurring, tags: data.tags, watched: data.watched};
     const typeColor = e.type === 'person' ? 'var(--entity-person)' : e.type === 'place' ? 'var(--entity-place)' : e.type === 'org' ? 'var(--entity-org)' : 'var(--entity-date)';
     const initial = (e.name || '?')[0].toUpperCase();
 
@@ -4955,7 +5152,7 @@ async function loadEntityProfile(entityId) {
         <div class="entity-section-title">Co-occurring Entities (${e.cooccurring.length})</div>
         <div style="display:flex;flex-wrap:wrap;gap:6px;">`;
       e.cooccurring.forEach(c => {
-        html += `<span class="entity-tag ${c.type}" style="cursor:pointer;font-size:12px;" onclick="showEntityView(${c.id})">${c.name} <span style="opacity:0.5;">(${c.shared_docs})</span></span>`;
+        html += `<span class="entity-tag ${c.type}" style="cursor:pointer;font-size:12px;" onclick="showEntityView(${c.id})">${c.name} <span style="opacity:0.5;">(${c.weight})</span></span>`;
       });
       html += '</div></div>';
     }
@@ -5118,6 +5315,481 @@ async function loadCommunities() {
     console.error('Communities load failed:', err);
     el.innerHTML = '<div style="color:#e05555;padding:20px;">Failed to load communities</div>';
   }
+}
+
+
+// ─── DUPLICATE DETECTION ───
+
+function showDuplicatesView() {
+  currentView = 'duplicates';
+  hideAllViews();
+  document.getElementById('duplicatesView').classList.add('active');
+  loadDuplicates();
+}
+
+async function loadDuplicates() {
+  const slider = document.getElementById('dupThreshold');
+  const threshold = (parseInt(slider.value) / 100).toFixed(2);
+  document.getElementById('dupThresholdVal').textContent = slider.value + '%';
+  const el = document.getElementById('duplicatesContent');
+  el.innerHTML = 'Scanning for duplicates...';
+  try {
+    const data = await api(`/api/duplicates?threshold=${threshold}&limit=40`);
+    if (!data.duplicates.length) {
+      el.innerHTML = '<div style="color:var(--text-muted);font-size:13px;padding:20px 0;">No duplicates found at this threshold. Try lowering it.</div>';
+      return;
+    }
+    let html = `<div style="font-size:11px;color:var(--text-muted);font-family:var(--font-mono);margin-bottom:8px;">${data.duplicates.length} potential duplicate pairs</div>`;
+    data.duplicates.forEach(d => {
+      const pct = (d.similarity * 100).toFixed(0);
+      html += `<div class="dup-card" id="dup-${d.id_a}-${d.id_b}">
+        <div class="dup-doc" onclick="readerPreviousView='duplicates';openReader(${d.id_a})">
+          <div style="font-size:13px;font-weight:500;margin-bottom:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${d.title_a || d.filename_a}</div>
+          <div style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted);">${d.category_a} · ${d.pages_a} pg · ${d.total_a} entities</div>
+        </div>
+        <div style="text-align:center;">
+          <div class="dup-vs">${pct}%</div>
+          <div style="font-family:var(--font-mono);font-size:9px;color:var(--text-muted);">${d.shared_entities} shared</div>
+        </div>
+        <div class="dup-doc" onclick="readerPreviousView='duplicates';openReader(${d.id_b})">
+          <div style="font-size:13px;font-weight:500;margin-bottom:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${d.title_b || d.filename_b}</div>
+          <div style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted);">${d.category_b} · ${d.pages_b} pg · ${d.total_b} entities</div>
+        </div>
+        <div class="dup-actions">
+          <button onclick="dismissDuplicate(${d.id_a},${d.id_b})">Dismiss</button>
+        </div>
+      </div>`;
+    });
+    el.innerHTML = html;
+  } catch (err) {
+    console.error('Duplicate detection failed:', err);
+    el.innerHTML = '<div style="color:#e05555;padding:20px;">Failed to detect duplicates</div>';
+  }
+}
+
+async function dismissDuplicate(idA, idB) {
+  try {
+    await fetch('/api/duplicates/dismiss', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({id_a: idA, id_b: idB})
+    });
+    const card = document.getElementById(`dup-${idA}-${idB}`);
+    if (card) card.style.display = 'none';
+  } catch (err) { console.error('Dismiss failed:', err); }
+}
+
+
+// ─── TIMELINE OVERLAY ───
+
+let overlayEntities = [];
+
+function showOverlayView() {
+  currentView = 'overlay';
+  hideAllViews();
+  document.getElementById('overlayView').classList.add('active');
+  renderOverlayEntities();
+  if (overlayEntities.length) loadOverlay();
+}
+
+function renderOverlayEntities() {
+  const el = document.getElementById('overlaySelectedEntities');
+  if (!overlayEntities.length) {
+    el.innerHTML = '<div style="color:var(--text-muted);font-size:11px;">Add entities above to compare their timelines</div>';
+    return;
+  }
+  const COLORS = ['#e07c4a','#4a9de0','#9b6de0','#4ae0a8','#e0c94a','#e05555'];
+  el.innerHTML = overlayEntities.map((e, i) =>
+    `<span class="entity-tag-chip" style="border-color:${COLORS[i % COLORS.length]};">${e.name}
+      <span class="remove-tag" onclick="overlayEntities.splice(${i},1);renderOverlayEntities();loadOverlay();">×</span>
+    </span>`
+  ).join('');
+}
+
+async function addOverlayEntity() {
+  const input = document.getElementById('overlayEntityInput');
+  const name = input.value.trim();
+  if (!name) return;
+  if (overlayEntities.length >= 6) { alert('Maximum 6 entities'); return; }
+  try {
+    const data = await api(`/api/entities/search?q=${encodeURIComponent(name)}&limit=1`);
+    if (data.entities.length) {
+      const e = data.entities[0];
+      if (!overlayEntities.find(x => x.id === e.id)) {
+        overlayEntities.push({id: e.id, name: e.name, type: e.type});
+        input.value = '';
+        renderOverlayEntities();
+        loadOverlay();
+      }
+    } else {
+      alert('Entity not found');
+    }
+  } catch (err) { console.error('Entity search failed:', err); }
+}
+
+async function loadOverlay() {
+  const el = document.getElementById('overlayContent');
+  if (!overlayEntities.length) { el.innerHTML = ''; return; }
+  el.innerHTML = 'Loading timeline data...';
+  const ids = overlayEntities.map(e => e.id).join(',');
+  const COLORS = ['#e07c4a','#4a9de0','#9b6de0','#4ae0a8','#e0c94a','#e05555'];
+  try {
+    const data = await api(`/api/timeline/overlay?entity_ids=${ids}&limit=300`);
+    if (!data.entities.length) {
+      el.innerHTML = '<div style="color:var(--text-muted);font-size:12px;padding:20px 0;">No timeline events found for selected entities</div>';
+      return;
+    }
+    let html = '';
+    data.entities.forEach((ent, i) => {
+      const color = COLORS[i % COLORS.length];
+      html += `<div class="overlay-lane">
+        <div class="overlay-lane-header">
+          <div class="overlay-dot" style="background:${color};"></div>
+          <span style="font-weight:600;font-size:13px;">${ent.entity_name}</span>
+          <span style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted);">${ent.events.length} events</span>
+        </div>`;
+      ent.events.slice(0, 30).forEach(ev => {
+        html += `<div class="overlay-event" style="border-color:${color};">
+          <span style="font-family:var(--font-mono);font-size:10px;color:${color};min-width:85px;">${ev.date || 'undated'}</span>
+          <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;" onclick="openReader(${ev.doc_id})">${ev.context || ev.doc_title}</span>
+        </div>`;
+      });
+      if (ent.events.length > 30) html += `<div style="color:var(--text-muted);font-size:10px;padding:4px 8px;margin-left:4px;">+ ${ent.events.length - 30} more events</div>`;
+      html += '</div>';
+    });
+    el.innerHTML = html;
+  } catch (err) {
+    console.error('Timeline overlay failed:', err);
+    el.innerHTML = '<div style="color:#e05555;padding:20px;">Failed to load timeline overlay</div>';
+  }
+}
+
+
+// ─── TAG ANALYTICS ───
+
+function showTagAnalyticsView() {
+  currentView = 'taganalytics';
+  hideAllViews();
+  document.getElementById('taganalyticsView').classList.add('active');
+  loadTagAnalytics();
+}
+
+async function loadTagAnalytics() {
+  const el = document.getElementById('taganalyticsContent');
+  el.innerHTML = 'Loading tag analytics...';
+  try {
+    const data = await api('/api/tags/analytics');
+    if (!data.tags.length) {
+      el.innerHTML = '<div style="color:var(--text-muted);font-size:13px;padding:20px 0;">No tags yet. Add tags to entities via Entity Profiles.</div>';
+      return;
+    }
+    let html = '';
+
+    // Tag cloud
+    const maxCount = Math.max(...data.tags.map(t => t.total));
+    html += `<div class="entity-section">
+      <div class="entity-section-title">Tag Cloud (${data.tags.length} tags)</div>
+      <div class="tag-cloud">`;
+    data.tags.forEach(t => {
+      const size = 11 + Math.round((t.total / maxCount) * 14);
+      html += `<span class="tag-cloud-item" style="font-size:${size}px;" onclick="showTagEntities('${t.tag.replace(/'/g,"\\'")}')">
+        ${t.tag} <span style="opacity:0.5;font-size:10px;">(${t.total})</span>
+      </span>`;
+    });
+    html += '</div></div>';
+
+    // Tag breakdown by entity type
+    html += `<div class="entity-section">
+      <div class="entity-section-title">Tags by Entity Type</div>`;
+    data.tags.forEach(t => {
+      const types = Object.entries(t.by_type || {});
+      html += `<div class="anomaly-row">
+        <span style="font-weight:500;min-width:120px;">${t.tag}</span>
+        <span style="flex:1;display:flex;gap:8px;">`;
+      types.forEach(([tp, cnt]) => {
+        html += `<span class="entity-tag ${tp}" style="font-size:10px;">${tp}: ${cnt}</span>`;
+      });
+      html += `</span>
+        <span style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted);">${t.total} total</span>
+      </div>`;
+    });
+    html += '</div>';
+
+    // Co-occurrence
+    if (data.cooccurrence.length) {
+      html += `<div class="entity-section">
+        <div class="entity-section-title">Tag Co-occurrence</div>`;
+      data.cooccurrence.slice(0, 20).forEach(c => {
+        html += `<div class="anomaly-row">
+          <span class="entity-tag-chip">${c.tag_a}</span>
+          <span style="color:var(--text-muted);margin:0 6px;">↔</span>
+          <span class="entity-tag-chip">${c.tag_b}</span>
+          <span style="flex:1;"></span>
+          <span style="font-family:var(--font-mono);font-size:11px;color:var(--text-secondary);">${c.shared_entities} shared</span>
+        </div>`;
+      });
+      html += '</div>';
+    }
+
+    // Top tagged entities
+    if (data.top_tagged.length) {
+      html += `<div class="entity-section">
+        <div class="entity-section-title">Most Tagged Entities</div>`;
+      data.top_tagged.forEach(e => {
+        html += `<div class="anomaly-row" style="cursor:pointer;" onclick="showEntityView(${e.id})">
+          <span class="entity-tag ${e.type}">${e.name}</span>
+          <span style="flex:1;font-size:11px;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-left:8px;">${e.tags}</span>
+          <span style="font-family:var(--font-mono);font-size:10px;color:var(--text-secondary);">${e.tag_count} tags</span>
+        </div>`;
+      });
+      html += '</div>';
+    }
+
+    el.innerHTML = html;
+  } catch (err) {
+    console.error('Tag analytics failed:', err);
+    el.innerHTML = '<div style="color:#e05555;padding:20px;">Failed to load tag analytics</div>';
+  }
+}
+
+async function showTagEntities(tag) {
+  try {
+    const data = await api(`/api/entities/by-tag?tag=${encodeURIComponent(tag)}`);
+    if (!data.entities.length) return;
+    // Show as a temporary overlay on the tag analytics view
+    const el = document.getElementById('taganalyticsContent');
+    let html = `<div style="margin-bottom:12px;">
+      <button onclick="loadTagAnalytics()" style="background:var(--bg-tertiary);border:1px solid var(--border);border-radius:var(--radius);padding:5px 12px;font-family:var(--font-mono);font-size:11px;color:var(--text-secondary);cursor:pointer;">← Back to Analytics</button>
+      <span style="font-family:var(--font-mono);font-size:12px;color:var(--text-primary);margin-left:12px;">Tag: "${tag}" (${data.entities.length} entities)</span>
+    </div>`;
+    data.entities.forEach(e => {
+      html += `<div class="anomaly-row" style="cursor:pointer;" onclick="showEntityView(${e.id})">
+        <span class="entity-tag ${e.type}">${e.name}</span>
+        <span style="flex:1;"></span>
+        <span style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted);">${e.doc_count} docs · ${e.total_mentions} mentions</span>
+      </div>`;
+    });
+    el.innerHTML = html;
+  } catch (err) { console.error('Tag entities failed:', err); }
+}
+
+async function doBulkTag() {
+  const tag = document.getElementById('bulkTagInput').value.trim();
+  if (!tag) { alert('Enter a tag name'); return; }
+  const entityType = document.getElementById('bulkTagType').value || undefined;
+  try {
+    const body = {tag};
+    if (entityType) body.entity_type = entityType;
+    body.min_mentions = 5;
+    const resp = await fetch('/api/tags/bulk', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(body)
+    });
+    const data = await resp.json();
+    alert(`Tagged ${data.tagged_count} entities with "${tag}"`);
+    document.getElementById('bulkTagInput').value = '';
+    loadTagAnalytics();
+  } catch (err) { console.error('Bulk tag failed:', err); }
+}
+
+
+// ─── RISK DASHBOARD ───
+
+function showRiskView() {
+  currentView = 'risk';
+  hideAllViews();
+  document.getElementById('riskView').classList.add('active');
+  loadRiskDashboard();
+}
+
+async function loadRiskDashboard() {
+  const el = document.getElementById('riskContent');
+  el.innerHTML = 'Loading risk data...';
+  try {
+    const data = await api('/api/risk/dashboard');
+    const o = data.overall || {};
+    let html = '';
+
+    // Overall stats
+    html += `<div style="display:flex;gap:16px;flex-wrap:wrap;">
+      <div class="entity-stat-pill" style="font-size:13px;padding:8px 16px;">${o.total_scored || 0} scored docs</div>
+      <div class="entity-stat-pill" style="font-size:13px;padding:8px 16px;">Avg: ${((o.avg_risk||0)*100).toFixed(1)}%</div>
+      <div class="entity-stat-pill" style="font-size:13px;padding:8px 16px;">Max: ${((o.max_risk||0)*100).toFixed(1)}%</div>
+      <div class="entity-stat-pill" style="font-size:13px;padding:8px 16px;border-color:#e05555;color:#e05555;">${o.high_risk_total || 0} high risk</div>
+    </div>`;
+
+    // Risk distribution bar
+    if (data.distribution.length) {
+      const total = data.distribution.reduce((s, d) => s + d.count, 0);
+      const RISK_COLORS = {critical:'#c44',high:'#e07c4a',medium:'#e0c94a',low:'#4ae0a8',minimal:'#5f6572'};
+      html += `<div class="entity-section">
+        <div class="entity-section-title">Risk Distribution</div>
+        <div class="risk-bar-track">`;
+      data.distribution.forEach(d => {
+        const pct = (d.count / total * 100).toFixed(1);
+        if (parseFloat(pct) > 2) {
+          html += `<div class="risk-bar-seg" style="width:${pct}%;background:${RISK_COLORS[d.level] || '#888'};">${d.level} ${d.count}</div>`;
+        }
+      });
+      html += '</div></div>';
+    }
+
+    // Risk by source
+    if (data.by_source.length) {
+      html += `<div class="entity-section">
+        <div class="entity-section-title">Risk by Source</div>`;
+      data.by_source.forEach(s => {
+        const barWidth = (s.avg_risk * 100).toFixed(0);
+        html += `<div class="anomaly-row">
+          <span style="flex:1;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${s.source || 'Unknown'}</span>
+          <div style="width:120px;height:8px;background:var(--bg-tertiary);border-radius:4px;overflow:hidden;">
+            <div style="width:${barWidth}%;height:100%;background:${s.avg_risk > 0.7 ? '#c44' : s.avg_risk > 0.5 ? '#e07c4a' : '#4ae0a8'};border-radius:4px;"></div>
+          </div>
+          <span style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted);min-width:80px;text-align:right;">${(s.avg_risk*100).toFixed(0)}% avg · ${s.high_risk_count} high</span>
+        </div>`;
+      });
+      html += '</div>';
+    }
+
+    // Risk by category
+    if (data.by_category.length) {
+      html += `<div class="entity-section">
+        <div class="entity-section-title">Risk by Category</div>`;
+      data.by_category.forEach(c => {
+        html += `<div class="anomaly-row">
+          <span class="doc-badge ${c.category}" style="font-size:10px;">${c.category}</span>
+          <span style="flex:1;"></span>
+          <span style="font-family:var(--font-mono);font-size:10px;color:var(--text-secondary);">${c.doc_count} docs · avg ${(c.avg_risk*100).toFixed(0)}% · ${c.high_risk_count} high</span>
+        </div>`;
+      });
+      html += '</div>';
+    }
+
+    // Top risk documents
+    if (data.top_documents.length) {
+      html += `<div class="entity-section">
+        <div class="entity-section-title">Highest Risk Documents (Top 25)</div>`;
+      data.top_documents.forEach(d => {
+        const level = d.score > 0.7 ? 'critical' : d.score > 0.5 ? 'high' : 'medium';
+        html += `<div class="anomaly-row" style="cursor:pointer;" onclick="readerPreviousView='risk';openReader(${d.id})">
+          <span class="anomaly-badge ${level}" style="min-width:40px;text-align:center;">${(d.score*100).toFixed(0)}%</span>
+          <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${d.title || d.filename}</span>
+          <span class="doc-badge ${d.category}" style="font-size:9px;">${d.category}</span>
+        </div>`;
+      });
+      html += '</div>';
+    }
+
+    el.innerHTML = html;
+  } catch (err) {
+    console.error('Risk dashboard failed:', err);
+    el.innerHTML = '<div style="color:#e05555;padding:20px;">Failed to load risk data</div>';
+  }
+}
+
+
+// ─── EXPORT & SHARING ───
+
+function showExportsView() {
+  currentView = 'exports';
+  hideAllViews();
+  document.getElementById('exportsView').classList.add('active');
+}
+
+async function exportData(type, format) {
+  try {
+    const data = await api(`/api/export/${type}?format=${format}&limit=2000`);
+    if (format === 'csv') {
+      const blob = new Blob([data.csv], {type: 'text/csv'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = `dossier_${type}.csv`; a.click();
+      URL.revokeObjectURL(url);
+    } else {
+      const key = type === 'timeline' ? 'events' : type;
+      const blob = new Blob([JSON.stringify(data[key] || data, null, 2)], {type: 'application/json'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = `dossier_${type}.json`; a.click();
+      URL.revokeObjectURL(url);
+    }
+  } catch (err) {
+    console.error('Export failed:', err);
+    alert('Export failed');
+  }
+}
+
+
+// ─── DOCUMENT ANNOTATIONS ───
+
+async function loadAnnotations(docId) {
+  try {
+    const data = await api(`/api/documents/${docId}/annotations`);
+    renderAnnotations(data.annotations);
+  } catch (err) { console.error('Load annotations failed:', err); }
+}
+
+function renderAnnotations(annotations) {
+  let container = document.getElementById('readerAnnotations');
+  if (!container) {
+    const readerView = document.getElementById('readerView');
+    const existing = readerView.querySelector('.reader-annotations');
+    if (existing) existing.remove();
+    container = document.createElement('div');
+    container.id = 'readerAnnotations';
+    container.className = 'reader-annotations';
+    container.style.cssText = 'padding:12px;border-top:1px solid var(--border);';
+    readerView.appendChild(container);
+  }
+  if (!annotations.length) {
+    container.innerHTML = '<div style="font-size:11px;color:var(--text-muted);font-family:var(--font-mono);">No annotations yet. Select text and click "Annotate" to add.</div>';
+    return;
+  }
+  let html = `<div style="font-family:var(--font-mono);font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:2px;color:var(--text-muted);margin-bottom:8px;">Annotations (${annotations.length})</div>`;
+  annotations.forEach(a => {
+    const colorMap = {yellow:'rgba(224,201,74,0.2)', red:'rgba(224,85,85,0.2)', green:'rgba(74,224,168,0.2)', blue:'rgba(74,157,224,0.2)'};
+    html += `<div style="padding:8px;margin-bottom:4px;border-radius:var(--radius);background:${colorMap[a.color] || colorMap.yellow};border-left:3px solid ${a.color === 'red' ? '#e05555' : a.color === 'green' ? '#4ae0a8' : a.color === 'blue' ? '#4a9de0' : '#e0c94a'};">
+      <div style="font-size:11px;font-style:italic;color:var(--text-secondary);margin-bottom:4px;">"${(a.text || '').substring(0, 100)}${a.text && a.text.length > 100 ? '...' : ''}"</div>
+      ${a.note ? `<div style="font-size:12px;color:var(--text-primary);">${a.note}</div>` : ''}
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px;">
+        <span style="font-family:var(--font-mono);font-size:9px;color:var(--text-muted);">${a.created_at || ''}</span>
+        <span style="font-size:10px;color:var(--text-muted);cursor:pointer;" onclick="deleteAnnotation(${a.id})">Delete</span>
+      </div>
+    </div>`;
+  });
+  container.innerHTML = html;
+}
+
+async function addAnnotation() {
+  const sel = window.getSelection();
+  if (!sel || sel.isCollapsed || !selectedDocId) return;
+  const text = sel.toString().trim();
+  if (!text) return;
+
+  const body = document.getElementById('readerBody');
+  const range = sel.getRangeAt(0);
+  const preRange = document.createRange();
+  preRange.selectNodeContents(body);
+  preRange.setEnd(range.startContainer, range.startOffset);
+  const startOffset = preRange.toString().length;
+  const endOffset = startOffset + text.length;
+
+  const note = prompt('Add a note for this annotation (optional):') || '';
+  const color = prompt('Color (yellow/red/green/blue):', 'yellow') || 'yellow';
+
+  try {
+    await fetch(`/api/documents/${selectedDocId}/annotations`, {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({start_offset: startOffset, end_offset: endOffset, text, note, color})
+    });
+    loadAnnotations(selectedDocId);
+  } catch (err) { console.error('Add annotation failed:', err); }
+}
+
+async function deleteAnnotation(id) {
+  try {
+    await fetch(`/api/annotations/${id}`, {method: 'DELETE'});
+    if (selectedDocId) loadAnnotations(selectedDocId);
+  } catch (err) { console.error('Delete annotation failed:', err); }
 }
 
 
