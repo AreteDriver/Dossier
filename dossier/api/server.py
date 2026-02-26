@@ -11101,6 +11101,130 @@ def connection_weight_histogram():
     return {"bins": [dict(r) for r in rows]}
 
 
+@app.get("/api/entity-degree-centrality")
+def entity_degree_centrality():
+    """Entity connection degree (number of unique partners)."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT e.name, e.type, sub.degree, sub.total_weight "
+            "FROM ("
+            "  SELECT entity_id, COUNT(*) AS degree, SUM(w) AS total_weight FROM ("
+            "    SELECT entity_a_id AS entity_id, weight AS w FROM entity_connections "
+            "    UNION ALL "
+            "    SELECT entity_b_id AS entity_id, weight AS w FROM entity_connections"
+            "  ) GROUP BY entity_id"
+            ") sub "
+            "JOIN entities e ON e.id = sub.entity_id "
+            "ORDER BY sub.degree DESC LIMIT 100"
+        ).fetchall()
+    return {"entities": [dict(r) for r in rows]}
+
+
+@app.get("/api/document-title-analysis")
+def document_title_analysis():
+    """Document title length stats and common words."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT title, LENGTH(title) AS title_len "
+            "FROM documents WHERE title IS NOT NULL AND title != '' "
+            "ORDER BY title_len DESC"
+        ).fetchall()
+        no_title = conn.execute(
+            "SELECT COUNT(*) AS cnt FROM documents WHERE title IS NULL OR title = ''"
+        ).fetchone()["cnt"]
+    total = len(rows)
+    avg_len = round(sum(r["title_len"] for r in rows) / total, 1) if total else 0
+    max_len = rows[0]["title_len"] if rows else 0
+    return {
+        "stats": {
+            "with_title": total,
+            "no_title": no_title,
+            "avg_len": avg_len,
+            "max_len": max_len,
+        },
+        "longest": [{"title": r["title"], "length": r["title_len"]} for r in rows[:50]],
+    }
+
+
+@app.get("/api/event-date-range-span")
+def event_date_range_span():
+    """Span between earliest and latest event dates per document."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT d.id, d.filename, "
+            "MIN(ev.event_date) AS earliest, MAX(ev.event_date) AS latest, "
+            "COUNT(ev.id) AS event_count "
+            "FROM events ev "
+            "JOIN documents d ON d.id = ev.document_id "
+            "WHERE ev.event_date IS NOT NULL AND ev.event_date != '' "
+            "GROUP BY d.id HAVING COUNT(ev.id) >= 2 "
+            "ORDER BY event_count DESC LIMIT 100"
+        ).fetchall()
+    return {"documents": [dict(r) for r in rows]}
+
+
+@app.get("/api/source-page-volume")
+def source_page_volume():
+    """Total pages per source."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT source, SUM(pages) AS total_pages, "
+            "COUNT(*) AS doc_count, "
+            "ROUND(AVG(pages), 1) AS avg_pages, "
+            "MAX(pages) AS max_pages "
+            "FROM documents GROUP BY source ORDER BY total_pages DESC"
+        ).fetchall()
+    return {"sources": [dict(r) for r in rows]}
+
+
+@app.get("/api/entity-alias-type-breakdown")
+def entity_alias_type_breakdown():
+    """Alias counts grouped by entity type."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT e.type, COUNT(ea.id) AS alias_count, "
+            "COUNT(DISTINCT ea.entity_id) AS entity_count "
+            "FROM entity_aliases ea "
+            "JOIN entities e ON e.id = ea.entity_id "
+            "GROUP BY e.type ORDER BY alias_count DESC"
+        ).fetchall()
+        total_aliases = sum(r["alias_count"] for r in rows)
+    return {
+        "total_aliases": total_aliases,
+        "types": [
+            {
+                "type": r["type"],
+                "alias_count": r["alias_count"],
+                "entity_count": r["entity_count"],
+                "pct": round(100.0 * r["alias_count"] / total_aliases, 1) if total_aliases else 0,
+            }
+            for r in rows
+        ],
+    }
+
+
+@app.get("/api/connection-bridge-entities")
+def connection_bridge_entities():
+    """Entities that connect otherwise separate groups (high betweenness)."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT e.name, e.type, sub.partners, sub.total_weight "
+            "FROM ("
+            "  SELECT entity_id, COUNT(DISTINCT partner_id) AS partners, "
+            "  SUM(w) AS total_weight FROM ("
+            "    SELECT entity_a_id AS entity_id, entity_b_id AS partner_id, weight AS w "
+            "    FROM entity_connections "
+            "    UNION ALL "
+            "    SELECT entity_b_id AS entity_id, entity_a_id AS partner_id, weight AS w "
+            "    FROM entity_connections"
+            "  ) GROUP BY entity_id HAVING partners >= 3"
+            ") sub "
+            "JOIN entities e ON e.id = sub.entity_id "
+            "ORDER BY sub.partners DESC, sub.total_weight DESC LIMIT 100"
+        ).fetchall()
+    return {"entities": [dict(r) for r in rows]}
+
+
 # ═══════════════════════════════════════════
 # STATIC FILES (serve the frontend)
 # ═══════════════════════════════════════════

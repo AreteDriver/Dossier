@@ -2061,6 +2061,8 @@ body::before {
 .entisoscore-view.active, .doccatbal-view.active, .evttempdensity-view.active, .srcentexcl-view.active, .entnamepattern-view.active, .conncluster-view.active { display: flex; }
 .docsrctimeline-view, .entcrosstype-view, .evtctxlen-view, .srcflagratio-view, .entrescov-view, .connwthist-view { display: none; flex-direction: column; gap: 16px; }
 .docsrctimeline-view.active, .entcrosstype-view.active, .evtctxlen-view.active, .srcflagratio-view.active, .entrescov-view.active, .connwthist-view.active { display: flex; }
+.entdegcent-view, .doctitleanalysis-view, .evtdatespan-view, .srcpagevol-view, .entaliastype-view, .connbridge-view { display: none; flex-direction: column; gap: 16px; }
+.entdegcent-view.active, .doctitleanalysis-view.active, .evtdatespan-view.active, .srcpagevol-view.active, .entaliastype-view.active, .connbridge-view.active { display: flex; }
 .rel-edge { display: flex; align-items: center; gap: 8px; padding: 4px 0; border-bottom: 1px solid var(--border); }
 .sbs-col { flex: 1; padding: 12px; background: var(--bg-card); border-radius: var(--radius); border: 1px solid var(--border); overflow: hidden; }
 .sbs-header { font-family: var(--font-mono); font-size: 12px; font-weight: 600; color: var(--text-primary); margin-bottom: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -2921,6 +2923,30 @@ body::before {
       <div class="sidebar-item" data-view="connwthist" id="connwthistNav">
         <div class="sidebar-dot" style="background:var(--entity-org)"></div>
         Connection Weight Histogram
+      </div>
+      <div class="sidebar-item" data-view="entdegcent" id="entdegcentNav">
+        <div class="sidebar-dot" style="background:var(--entity-location)"></div>
+        Entity Degree Centrality
+      </div>
+      <div class="sidebar-item" data-view="doctitleanalysis" id="doctitleanalysisNav">
+        <div class="sidebar-dot" style="background:var(--accent)"></div>
+        Document Title Analysis
+      </div>
+      <div class="sidebar-item" data-view="evtdatespan" id="evtdatespanNav">
+        <div class="sidebar-dot" style="background:var(--entity-person)"></div>
+        Event Date Range Span
+      </div>
+      <div class="sidebar-item" data-view="srcpagevol" id="srcpagevolNav">
+        <div class="sidebar-dot" style="background:var(--entity-org)"></div>
+        Source Page Volume
+      </div>
+      <div class="sidebar-item" data-view="entaliastype" id="entaliastypeNav">
+        <div class="sidebar-dot" style="background:var(--entity-location)"></div>
+        Entity Alias Type Breakdown
+      </div>
+      <div class="sidebar-item" data-view="connbridge" id="connbridgeNav">
+        <div class="sidebar-dot" style="background:var(--accent)"></div>
+        Connection Bridge Entities
       </div>
     </div>
 
@@ -4626,6 +4652,36 @@ body::before {
       <div id="connwthistContent">Loading connection weight histogram...</div>
     </div>
 
+    <div class="entdegcent-view" id="entdegcentView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Entity Degree Centrality</div>
+      <div id="entdegcentContent">Loading entity degree centrality...</div>
+    </div>
+
+    <div class="doctitleanalysis-view" id="doctitleanalysisView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Document Title Analysis</div>
+      <div id="doctitleanalysisContent">Loading document title analysis...</div>
+    </div>
+
+    <div class="evtdatespan-view" id="evtdatespanView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Event Date Range Span</div>
+      <div id="evtdatespanContent">Loading event date range span...</div>
+    </div>
+
+    <div class="srcpagevol-view" id="srcpagevolView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Source Page Volume</div>
+      <div id="srcpagevolContent">Loading source page volume...</div>
+    </div>
+
+    <div class="entaliastype-view" id="entaliastypeView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Entity Alias Type Breakdown</div>
+      <div id="entaliastypeContent">Loading entity alias type breakdown...</div>
+    </div>
+
+    <div class="connbridge-view" id="connbridgeView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Connection Bridge Entities</div>
+      <div id="connbridgeContent">Loading connection bridge entities...</div>
+    </div>
+
   </main>
 
   <!-- RIGHT PANEL -->
@@ -5418,6 +5474,12 @@ function hideAllViews() {
   document.getElementById('srcflagratioView').classList.remove('active');
   document.getElementById('entrescovView').classList.remove('active');
   document.getElementById('connwthistView').classList.remove('active');
+  document.getElementById('entdegcentView').classList.remove('active');
+  document.getElementById('doctitleanalysisView').classList.remove('active');
+  document.getElementById('evtdatespanView').classList.remove('active');
+  document.getElementById('srcpagevolView').classList.remove('active');
+  document.getElementById('entaliastypeView').classList.remove('active');
+  document.getElementById('connbridgeView').classList.remove('active');
 }
 
 function showDocumentView() {
@@ -5663,6 +5725,12 @@ document.querySelectorAll('.sidebar-item[data-view]').forEach(item => {
     else if (view === 'srcflagratio') showSrcFlagRatioView();
     else if (view === 'entrescov') showEntResCovView();
     else if (view === 'connwthist') showConnWtHistView();
+    else if (view === 'entdegcent') showEntDegCentView();
+    else if (view === 'doctitleanalysis') showDocTitleAnalysisView();
+    else if (view === 'evtdatespan') showEvtDateSpanView();
+    else if (view === 'srcpagevol') showSrcPageVolView();
+    else if (view === 'entaliastype') showEntAliasTypeView();
+    else if (view === 'connbridge') showConnBridgeView();
   });
 });
 
@@ -6906,6 +6974,12 @@ function goBackFromReader() {
   else if (readerPreviousView === 'srcflagratio') showSrcFlagRatioView();
   else if (readerPreviousView === 'entrescov') showEntResCovView();
   else if (readerPreviousView === 'connwthist') showConnWtHistView();
+  else if (readerPreviousView === 'entdegcent') showEntDegCentView();
+  else if (readerPreviousView === 'doctitleanalysis') showDocTitleAnalysisView();
+  else if (readerPreviousView === 'evtdatespan') showEvtDateSpanView();
+  else if (readerPreviousView === 'srcpagevol') showSrcPageVolView();
+  else if (readerPreviousView === 'entaliastype') showEntAliasTypeView();
+  else if (readerPreviousView === 'connbridge') showConnBridgeView();
   else showDocumentView();
 }
 
@@ -16075,6 +16149,136 @@ async function loadConnWtHist() {
     html += '</tbody></table>';
     el.innerHTML = html;
   } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load connection weight histogram</div>'; }
+}
+
+function showEntDegCentView() {
+  currentView = 'entdegcent';
+  hideAllViews();
+  document.getElementById('entdegcentView').classList.add('active');
+  loadEntDegCent();
+}
+async function loadEntDegCent() {
+  const el = document.getElementById('entdegcentContent');
+  try {
+    const res = await fetch('/api/entity-degree-centrality');
+    const data = await res.json();
+    let html = '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="border-bottom:2px solid var(--border);"><th style="text-align:left;padding:8px;">Entity</th><th style="text-align:left;padding:8px;">Type</th><th style="text-align:right;padding:8px;">Degree</th><th style="text-align:right;padding:8px;">Total Weight</th></tr></thead><tbody>';
+    data.entities.forEach(r => {
+      html += `<tr style="border-bottom:1px solid var(--border);"><td style="padding:8px;">${r.name}</td><td style="padding:8px;"><span class="entity-tag ${r.type}" style="font-size:10px;">${r.type}</span></td><td style="text-align:right;padding:8px;font-weight:600;">${r.degree}</td><td style="text-align:right;padding:8px;">${r.total_weight}</td></tr>`;
+    });
+    html += '</tbody></table>';
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load entity degree centrality</div>'; }
+}
+
+function showDocTitleAnalysisView() {
+  currentView = 'doctitleanalysis';
+  hideAllViews();
+  document.getElementById('doctitleanalysisView').classList.add('active');
+  loadDocTitleAnalysis();
+}
+async function loadDocTitleAnalysis() {
+  const el = document.getElementById('doctitleanalysisContent');
+  try {
+    const res = await fetch('/api/document-title-analysis');
+    const data = await res.json();
+    const s = data.stats;
+    let html = `<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;">`;
+    html += `<div style="background:var(--bg-secondary);padding:12px;border-radius:6px;"><div style="font-size:11px;color:var(--text-muted);">With Title</div><div style="font-size:20px;font-weight:700;color:var(--text-primary);">${s.with_title}</div></div>`;
+    html += `<div style="background:var(--bg-secondary);padding:12px;border-radius:6px;"><div style="font-size:11px;color:var(--text-muted);">No Title</div><div style="font-size:20px;font-weight:700;color:var(--text-primary);">${s.no_title}</div></div>`;
+    html += `<div style="background:var(--bg-secondary);padding:12px;border-radius:6px;"><div style="font-size:11px;color:var(--text-muted);">Avg Length</div><div style="font-size:20px;font-weight:700;color:var(--text-primary);">${s.avg_len}</div></div>`;
+    html += `<div style="background:var(--bg-secondary);padding:12px;border-radius:6px;"><div style="font-size:11px;color:var(--text-muted);">Max Length</div><div style="font-size:20px;font-weight:700;color:var(--text-primary);">${s.max_len}</div></div>`;
+    html += `</div>`;
+    if (data.longest.length) {
+      html += '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="border-bottom:2px solid var(--border);"><th style="text-align:left;padding:8px;">Title</th><th style="text-align:right;padding:8px;">Length</th></tr></thead><tbody>';
+      data.longest.forEach(r => {
+        html += `<tr style="border-bottom:1px solid var(--border);"><td style="padding:8px;max-width:500px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${r.title}</td><td style="text-align:right;padding:8px;font-weight:600;">${r.length}</td></tr>`;
+      });
+      html += '</tbody></table>';
+    }
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load document title analysis</div>'; }
+}
+
+function showEvtDateSpanView() {
+  currentView = 'evtdatespan';
+  hideAllViews();
+  document.getElementById('evtdatespanView').classList.add('active');
+  loadEvtDateSpan();
+}
+async function loadEvtDateSpan() {
+  const el = document.getElementById('evtdatespanContent');
+  try {
+    const res = await fetch('/api/event-date-range-span');
+    const data = await res.json();
+    let html = '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="border-bottom:2px solid var(--border);"><th style="text-align:left;padding:8px;">Document</th><th style="text-align:left;padding:8px;">Earliest</th><th style="text-align:left;padding:8px;">Latest</th><th style="text-align:right;padding:8px;">Events</th></tr></thead><tbody>';
+    data.documents.forEach(r => {
+      html += `<tr style="border-bottom:1px solid var(--border);"><td style="padding:8px;max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${r.filename}</td><td style="padding:8px;">${r.earliest || '—'}</td><td style="padding:8px;">${r.latest || '—'}</td><td style="text-align:right;padding:8px;font-weight:600;">${r.event_count}</td></tr>`;
+    });
+    html += '</tbody></table>';
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load event date range span</div>'; }
+}
+
+function showSrcPageVolView() {
+  currentView = 'srcpagevol';
+  hideAllViews();
+  document.getElementById('srcpagevolView').classList.add('active');
+  loadSrcPageVol();
+}
+async function loadSrcPageVol() {
+  const el = document.getElementById('srcpagevolContent');
+  try {
+    const res = await fetch('/api/source-page-volume');
+    const data = await res.json();
+    let html = '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="border-bottom:2px solid var(--border);"><th style="text-align:left;padding:8px;">Source</th><th style="text-align:right;padding:8px;">Total Pages</th><th style="text-align:right;padding:8px;">Documents</th><th style="text-align:right;padding:8px;">Avg Pages</th><th style="text-align:right;padding:8px;">Max Pages</th></tr></thead><tbody>';
+    data.sources.forEach(r => {
+      html += `<tr style="border-bottom:1px solid var(--border);"><td style="padding:8px;">${r.source || '—'}</td><td style="text-align:right;padding:8px;font-weight:600;">${(r.total_pages || 0).toLocaleString()}</td><td style="text-align:right;padding:8px;">${r.doc_count}</td><td style="text-align:right;padding:8px;">${r.avg_pages || 0}</td><td style="text-align:right;padding:8px;">${r.max_pages || 0}</td></tr>`;
+    });
+    html += '</tbody></table>';
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load source page volume</div>'; }
+}
+
+function showEntAliasTypeView() {
+  currentView = 'entaliastype';
+  hideAllViews();
+  document.getElementById('entaliastypeView').classList.add('active');
+  loadEntAliasType();
+}
+async function loadEntAliasType() {
+  const el = document.getElementById('entaliastypeContent');
+  try {
+    const res = await fetch('/api/entity-alias-type-breakdown');
+    const data = await res.json();
+    let html = `<div style="background:var(--bg-secondary);padding:12px;border-radius:6px;margin-bottom:16px;"><div style="font-size:11px;color:var(--text-muted);">Total Aliases</div><div style="font-size:20px;font-weight:700;color:var(--text-primary);">${data.total_aliases.toLocaleString()}</div></div>`;
+    html += '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="border-bottom:2px solid var(--border);"><th style="text-align:left;padding:8px;">Type</th><th style="text-align:right;padding:8px;">Aliases</th><th style="text-align:right;padding:8px;">Entities</th><th style="text-align:right;padding:8px;">%</th><th style="text-align:left;padding:8px;width:30%;">Bar</th></tr></thead><tbody>';
+    data.types.forEach(r => {
+      html += `<tr style="border-bottom:1px solid var(--border);"><td style="padding:8px;"><span class="entity-tag ${r.type}" style="font-size:10px;">${r.type}</span></td><td style="text-align:right;padding:8px;font-weight:600;">${r.alias_count}</td><td style="text-align:right;padding:8px;">${r.entity_count}</td><td style="text-align:right;padding:8px;">${r.pct}%</td><td style="padding:8px;"><div style="background:var(--accent);height:14px;border-radius:3px;width:${r.pct}%;"></div></td></tr>`;
+    });
+    html += '</tbody></table>';
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load entity alias type breakdown</div>'; }
+}
+
+function showConnBridgeView() {
+  currentView = 'connbridge';
+  hideAllViews();
+  document.getElementById('connbridgeView').classList.add('active');
+  loadConnBridge();
+}
+async function loadConnBridge() {
+  const el = document.getElementById('connbridgeContent');
+  try {
+    const res = await fetch('/api/connection-bridge-entities');
+    const data = await res.json();
+    let html = '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="border-bottom:2px solid var(--border);"><th style="text-align:left;padding:8px;">Entity</th><th style="text-align:left;padding:8px;">Type</th><th style="text-align:right;padding:8px;">Partners</th><th style="text-align:right;padding:8px;">Total Weight</th></tr></thead><tbody>';
+    data.entities.forEach(r => {
+      html += `<tr style="border-bottom:1px solid var(--border);"><td style="padding:8px;">${r.name}</td><td style="padding:8px;"><span class="entity-tag ${r.type}" style="font-size:10px;">${r.type}</span></td><td style="text-align:right;padding:8px;font-weight:600;">${r.partners}</td><td style="text-align:right;padding:8px;">${r.total_weight}</td></tr>`;
+    });
+    html += '</tbody></table>';
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load connection bridge entities</div>'; }
 }
 
 // ─── INIT ───
