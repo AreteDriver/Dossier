@@ -2029,6 +2029,8 @@ body::before {
 .entconnmap-view.active, .docwords-view.active, .mentionheat-view.active, .srcquality-view.active, .eventcal-view.active, .pairhist-view.active { display: flex; }
 .finentlinks-view, .docsrccluster-view, .tlgaps-view, .degreedist-view, .multimention-view, .flagsummary-view { display: none; flex-direction: column; gap: 16px; }
 .finentlinks-view.active, .docsrccluster-view.active, .tlgaps-view.active, .degreedist-view.active, .multimention-view.active, .flagsummary-view.active { display: flex; }
+.resaudit-view, .docshared-view, .srcrange-view, .searchhist-view, .catentmatrix-view, .eventrank-view { display: none; flex-direction: column; gap: 16px; }
+.resaudit-view.active, .docshared-view.active, .srcrange-view.active, .searchhist-view.active, .catentmatrix-view.active, .eventrank-view.active { display: flex; }
 .rel-edge { display: flex; align-items: center; gap: 8px; padding: 4px 0; border-bottom: 1px solid var(--border); }
 .sbs-col { flex: 1; padding: 12px; background: var(--bg-card); border-radius: var(--radius); border: 1px solid var(--border); overflow: hidden; }
 .sbs-header { font-family: var(--font-mono); font-size: 12px; font-weight: 600; color: var(--text-primary); margin-bottom: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -2505,6 +2507,30 @@ body::before {
       <div class="sidebar-item" data-view="flagsummary" id="flagsummaryNav">
         <div class="sidebar-dot" style="background:var(--entity-place)"></div>
         Flagged Summary
+      </div>
+      <div class="sidebar-item" data-view="resaudit" id="resauditNav">
+        <div class="sidebar-dot" style="background:var(--entity-person)"></div>
+        Resolution Audit
+      </div>
+      <div class="sidebar-item" data-view="docshared" id="docsharedNav">
+        <div class="sidebar-dot" style="background:var(--entity-org)"></div>
+        Shared Entities
+      </div>
+      <div class="sidebar-item" data-view="srcrange" id="srcrangeNav">
+        <div class="sidebar-dot" style="background:var(--entity-date)"></div>
+        Source Date Range
+      </div>
+      <div class="sidebar-item" data-view="searchhist" id="searchhistNav">
+        <div class="sidebar-dot" style="background:var(--entity-place)"></div>
+        Search History
+      </div>
+      <div class="sidebar-item" data-view="catentmatrix" id="catentmatrixNav">
+        <div class="sidebar-dot" style="background:var(--entity-person)"></div>
+        Category-Entity Matrix
+      </div>
+      <div class="sidebar-item" data-view="eventrank" id="eventrankNav">
+        <div class="sidebar-dot" style="background:var(--entity-org)"></div>
+        Event Entity Ranking
       </div>
     </div>
 
@@ -3730,6 +3756,36 @@ body::before {
       <div id="flagsummaryContent">Loading flagged summary...</div>
     </div>
 
+    <div class="resaudit-view" id="resauditView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Resolution Audit</div>
+      <div id="resauditContent">Loading resolution audit...</div>
+    </div>
+
+    <div class="docshared-view" id="docsharedView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Shared Entities Between Documents</div>
+      <div id="docsharedContent">Loading shared entities...</div>
+    </div>
+
+    <div class="srcrange-view" id="srcrangeView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Source Date Range</div>
+      <div id="srcrangeContent">Loading source date ranges...</div>
+    </div>
+
+    <div class="searchhist-view" id="searchhistView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Search History Stats</div>
+      <div id="searchhistContent">Loading search history...</div>
+    </div>
+
+    <div class="catentmatrix-view" id="catentmatrixView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Category-Entity Matrix</div>
+      <div id="catentmatrixContent">Loading category-entity matrix...</div>
+    </div>
+
+    <div class="eventrank-view" id="eventrankView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Event Entity Ranking</div>
+      <div id="eventrankContent">Loading event entity ranking...</div>
+    </div>
+
   </main>
 
   <!-- RIGHT PANEL -->
@@ -4426,6 +4482,12 @@ function hideAllViews() {
   document.getElementById('degreedistView').classList.remove('active');
   document.getElementById('multimentionView').classList.remove('active');
   document.getElementById('flagsummaryView').classList.remove('active');
+  document.getElementById('resauditView').classList.remove('active');
+  document.getElementById('docsharedView').classList.remove('active');
+  document.getElementById('srcrangeView').classList.remove('active');
+  document.getElementById('searchhistView').classList.remove('active');
+  document.getElementById('catentmatrixView').classList.remove('active');
+  document.getElementById('eventrankView').classList.remove('active');
 }
 
 function showDocumentView() {
@@ -4575,6 +4637,12 @@ document.querySelectorAll('.sidebar-item[data-view]').forEach(item => {
     else if (view === 'degreedist') showDegreeDistView();
     else if (view === 'multimention') showMultiMentionView();
     else if (view === 'flagsummary') showFlagSummaryView();
+    else if (view === 'resaudit') showResAuditView();
+    else if (view === 'docshared') showDocSharedView();
+    else if (view === 'srcrange') showSrcRangeView();
+    else if (view === 'searchhist') showSearchHistView();
+    else if (view === 'catentmatrix') showCatEntMatrixView();
+    else if (view === 'eventrank') showEventRankView();
   });
 });
 
@@ -5722,6 +5790,12 @@ function goBackFromReader() {
   else if (readerPreviousView === 'degreedist') showDegreeDistView();
   else if (readerPreviousView === 'multimention') showMultiMentionView();
   else if (readerPreviousView === 'flagsummary') showFlagSummaryView();
+  else if (readerPreviousView === 'resaudit') showResAuditView();
+  else if (readerPreviousView === 'docshared') showDocSharedView();
+  else if (readerPreviousView === 'srcrange') showSrcRangeView();
+  else if (readerPreviousView === 'searchhist') showSearchHistView();
+  else if (readerPreviousView === 'catentmatrix') showCatEntMatrixView();
+  else if (readerPreviousView === 'eventrank') showEventRankView();
   else showDocumentView();
 }
 
@@ -12084,6 +12158,231 @@ async function loadFlagSummary() {
     }
     el.innerHTML = html;
   } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load flagged summary</div>'; }
+}
+
+
+// ── Resolution Audit ──
+
+function showResAuditView() {
+  currentView = 'resaudit';
+  hideAllViews();
+  document.getElementById('resauditView').classList.add('active');
+  loadResAudit();
+}
+
+async function loadResAudit() {
+  const el = document.getElementById('resauditContent');
+  el.innerHTML = 'Loading resolution audit...';
+  try {
+    const data = await fetchJSON('/api/resolution-audit');
+    let html = `<div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:12px;">`;
+    html += `<div class="stat-card"><div class="stat-value">${data.total}</div><div class="stat-label">Resolutions</div></div>`;
+    html += `</div>`;
+
+    if (data.by_type.length) {
+      html += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">';
+      data.by_type.forEach(t => html += `<span class="entity-tag ${t.type}" style="font-size:10px;">${t.type}: ${t.count}</span> `);
+      html += '</div>';
+    }
+
+    if (data.resolutions.length) {
+      html += '<table class="data-table"><thead><tr><th>Source Entity</th><th>Type</th><th>→</th><th>Canonical Entity</th><th>Type</th></tr></thead><tbody>';
+      data.resolutions.forEach(r => {
+        html += `<tr><td>${r.source_name}</td><td><span class="entity-tag ${r.source_type}" style="font-size:9px;">${r.source_type}</span></td>`;
+        html += `<td style="color:var(--text-muted);">→</td>`;
+        html += `<td>${r.canonical_name}</td><td><span class="entity-tag ${r.canonical_type}" style="font-size:9px;">${r.canonical_type}</span></td></tr>`;
+      });
+      html += '</tbody></table>';
+    } else {
+      html += '<div style="color:var(--text-muted);">No entity resolutions found.</div>';
+    }
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load resolution audit</div>'; }
+}
+
+// ── Document Shared Entities ──
+
+function showDocSharedView() {
+  currentView = 'docshared';
+  hideAllViews();
+  document.getElementById('docsharedView').classList.add('active');
+  loadDocShared();
+}
+
+async function loadDocShared() {
+  const el = document.getElementById('docsharedContent');
+  el.innerHTML = 'Loading shared entities...';
+  try {
+    const data = await fetchJSON('/api/document-shared-entities');
+    let html = `<div class="stat-card" style="margin-bottom:12px;"><div class="stat-value">${data.total}</div><div class="stat-label">Document Pairs</div></div>`;
+
+    if (data.pairs.length) {
+      html += '<table class="data-table"><thead><tr><th>Document A</th><th>Cat</th><th>Document B</th><th>Cat</th><th>Shared</th></tr></thead><tbody>';
+      data.pairs.forEach(p => {
+        const nameA = (p.title_a || p.file_a).substring(0, 35);
+        const nameB = (p.title_b || p.file_b).substring(0, 35);
+        html += `<tr><td><a href="#" onclick="openReader(${p.doc_a});return false;">${nameA}</a></td>`;
+        html += `<td>${p.cat_a||''}</td>`;
+        html += `<td><a href="#" onclick="openReader(${p.doc_b});return false;">${nameB}</a></td>`;
+        html += `<td>${p.cat_b||''}</td>`;
+        html += `<td style="font-weight:600;color:var(--accent);">${p.shared_count}</td></tr>`;
+      });
+      html += '</tbody></table>';
+    } else {
+      html += '<div style="color:var(--text-muted);">No shared entities between documents.</div>';
+    }
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load shared entities</div>'; }
+}
+
+// ── Source Date Range ──
+
+function showSrcRangeView() {
+  currentView = 'srcrange';
+  hideAllViews();
+  document.getElementById('srcrangeView').classList.add('active');
+  loadSrcRange();
+}
+
+async function loadSrcRange() {
+  const el = document.getElementById('srcrangeContent');
+  el.innerHTML = 'Loading source date ranges...';
+  try {
+    const data = await fetchJSON('/api/source-date-range');
+    let html = `<div class="stat-card" style="margin-bottom:12px;"><div class="stat-value">${data.total}</div><div class="stat-label">Sources</div></div>`;
+
+    if (data.sources.length) {
+      html += '<table class="data-table"><thead><tr><th>Source</th><th>Docs</th><th>Earliest</th><th>Latest</th><th>Pages</th></tr></thead><tbody>';
+      data.sources.forEach(s => {
+        html += `<tr><td>${s.source}</td><td>${s.doc_count}</td>`;
+        html += `<td>${s.earliest||'—'}</td><td>${s.latest||'—'}</td>`;
+        html += `<td>${(s.total_pages||0).toLocaleString()}</td></tr>`;
+      });
+      html += '</tbody></table>';
+    } else {
+      html += '<div style="color:var(--text-muted);">No source data available.</div>';
+    }
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load source date ranges</div>'; }
+}
+
+// ── Search History Stats ──
+
+function showSearchHistView() {
+  currentView = 'searchhist';
+  hideAllViews();
+  document.getElementById('searchhistView').classList.add('active');
+  loadSearchHist();
+}
+
+async function loadSearchHist() {
+  const el = document.getElementById('searchhistContent');
+  el.innerHTML = 'Loading search history...';
+  try {
+    const data = await fetchJSON('/api/search-history-stats');
+    let html = `<div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:12px;">`;
+    html += `<div class="stat-card"><div class="stat-value">${data.total}</div><div class="stat-label">Total Searches</div></div>`;
+    html += `<div class="stat-card"><div class="stat-value">${data.unique_queries}</div><div class="stat-label">Unique Queries</div></div>`;
+    html += `</div>`;
+
+    if (data.by_hour.length) {
+      html += '<div style="font-size:12px;font-weight:600;margin-bottom:6px;color:var(--text-secondary);">Searches by Hour</div>';
+      const maxH = Math.max(...data.by_hour.map(h => h.cnt));
+      html += '<div style="display:flex;gap:2px;align-items:end;height:60px;margin-bottom:12px;">';
+      for (let i = 0; i < 24; i++) {
+        const hObj = data.by_hour.find(h => h.hour === i);
+        const cnt = hObj ? hObj.cnt : 0;
+        const pct = maxH ? (cnt / maxH * 100) : 0;
+        html += `<div title="${i}:00 — ${cnt} searches" style="flex:1;background:var(--accent);min-height:2px;height:${pct}%;border-radius:1px;"></div>`;
+      }
+      html += '</div>';
+    }
+
+    if (data.queries.length) {
+      html += '<table class="data-table"><thead><tr><th>Query</th><th>Count</th><th>Last Searched</th></tr></thead><tbody>';
+      data.queries.forEach(q => {
+        html += `<tr><td>${q.query}</td><td>${q.cnt}</td><td>${q.last_searched||''}</td></tr>`;
+      });
+      html += '</tbody></table>';
+    } else {
+      html += '<div style="color:var(--text-muted);">No search history yet.</div>';
+    }
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load search history</div>'; }
+}
+
+// ── Category-Entity Matrix ──
+
+function showCatEntMatrixView() {
+  currentView = 'catentmatrix';
+  hideAllViews();
+  document.getElementById('catentmatrixView').classList.add('active');
+  loadCatEntMatrix();
+}
+
+async function loadCatEntMatrix() {
+  const el = document.getElementById('catentmatrixContent');
+  el.innerHTML = 'Loading category-entity matrix...';
+  try {
+    const data = await fetchJSON('/api/category-entity-matrix');
+    if (!data.categories.length) { el.innerHTML = '<div style="color:var(--text-muted);">No data.</div>'; return; }
+
+    let html = '<div style="overflow-x:auto;"><table class="data-table"><thead><tr><th>Category</th>';
+    data.entity_types.forEach(t => html += `<th>${t}</th>`);
+    html += '</tr></thead><tbody>';
+
+    data.categories.forEach(cat => {
+      html += `<tr><td style="font-weight:600;">${cat}</td>`;
+      data.entity_types.forEach(t => {
+        const cell = data.matrix[cat] && data.matrix[cat][t];
+        if (cell) {
+          html += `<td title="${cell.mentions} mentions">${cell.count}</td>`;
+        } else {
+          html += `<td style="color:var(--text-muted);">—</td>`;
+        }
+      });
+      html += '</tr>';
+    });
+    html += '</tbody></table></div>';
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load category-entity matrix</div>'; }
+}
+
+// ── Event Entity Ranking ──
+
+function showEventRankView() {
+  currentView = 'eventrank';
+  hideAllViews();
+  document.getElementById('eventrankView').classList.add('active');
+  loadEventRank();
+}
+
+async function loadEventRank() {
+  const el = document.getElementById('eventrankContent');
+  el.innerHTML = 'Loading event entity ranking...';
+  try {
+    const data = await fetchJSON('/api/event-entity-ranking');
+    let html = `<div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:12px;">`;
+    html += `<div class="stat-card"><div class="stat-value">${data.total_ranked}</div><div class="stat-label">Entities w/ Events</div></div>`;
+    html += `<div class="stat-card"><div class="stat-value">${data.avg_events}</div><div class="stat-label">Avg Events</div></div>`;
+    html += `<div class="stat-card"><div class="stat-value">${data.max_events}</div><div class="stat-label">Max Events</div></div>`;
+    html += `</div>`;
+
+    if (data.entities.length) {
+      const maxEvt = data.entities[0].event_count;
+      html += '<table class="data-table"><thead><tr><th>Entity</th><th>Type</th><th>Events</th><th>First</th><th>Last</th><th>Bar</th></tr></thead><tbody>';
+      data.entities.forEach(e => {
+        const pct = maxEvt ? (e.event_count / maxEvt * 100) : 0;
+        html += `<tr><td>${e.name}</td><td><span class="entity-tag ${e.type}" style="font-size:9px;">${e.type}</span></td>`;
+        html += `<td>${e.event_count}</td><td>${e.first_event||'—'}</td><td>${e.last_event||'—'}</td>`;
+        html += `<td style="width:120px;"><div style="height:8px;background:var(--accent);width:${pct}%;border-radius:3px;"></div></td></tr>`;
+      });
+      html += '</tbody></table>';
+    } else {
+      html += '<div style="color:var(--text-muted);">No event entities found.</div>';
+    }
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load event entity ranking</div>'; }
 }
 
 

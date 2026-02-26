@@ -8676,6 +8676,191 @@ def flagged_summary():
     }
 
 
+# ── Resolution Audit ──────────────────────────────
+
+
+@app.get("/api/resolution-audit")
+def resolution_audit():
+    """Entity resolution decisions — source to canonical mapping."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT er.source_entity_id, er.canonical_entity_id, "
+            "es.name as source_name, es.type as source_type, "
+            "ec.name as canonical_name, ec.type as canonical_type "
+            "FROM entity_resolutions er "
+            "JOIN entities es ON es.id = er.source_entity_id "
+            "JOIN entities ec ON ec.id = er.canonical_entity_id "
+            "ORDER BY ec.name"
+        ).fetchall()
+
+    resolutions = [dict(r) for r in rows]
+
+    by_type = {}
+    for r in resolutions:
+        t = r.get("source_type", "unknown")
+        by_type[t] = by_type.get(t, 0) + 1
+
+    return {
+        "resolutions": resolutions[:200],
+        "total": len(resolutions),
+        "by_type": [
+            {"type": k, "count": v}
+            for k, v in sorted(by_type.items(), key=lambda x: x[1], reverse=True)
+        ],
+    }
+
+
+# ── Document Shared Entities ─────────────────────
+
+
+@app.get("/api/document-shared-entities")
+def document_shared_entities():
+    """Pairs of documents sharing the most entities."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT de1.document_id as doc_a, de2.document_id as doc_b, "
+            "COUNT(*) as shared_count, "
+            "d1.title as title_a, d1.filename as file_a, d1.category as cat_a, "
+            "d2.title as title_b, d2.filename as file_b, d2.category as cat_b "
+            "FROM document_entities de1 "
+            "JOIN document_entities de2 ON de1.entity_id = de2.entity_id AND de1.document_id < de2.document_id "
+            "JOIN documents d1 ON d1.id = de1.document_id "
+            "JOIN documents d2 ON d2.id = de2.document_id "
+            "GROUP BY de1.document_id, de2.document_id "
+            "ORDER BY shared_count DESC "
+            "LIMIT 100"
+        ).fetchall()
+
+    return {"pairs": [dict(r) for r in rows], "total": len(rows)}
+
+
+# ── Source Date Range ────────────────────────────
+
+
+@app.get("/api/source-date-range")
+def source_date_range():
+    """Earliest and latest document dates per source."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT source, COUNT(*) as doc_count, "
+            "MIN(date) as earliest, MAX(date) as latest, "
+            "SUM(pages) as total_pages "
+            "FROM documents "
+            "WHERE source IS NOT NULL AND source != '' "
+            "GROUP BY source "
+            "ORDER BY doc_count DESC"
+        ).fetchall()
+
+    return {"sources": [dict(r) for r in rows], "total": len(rows)}
+
+
+# ── Search History Stats ─────────────────────────
+
+
+@app.get("/api/search-history-stats")
+def search_history_stats():
+    """Analysis of search queries from the search_history table."""
+    with get_db() as conn:
+        # Check if search_history table exists
+        table_check = conn.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='search_history'"
+        ).fetchone()
+        if not table_check:
+            return {"queries": [], "total": 0, "top_terms": [], "by_hour": []}
+
+        rows = conn.execute(
+            "SELECT query, COUNT(*) as cnt, MAX(searched_at) as last_searched "
+            "FROM search_history "
+            "GROUP BY query "
+            "ORDER BY cnt DESC "
+            "LIMIT 50"
+        ).fetchall()
+
+        total = conn.execute("SELECT COUNT(*) as c FROM search_history").fetchone()["c"]
+
+        by_hour = conn.execute(
+            "SELECT CAST(strftime('%H', searched_at) AS INTEGER) as hour, COUNT(*) as cnt "
+            "FROM search_history "
+            "GROUP BY hour ORDER BY hour"
+        ).fetchall()
+
+    return {
+        "queries": [dict(r) for r in rows],
+        "total": total,
+        "unique_queries": len(rows),
+        "by_hour": [dict(h) for h in by_hour],
+    }
+
+
+# ── Category Entity Matrix ───────────────────────
+
+
+@app.get("/api/category-entity-matrix")
+def category_entity_matrix():
+    """Entity type counts per document category."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT d.category, e.type, COUNT(DISTINCT e.id) as entity_count, "
+            "SUM(de.count) as total_mentions "
+            "FROM document_entities de "
+            "JOIN documents d ON d.id = de.document_id "
+            "JOIN entities e ON e.id = de.entity_id "
+            "WHERE d.category IS NOT NULL AND d.category != '' "
+            "GROUP BY d.category, e.type "
+            "ORDER BY d.category, entity_count DESC"
+        ).fetchall()
+
+    # Pivot into matrix
+    matrix = {}
+    entity_types = set()
+    for r in rows:
+        cat = r["category"]
+        etype = r["type"]
+        entity_types.add(etype)
+        if cat not in matrix:
+            matrix[cat] = {}
+        matrix[cat][etype] = {"count": r["entity_count"], "mentions": r["total_mentions"]}
+
+    categories = sorted(matrix.keys())
+    entity_types = sorted(entity_types)
+
+    return {
+        "categories": categories,
+        "entity_types": entity_types,
+        "matrix": matrix,
+        "raw": [dict(r) for r in rows],
+    }
+
+
+# ── Event Entity Ranking ────────────────────────
+
+
+@app.get("/api/event-entity-ranking")
+def event_entity_ranking():
+    """Entities ranked by number of timeline events they appear in."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT e.id, e.name, e.type, COUNT(DISTINCT ee.event_id) as event_count, "
+            "MIN(ev.event_date) as first_event, MAX(ev.event_date) as last_event "
+            "FROM event_entities ee "
+            "JOIN entities e ON e.id = ee.entity_id "
+            "JOIN events ev ON ev.id = ee.event_id "
+            "GROUP BY e.id "
+            "ORDER BY event_count DESC "
+            "LIMIT 100"
+        ).fetchall()
+
+    entities = [dict(r) for r in rows]
+    event_counts = [e["event_count"] for e in entities]
+
+    return {
+        "entities": entities,
+        "total_ranked": len(entities),
+        "avg_events": round(sum(event_counts) / len(event_counts), 1) if event_counts else 0,
+        "max_events": max(event_counts) if event_counts else 0,
+    }
+
+
 # ═══════════════════════════════════════════
 # STATIC FILES (serve the frontend)
 # ═══════════════════════════════════════════
