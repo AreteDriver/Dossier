@@ -2063,6 +2063,8 @@ body::before {
 .docsrctimeline-view.active, .entcrosstype-view.active, .evtctxlen-view.active, .srcflagratio-view.active, .entrescov-view.active, .connwthist-view.active { display: flex; }
 .entdegcent-view, .doctitleanalysis-view, .evtdatespan-view, .srcpagevol-view, .entaliastype-view, .connbridge-view { display: none; flex-direction: column; gap: 16px; }
 .entdegcent-view.active, .doctitleanalysis-view.active, .evtdatespan-view.active, .srcpagevol-view.active, .entaliastype-view.active, .connbridge-view.active { display: flex; }
+.entsharedsrc-view, .docfilepattern-view, .evtmonthmap-view, .srcentconc-view, .entconnstrrank-view, .redactdoccov-view { display: none; flex-direction: column; gap: 16px; }
+.entsharedsrc-view.active, .docfilepattern-view.active, .evtmonthmap-view.active, .srcentconc-view.active, .entconnstrrank-view.active, .redactdoccov-view.active { display: flex; }
 .rel-edge { display: flex; align-items: center; gap: 8px; padding: 4px 0; border-bottom: 1px solid var(--border); }
 .sbs-col { flex: 1; padding: 12px; background: var(--bg-card); border-radius: var(--radius); border: 1px solid var(--border); overflow: hidden; }
 .sbs-header { font-family: var(--font-mono); font-size: 12px; font-weight: 600; color: var(--text-primary); margin-bottom: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -2947,6 +2949,30 @@ body::before {
       <div class="sidebar-item" data-view="connbridge" id="connbridgeNav">
         <div class="sidebar-dot" style="background:var(--accent)"></div>
         Connection Bridge Entities
+      </div>
+      <div class="sidebar-item" data-view="entsharedsrc" id="entsharedsrcNav">
+        <div class="sidebar-dot" style="background:var(--entity-person)"></div>
+        Entity Shared Sources
+      </div>
+      <div class="sidebar-item" data-view="docfilepattern" id="docfilepatternNav">
+        <div class="sidebar-dot" style="background:var(--entity-org)"></div>
+        Document Filename Pattern
+      </div>
+      <div class="sidebar-item" data-view="evtmonthmap" id="evtmonthmapNav">
+        <div class="sidebar-dot" style="background:var(--entity-location)"></div>
+        Event Monthly Heatmap
+      </div>
+      <div class="sidebar-item" data-view="srcentconc" id="srcentconcNav">
+        <div class="sidebar-dot" style="background:var(--accent)"></div>
+        Source Entity Concentration
+      </div>
+      <div class="sidebar-item" data-view="entconnstrrank" id="entconnstrrankNav">
+        <div class="sidebar-dot" style="background:var(--entity-person)"></div>
+        Entity Connection Strength Rank
+      </div>
+      <div class="sidebar-item" data-view="redactdoccov" id="redactdoccovNav">
+        <div class="sidebar-dot" style="background:var(--entity-org)"></div>
+        Redaction Document Coverage
       </div>
     </div>
 
@@ -4682,6 +4708,36 @@ body::before {
       <div id="connbridgeContent">Loading connection bridge entities...</div>
     </div>
 
+    <div class="entsharedsrc-view" id="entsharedsrcView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Entity Shared Sources</div>
+      <div id="entsharedsrcContent">Loading entity shared sources...</div>
+    </div>
+
+    <div class="docfilepattern-view" id="docfilepatternView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Document Filename Pattern</div>
+      <div id="docfilepatternContent">Loading document filename pattern...</div>
+    </div>
+
+    <div class="evtmonthmap-view" id="evtmonthmapView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Event Monthly Heatmap</div>
+      <div id="evtmonthmapContent">Loading event monthly heatmap...</div>
+    </div>
+
+    <div class="srcentconc-view" id="srcentconcView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Source Entity Concentration</div>
+      <div id="srcentconcContent">Loading source entity concentration...</div>
+    </div>
+
+    <div class="entconnstrrank-view" id="entconnstrrankView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Entity Connection Strength Rank</div>
+      <div id="entconnstrrankContent">Loading entity connection strength rank...</div>
+    </div>
+
+    <div class="redactdoccov-view" id="redactdoccovView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Redaction Document Coverage</div>
+      <div id="redactdoccovContent">Loading redaction document coverage...</div>
+    </div>
+
   </main>
 
   <!-- RIGHT PANEL -->
@@ -5480,6 +5536,12 @@ function hideAllViews() {
   document.getElementById('srcpagevolView').classList.remove('active');
   document.getElementById('entaliastypeView').classList.remove('active');
   document.getElementById('connbridgeView').classList.remove('active');
+  document.getElementById('entsharedsrcView').classList.remove('active');
+  document.getElementById('docfilepatternView').classList.remove('active');
+  document.getElementById('evtmonthmapView').classList.remove('active');
+  document.getElementById('srcentconcView').classList.remove('active');
+  document.getElementById('entconnstrrankView').classList.remove('active');
+  document.getElementById('redactdoccovView').classList.remove('active');
 }
 
 function showDocumentView() {
@@ -5731,6 +5793,12 @@ document.querySelectorAll('.sidebar-item[data-view]').forEach(item => {
     else if (view === 'srcpagevol') showSrcPageVolView();
     else if (view === 'entaliastype') showEntAliasTypeView();
     else if (view === 'connbridge') showConnBridgeView();
+    else if (view === 'entsharedsrc') showEntSharedSrcView();
+    else if (view === 'docfilepattern') showDocFilePatternView();
+    else if (view === 'evtmonthmap') showEvtMonthMapView();
+    else if (view === 'srcentconc') showSrcEntConcView();
+    else if (view === 'entconnstrrank') showEntConnStrRankView();
+    else if (view === 'redactdoccov') showRedactDocCovView();
   });
 });
 
@@ -6980,6 +7048,12 @@ function goBackFromReader() {
   else if (readerPreviousView === 'srcpagevol') showSrcPageVolView();
   else if (readerPreviousView === 'entaliastype') showEntAliasTypeView();
   else if (readerPreviousView === 'connbridge') showConnBridgeView();
+  else if (readerPreviousView === 'entsharedsrc') showEntSharedSrcView();
+  else if (readerPreviousView === 'docfilepattern') showDocFilePatternView();
+  else if (readerPreviousView === 'evtmonthmap') showEvtMonthMapView();
+  else if (readerPreviousView === 'srcentconc') showSrcEntConcView();
+  else if (readerPreviousView === 'entconnstrrank') showEntConnStrRankView();
+  else if (readerPreviousView === 'redactdoccov') showRedactDocCovView();
   else showDocumentView();
 }
 
@@ -16279,6 +16353,139 @@ async function loadConnBridge() {
     html += '</tbody></table>';
     el.innerHTML = html;
   } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load connection bridge entities</div>'; }
+}
+
+function showEntSharedSrcView() {
+  currentView = 'entsharedsrc';
+  hideAllViews();
+  document.getElementById('entsharedsrcView').classList.add('active');
+  loadEntSharedSrc();
+}
+async function loadEntSharedSrc() {
+  const el = document.getElementById('entsharedsrcContent');
+  try {
+    const res = await fetch('/api/entity-shared-sources');
+    const data = await res.json();
+    let html = '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="border-bottom:2px solid var(--border);"><th style="text-align:left;padding:8px;">Entity</th><th style="text-align:left;padding:8px;">Type</th><th style="text-align:right;padding:8px;">Sources</th><th style="text-align:right;padding:8px;">Documents</th></tr></thead><tbody>';
+    data.entities.forEach(r => {
+      html += `<tr style="border-bottom:1px solid var(--border);"><td style="padding:8px;">${r.name}</td><td style="padding:8px;"><span class="entity-tag ${r.type}" style="font-size:10px;">${r.type}</span></td><td style="text-align:right;padding:8px;font-weight:600;">${r.source_count}</td><td style="text-align:right;padding:8px;">${r.doc_count}</td></tr>`;
+    });
+    html += '</tbody></table>';
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load entity shared sources</div>'; }
+}
+
+function showDocFilePatternView() {
+  currentView = 'docfilepattern';
+  hideAllViews();
+  document.getElementById('docfilepatternView').classList.add('active');
+  loadDocFilePattern();
+}
+async function loadDocFilePattern() {
+  const el = document.getElementById('docfilepatternContent');
+  try {
+    const res = await fetch('/api/document-filename-pattern');
+    const data = await res.json();
+    let html = `<div style="background:var(--bg-secondary);padding:12px;border-radius:6px;margin-bottom:16px;"><div style="font-size:11px;color:var(--text-muted);">Total Documents</div><div style="font-size:20px;font-weight:700;color:var(--text-primary);">${data.total}</div></div>`;
+    html += '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="border-bottom:2px solid var(--border);"><th style="text-align:left;padding:8px;">Extension</th><th style="text-align:right;padding:8px;">Count</th><th style="text-align:right;padding:8px;">%</th><th style="text-align:left;padding:8px;width:40%;">Bar</th></tr></thead><tbody>';
+    data.extensions.forEach(r => {
+      html += `<tr style="border-bottom:1px solid var(--border);"><td style="padding:8px;font-family:var(--font-mono);">${r.extension}</td><td style="text-align:right;padding:8px;font-weight:600;">${r.count}</td><td style="text-align:right;padding:8px;">${r.pct}%</td><td style="padding:8px;"><div style="background:var(--accent);height:14px;border-radius:3px;width:${r.pct}%;"></div></td></tr>`;
+    });
+    html += '</tbody></table>';
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load document filename pattern</div>'; }
+}
+
+function showEvtMonthMapView() {
+  currentView = 'evtmonthmap';
+  hideAllViews();
+  document.getElementById('evtmonthmapView').classList.add('active');
+  loadEvtMonthMap();
+}
+async function loadEvtMonthMap() {
+  const el = document.getElementById('evtmonthmapContent');
+  try {
+    const res = await fetch('/api/event-monthly-heatmap');
+    const data = await res.json();
+    const maxCount = Math.max(...data.months.map(m => m.count), 1);
+    let html = '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="border-bottom:2px solid var(--border);"><th style="text-align:left;padding:8px;">Month</th><th style="text-align:right;padding:8px;">Events</th><th style="text-align:left;padding:8px;width:60%;">Bar</th></tr></thead><tbody>';
+    data.months.forEach(m => {
+      const w = Math.round(100 * m.count / maxCount);
+      const heat = m.count / maxCount;
+      const color = heat > 0.7 ? '#ef4444' : heat > 0.4 ? '#f59e0b' : heat > 0.1 ? '#22c55e' : 'var(--accent)';
+      html += `<tr style="border-bottom:1px solid var(--border);"><td style="padding:8px;">${m.month}</td><td style="text-align:right;padding:8px;font-weight:600;">${m.count.toLocaleString()}</td><td style="padding:8px;"><div style="background:${color};height:14px;border-radius:3px;width:${w}%;"></div></td></tr>`;
+    });
+    html += '</tbody></table>';
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load event monthly heatmap</div>'; }
+}
+
+function showSrcEntConcView() {
+  currentView = 'srcentconc';
+  hideAllViews();
+  document.getElementById('srcentconcView').classList.add('active');
+  loadSrcEntConc();
+}
+async function loadSrcEntConc() {
+  const el = document.getElementById('srcentconcContent');
+  try {
+    const res = await fetch('/api/source-entity-concentration');
+    const data = await res.json();
+    let html = '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="border-bottom:2px solid var(--border);"><th style="text-align:left;padding:8px;">Source</th><th style="text-align:right;padding:8px;">Unique Entities</th><th style="text-align:right;padding:8px;">Documents</th><th style="text-align:right;padding:8px;">Entities/Doc</th></tr></thead><tbody>';
+    data.sources.forEach(r => {
+      html += `<tr style="border-bottom:1px solid var(--border);"><td style="padding:8px;">${r.source || '—'}</td><td style="text-align:right;padding:8px;font-weight:600;">${r.unique_entities}</td><td style="text-align:right;padding:8px;">${r.doc_count}</td><td style="text-align:right;padding:8px;">${r.entities_per_doc}</td></tr>`;
+    });
+    html += '</tbody></table>';
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load source entity concentration</div>'; }
+}
+
+function showEntConnStrRankView() {
+  currentView = 'entconnstrrank';
+  hideAllViews();
+  document.getElementById('entconnstrrankView').classList.add('active');
+  loadEntConnStrRank();
+}
+async function loadEntConnStrRank() {
+  const el = document.getElementById('entconnstrrankContent');
+  try {
+    const res = await fetch('/api/entity-connection-strength-rank');
+    const data = await res.json();
+    let html = '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="border-bottom:2px solid var(--border);"><th style="text-align:left;padding:8px;">Entity</th><th style="text-align:left;padding:8px;">Type</th><th style="text-align:right;padding:8px;">Max Weight</th><th style="text-align:left;padding:8px;">Strongest Partner</th></tr></thead><tbody>';
+    data.entities.forEach(r => {
+      html += `<tr style="border-bottom:1px solid var(--border);"><td style="padding:8px;">${r.name}</td><td style="padding:8px;"><span class="entity-tag ${r.type}" style="font-size:10px;">${r.type}</span></td><td style="text-align:right;padding:8px;font-weight:600;">${r.max_weight}</td><td style="padding:8px;">${r.partner_name} <span class="entity-tag ${r.partner_type}" style="font-size:9px;">${r.partner_type}</span></td></tr>`;
+    });
+    html += '</tbody></table>';
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load entity connection strength rank</div>'; }
+}
+
+function showRedactDocCovView() {
+  currentView = 'redactdoccov';
+  hideAllViews();
+  document.getElementById('redactdoccovView').classList.add('active');
+  loadRedactDocCov();
+}
+async function loadRedactDocCov() {
+  const el = document.getElementById('redactdoccovContent');
+  try {
+    const res = await fetch('/api/redaction-document-coverage');
+    const data = await res.json();
+    let html = `<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;">`;
+    html += `<div style="background:var(--bg-secondary);padding:12px;border-radius:6px;"><div style="font-size:11px;color:var(--text-muted);">Total Docs</div><div style="font-size:20px;font-weight:700;color:var(--text-primary);">${data.total_docs}</div></div>`;
+    html += `<div style="background:var(--bg-secondary);padding:12px;border-radius:6px;"><div style="font-size:11px;color:var(--text-muted);">With Redactions</div><div style="font-size:20px;font-weight:700;color:var(--text-primary);">${data.with_redactions}</div></div>`;
+    html += `<div style="background:var(--bg-secondary);padding:12px;border-radius:6px;"><div style="font-size:11px;color:var(--text-muted);">Without</div><div style="font-size:20px;font-weight:700;color:var(--text-primary);">${data.without_redactions}</div></div>`;
+    html += `<div style="background:var(--bg-secondary);padding:12px;border-radius:6px;"><div style="font-size:11px;color:var(--text-muted);">Coverage</div><div style="font-size:20px;font-weight:700;color:var(--text-primary);">${data.coverage_pct}%</div></div>`;
+    html += `</div>`;
+    if (data.top_redacted.length) {
+      html += '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="border-bottom:2px solid var(--border);"><th style="text-align:left;padding:8px;">Document</th><th style="text-align:right;padding:8px;">Redactions</th></tr></thead><tbody>';
+      data.top_redacted.forEach(r => {
+        html += `<tr style="border-bottom:1px solid var(--border);"><td style="padding:8px;">${r.filename}</td><td style="text-align:right;padding:8px;font-weight:600;">${r.redaction_count}</td></tr>`;
+      });
+      html += '</tbody></table>';
+    }
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load redaction document coverage</div>'; }
 }
 
 // ─── INIT ───

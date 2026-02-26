@@ -11225,6 +11225,141 @@ def connection_bridge_entities():
     return {"entities": [dict(r) for r in rows]}
 
 
+@app.get("/api/entity-shared-sources")
+def entity_shared_sources():
+    """Entities that appear across the most sources."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT e.name, e.type, "
+            "COUNT(DISTINCT d.source) AS source_count, "
+            "COUNT(DISTINCT de.document_id) AS doc_count "
+            "FROM entities e "
+            "JOIN document_entities de ON de.entity_id = e.id "
+            "JOIN documents d ON d.id = de.document_id "
+            "GROUP BY e.id ORDER BY source_count DESC, doc_count DESC LIMIT 100"
+        ).fetchall()
+    return {"entities": [dict(r) for r in rows]}
+
+
+@app.get("/api/document-filename-pattern")
+def document_filename_pattern():
+    """Document filename extension and prefix analysis."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT "
+            "CASE WHEN INSTR(filename, '.') > 0 "
+            "  THEN LOWER(SUBSTR(filename, -INSTR(REPLACE(filename, '.', CHAR(0)), CHAR(0)))) "
+            "  ELSE 'no extension' END AS extension, "
+            "COUNT(*) AS count "
+            "FROM documents GROUP BY extension ORDER BY count DESC"
+        ).fetchall()
+        total = conn.execute("SELECT COUNT(*) AS cnt FROM documents").fetchone()["cnt"]
+    return {
+        "total": total,
+        "extensions": [
+            {
+                "extension": r["extension"],
+                "count": r["count"],
+                "pct": round(100.0 * r["count"] / total, 1) if total else 0,
+            }
+            for r in rows
+        ],
+    }
+
+
+@app.get("/api/event-monthly-heatmap")
+def event_monthly_heatmap():
+    """Events per year-month for heatmap display."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT SUBSTR(event_date, 1, 7) AS month, COUNT(*) AS count "
+            "FROM events "
+            "WHERE event_date IS NOT NULL AND LENGTH(event_date) >= 7 "
+            "AND SUBSTR(event_date, 1, 4) GLOB '[0-9][0-9][0-9][0-9]' "
+            "GROUP BY month ORDER BY month"
+        ).fetchall()
+    return {"months": [dict(r) for r in rows]}
+
+
+@app.get("/api/source-entity-concentration")
+def source_entity_concentration():
+    """Unique entities per document by source."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT d.source, "
+            "COUNT(DISTINCT de.entity_id) AS unique_entities, "
+            "COUNT(DISTINCT d.id) AS doc_count, "
+            "ROUND(CAST(COUNT(DISTINCT de.entity_id) AS REAL) / "
+            "COUNT(DISTINCT d.id), 1) AS entities_per_doc "
+            "FROM documents d "
+            "LEFT JOIN document_entities de ON de.document_id = d.id "
+            "GROUP BY d.source ORDER BY entities_per_doc DESC"
+        ).fetchall()
+    return {"sources": [dict(r) for r in rows]}
+
+
+@app.get("/api/entity-connection-strength-rank")
+def entity_connection_strength_rank():
+    """Entities ranked by their strongest single connection."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT e.name, e.type, sub.max_weight, sub.partner_name, sub.partner_type "
+            "FROM ("
+            "  SELECT entity_id, max_weight, partner_id, "
+            "  (SELECT name FROM entities WHERE id = partner_id) AS partner_name, "
+            "  (SELECT type FROM entities WHERE id = partner_id) AS partner_type "
+            "  FROM ("
+            "    SELECT entity_id, MAX(w) AS max_weight, partner_id FROM ("
+            "      SELECT entity_a_id AS entity_id, entity_b_id AS partner_id, weight AS w "
+            "      FROM entity_connections "
+            "      UNION ALL "
+            "      SELECT entity_b_id AS entity_id, entity_a_id AS partner_id, weight AS w "
+            "      FROM entity_connections"
+            "    ) GROUP BY entity_id"
+            "  )"
+            ") sub "
+            "JOIN entities e ON e.id = sub.entity_id "
+            "ORDER BY sub.max_weight DESC LIMIT 100"
+        ).fetchall()
+    return {"entities": [dict(r) for r in rows]}
+
+
+@app.get("/api/redaction-document-coverage")
+def redaction_document_coverage():
+    """How many documents have redactions vs don't."""
+    with get_db() as conn:
+        # Check if redactions table exists
+        has_table = conn.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='redactions'"
+        ).fetchone()
+        if not has_table:
+            total = conn.execute("SELECT COUNT(*) AS cnt FROM documents").fetchone()["cnt"]
+            return {
+                "total_docs": total,
+                "with_redactions": 0,
+                "without_redactions": total,
+                "coverage_pct": 0,
+                "top_redacted": [],
+            }
+        with_redactions = conn.execute(
+            "SELECT COUNT(DISTINCT document_id) AS cnt FROM redactions"
+        ).fetchone()["cnt"]
+        total = conn.execute("SELECT COUNT(*) AS cnt FROM documents").fetchone()["cnt"]
+        top = conn.execute(
+            "SELECT d.id, d.filename, COUNT(r.id) AS redaction_count "
+            "FROM redactions r "
+            "JOIN documents d ON d.id = r.document_id "
+            "GROUP BY d.id ORDER BY redaction_count DESC LIMIT 50"
+        ).fetchall()
+    return {
+        "total_docs": total,
+        "with_redactions": with_redactions,
+        "without_redactions": total - with_redactions,
+        "coverage_pct": round(100.0 * with_redactions / total, 1) if total else 0,
+        "top_redacted": [dict(r) for r in top],
+    }
+
+
 # ═══════════════════════════════════════════
 # STATIC FILES (serve the frontend)
 # ═══════════════════════════════════════════
