@@ -2023,6 +2023,8 @@ body::before {
 .aliasnet-view.active, .doclength-view.active, .tempheat-view.active, .typebreak-view.active, .srcnet-view.active, .redactdensity-view.active { display: flex; }
 .entdensity-view, .docdupes-view, .connstrength-view, .cattimeline-view, .orphandocs-view, .entfirstlast-view { display: none; flex-direction: column; gap: 16px; }
 .entdensity-view.active, .docdupes-view.active, .connstrength-view.active, .cattimeline-view.active, .orphandocs-view.active, .entfirstlast-view.active { display: flex; }
+.xsource-view, .pagedist-view, .namelen-view, .ingesttl-view, .hvt-view, .kwcontext-view { display: none; flex-direction: column; gap: 16px; }
+.xsource-view.active, .pagedist-view.active, .namelen-view.active, .ingesttl-view.active, .hvt-view.active, .kwcontext-view.active { display: flex; }
 .rel-edge { display: flex; align-items: center; gap: 8px; padding: 4px 0; border-bottom: 1px solid var(--border); }
 .sbs-col { flex: 1; padding: 12px; background: var(--bg-card); border-radius: var(--radius); border: 1px solid var(--border); overflow: hidden; }
 .sbs-header { font-family: var(--font-mono); font-size: 12px; font-weight: 600; color: var(--text-primary); margin-bottom: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -2427,6 +2429,30 @@ body::before {
       <div class="sidebar-item" data-view="entfirstlast" id="entfirstlastNav">
         <div class="sidebar-dot" style="background:var(--entity-person)"></div>
         Entity First/Last
+      </div>
+      <div class="sidebar-item" data-view="xsource" id="xsourceNav">
+        <div class="sidebar-dot" style="background:var(--entity-org)"></div>
+        Cross-Source
+      </div>
+      <div class="sidebar-item" data-view="pagedist" id="pagedistNav">
+        <div class="sidebar-dot" style="background:var(--entity-place)"></div>
+        Page Distribution
+      </div>
+      <div class="sidebar-item" data-view="namelen" id="namelenNav">
+        <div class="sidebar-dot" style="background:var(--entity-person)"></div>
+        Name Length
+      </div>
+      <div class="sidebar-item" data-view="ingesttl" id="ingesttlNav">
+        <div class="sidebar-dot" style="background:#e05555"></div>
+        Ingest Timeline
+      </div>
+      <div class="sidebar-item" data-view="hvt" id="hvtNav">
+        <div class="sidebar-dot" style="background:var(--entity-org)"></div>
+        High-Value Targets
+      </div>
+      <div class="sidebar-item" data-view="kwcontext" id="kwcontextNav">
+        <div class="sidebar-dot" style="background:var(--entity-place)"></div>
+        Keyword Context
       </div>
     </div>
 
@@ -3545,6 +3571,40 @@ body::before {
       <div id="entfirstlastContent">Loading entity timeline...</div>
     </div>
 
+    <div class="xsource-view" id="xsourceView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Cross-Source Entities</div>
+      <div id="xsourceContent">Loading cross-source data...</div>
+    </div>
+
+    <div class="pagedist-view" id="pagedistView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Page Count Distribution</div>
+      <div id="pagedistContent">Loading page distribution...</div>
+    </div>
+
+    <div class="namelen-view" id="namelenView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Entity Name Length</div>
+      <div id="namelenContent">Loading name lengths...</div>
+    </div>
+
+    <div class="ingesttl-view" id="ingesttlView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Ingest Timeline</div>
+      <div id="ingesttlContent">Loading ingest timeline...</div>
+    </div>
+
+    <div class="hvt-view" id="hvtView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">High-Value Targets</div>
+      <div id="hvtContent">Loading high-value targets...</div>
+    </div>
+
+    <div class="kwcontext-view" id="kwcontextView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Keyword Context</div>
+      <div style="display:flex;gap:8px;margin-bottom:8px;">
+        <input type="text" id="kwcontextInput" placeholder="Enter keyword..." style="flex:1;padding:8px 12px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);color:var(--text-primary);font-size:13px;">
+        <button onclick="loadKwContext()" style="padding:8px 16px;background:var(--accent);color:#000;border:none;border-radius:var(--radius);cursor:pointer;font-size:13px;">Search</button>
+      </div>
+      <div id="kwcontextContent">Enter a keyword to see context snippets.</div>
+    </div>
+
   </main>
 
   <!-- RIGHT PANEL -->
@@ -4223,6 +4283,12 @@ function hideAllViews() {
   document.getElementById('cattimelineView').classList.remove('active');
   document.getElementById('orphandocsView').classList.remove('active');
   document.getElementById('entfirstlastView').classList.remove('active');
+  document.getElementById('xsourceView').classList.remove('active');
+  document.getElementById('pagedistView').classList.remove('active');
+  document.getElementById('namelenView').classList.remove('active');
+  document.getElementById('ingesttlView').classList.remove('active');
+  document.getElementById('hvtView').classList.remove('active');
+  document.getElementById('kwcontextView').classList.remove('active');
 }
 
 function showDocumentView() {
@@ -4354,6 +4420,12 @@ document.querySelectorAll('.sidebar-item[data-view]').forEach(item => {
     else if (view === 'cattimeline') showCatTimelineView();
     else if (view === 'orphandocs') showOrphanDocsView();
     else if (view === 'entfirstlast') showEntFirstLastView();
+    else if (view === 'xsource') showXSourceView();
+    else if (view === 'pagedist') showPageDistView();
+    else if (view === 'namelen') showNameLenView();
+    else if (view === 'ingesttl') showIngestTlView();
+    else if (view === 'hvt') showHvtView();
+    else if (view === 'kwcontext') showKwContextView();
   });
 });
 
@@ -5483,6 +5555,12 @@ function goBackFromReader() {
   else if (readerPreviousView === 'cattimeline') showCatTimelineView();
   else if (readerPreviousView === 'orphandocs') showOrphanDocsView();
   else if (readerPreviousView === 'entfirstlast') showEntFirstLastView();
+  else if (readerPreviousView === 'xsource') showXSourceView();
+  else if (readerPreviousView === 'pagedist') showPageDistView();
+  else if (readerPreviousView === 'namelen') showNameLenView();
+  else if (readerPreviousView === 'ingesttl') showIngestTlView();
+  else if (readerPreviousView === 'hvt') showHvtView();
+  else if (readerPreviousView === 'kwcontext') showKwContextView();
   else showDocumentView();
 }
 
@@ -11165,6 +11243,228 @@ async function loadEntFirstLast() {
     }
     el.innerHTML = html;
   } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load entity first/last</div>'; }
+}
+
+
+// ── Cross-Source Entities ──
+
+function showXSourceView() {
+  currentView = 'xsource';
+  hideAllViews();
+  document.getElementById('xsourceView').classList.add('active');
+  loadXSource();
+}
+
+async function loadXSource() {
+  const el = document.getElementById('xsourceContent');
+  el.innerHTML = 'Analyzing cross-source entities...';
+  try {
+    const data = await fetchJSON('/api/cross-source-entities?min_sources=2');
+    let html = `<div class="stat-card" style="margin-bottom:12px;"><div class="stat-value">${data.entities.length}</div><div class="stat-label">Cross-Source Entities</div></div>`;
+    if (data.entities.length) {
+      html += '<table class="data-table"><thead><tr><th>Entity</th><th>Type</th><th>Sources</th><th>Docs</th><th>Mentions</th><th>Found In</th></tr></thead><tbody>';
+      data.entities.forEach(e => {
+        const srcs = (e.sources||'').split(',').map(s => `<span style="font-size:9px;background:var(--bg-card);padding:2px 5px;border-radius:3px;margin:1px;display:inline-block;">${s.trim()}</span>`).join('');
+        html += `<tr><td><strong>${e.name}</strong></td><td><span class="entity-tag ${e.type}">${e.type}</span></td>`;
+        html += `<td>${e.source_count}</td><td>${e.doc_count}</td><td>${e.total_mentions}</td><td>${srcs}</td></tr>`;
+      });
+      html += '</tbody></table>';
+    }
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load cross-source entities</div>'; }
+}
+
+
+// ── Page Distribution ──
+
+function showPageDistView() {
+  currentView = 'pagedist';
+  hideAllViews();
+  document.getElementById('pagedistView').classList.add('active');
+  loadPageDist();
+}
+
+async function loadPageDist() {
+  const el = document.getElementById('pagedistContent');
+  el.innerHTML = 'Analyzing page counts...';
+  try {
+    const data = await fetchJSON('/api/page-distribution');
+    let html = `<div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:12px;">`;
+    html += `<div class="stat-card"><div class="stat-value">${data.total_documents}</div><div class="stat-label">Total Docs</div></div>`;
+    html += `<div class="stat-card"><div class="stat-value">${data.total_pages.toLocaleString()}</div><div class="stat-label">Total Pages</div></div>`;
+    html += `<div class="stat-card"><div class="stat-value">${data.avg_pages}</div><div class="stat-label">Avg Pages</div></div>`;
+    html += `</div>`;
+
+    const buckets = Object.entries(data.buckets);
+    const maxB = Math.max(...buckets.map(b => b[1]));
+    html += '<div style="font-size:12px;font-weight:600;margin-bottom:8px;color:var(--text-secondary);">Page Count Ranges</div>';
+    buckets.forEach(([label, cnt]) => {
+      const pct = maxB ? (cnt / maxB * 100).toFixed(0) : 0;
+      html += `<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">`;
+      html += `<span style="width:70px;font-size:11px;text-align:right;color:var(--text-muted);">${label}</span>`;
+      html += `<div style="flex:1;height:18px;background:var(--bg-card);border-radius:3px;overflow:hidden;">`;
+      html += `<div style="width:${pct}%;height:100%;background:var(--accent);border-radius:3px;"></div></div>`;
+      html += `<span style="width:40px;font-size:11px;color:var(--text-secondary);">${cnt}</span></div>`;
+    });
+
+    if (data.largest.length) {
+      html += '<div style="font-size:12px;font-weight:600;margin:12px 0 8px;color:var(--text-secondary);">Largest Documents</div>';
+      html += '<table class="data-table"><thead><tr><th>Title</th><th>Pages</th><th>Category</th><th>Source</th></tr></thead><tbody>';
+      data.largest.forEach(d => {
+        html += `<tr><td><a href="#" onclick="openReader(${d.id});return false;">${(d.title || d.filename).substring(0,50)}</a></td>`;
+        html += `<td>${d.pages||0}</td><td>${d.category||''}</td><td>${d.source||''}</td></tr>`;
+      });
+      html += '</tbody></table>';
+    }
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load page distribution</div>'; }
+}
+
+
+// ── Entity Name Length ──
+
+function showNameLenView() {
+  currentView = 'namelen';
+  hideAllViews();
+  document.getElementById('namelenView').classList.add('active');
+  loadNameLen();
+}
+
+async function loadNameLen() {
+  const el = document.getElementById('namelenContent');
+  el.innerHTML = 'Analyzing name lengths...';
+  try {
+    const data = await fetchJSON('/api/entity-name-length');
+    const s = data.stats;
+    let html = `<div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:12px;">`;
+    html += `<div class="stat-card"><div class="stat-value">${s.total}</div><div class="stat-label">Total Entities</div></div>`;
+    html += `<div class="stat-card"><div class="stat-value">${s.avg_length}</div><div class="stat-label">Avg Length</div></div>`;
+    html += `<div class="stat-card"><div class="stat-value">${s.max_length}</div><div class="stat-label">Max Length</div></div>`;
+    html += `</div>`;
+
+    const buckets = Object.entries(data.buckets);
+    const maxB = Math.max(...buckets.map(b => b[1]));
+    html += '<div style="font-size:12px;font-weight:600;margin-bottom:8px;color:var(--text-secondary);">Length Distribution</div>';
+    buckets.forEach(([label, cnt]) => {
+      const pct = maxB ? (cnt / maxB * 100).toFixed(0) : 0;
+      html += `<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">`;
+      html += `<span style="width:50px;font-size:11px;text-align:right;color:var(--text-muted);">${label}</span>`;
+      html += `<div style="flex:1;height:18px;background:var(--bg-card);border-radius:3px;overflow:hidden;">`;
+      html += `<div style="width:${pct}%;height:100%;background:var(--accent);border-radius:3px;"></div></div>`;
+      html += `<span style="width:50px;font-size:11px;color:var(--text-secondary);">${cnt}</span></div>`;
+    });
+
+    if (data.longest.length) {
+      html += '<div style="font-size:12px;font-weight:600;margin:12px 0 8px;color:var(--text-secondary);">Longest Names</div>';
+      html += '<table class="data-table"><thead><tr><th>Name</th><th>Type</th><th>Length</th></tr></thead><tbody>';
+      data.longest.forEach(e => {
+        html += `<tr><td>${e.name}</td><td><span class="entity-tag ${e.type}">${e.type}</span></td><td>${e.name_len}</td></tr>`;
+      });
+      html += '</tbody></table>';
+    }
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load name lengths</div>'; }
+}
+
+
+// ── Ingest Timeline ──
+
+function showIngestTlView() {
+  currentView = 'ingesttl';
+  hideAllViews();
+  document.getElementById('ingesttlView').classList.add('active');
+  loadIngestTl();
+}
+
+async function loadIngestTl() {
+  const el = document.getElementById('ingesttlContent');
+  el.innerHTML = 'Loading ingest timeline...';
+  try {
+    const data = await fetchJSON('/api/ingest-timeline');
+    let html = `<div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:12px;">`;
+    html += `<div class="stat-card"><div class="stat-value">${data.total_documents}</div><div class="stat-label">Total Docs</div></div>`;
+    html += `<div class="stat-card"><div class="stat-value">${data.ingest_days}</div><div class="stat-label">Ingest Days</div></div>`;
+    html += `</div>`;
+
+    if (data.timeline.length) {
+      const maxC = Math.max(...data.timeline.map(t => t.cnt));
+      html += '<div style="font-size:12px;font-weight:600;margin-bottom:8px;color:var(--text-secondary);">Documents Ingested Per Day</div>';
+      data.timeline.forEach(t => {
+        const pct = maxC ? (t.cnt / maxC * 100).toFixed(0) : 0;
+        html += `<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">`;
+        html += `<span style="width:90px;font-size:11px;text-align:right;color:var(--text-muted);">${t.day}</span>`;
+        html += `<div style="flex:1;height:18px;background:var(--bg-card);border-radius:3px;overflow:hidden;">`;
+        html += `<div style="width:${pct}%;height:100%;background:var(--accent);border-radius:3px;"></div></div>`;
+        html += `<span style="width:40px;font-size:11px;color:var(--text-secondary);">${t.cnt}</span>`;
+        html += `<span style="font-size:10px;color:var(--text-muted);">${t.categories||''}</span></div>`;
+      });
+    }
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load ingest timeline</div>'; }
+}
+
+
+// ── High-Value Targets ──
+
+function showHvtView() {
+  currentView = 'hvt';
+  hideAllViews();
+  document.getElementById('hvtView').classList.add('active');
+  loadHvt();
+}
+
+async function loadHvt() {
+  const el = document.getElementById('hvtContent');
+  el.innerHTML = 'Computing high-value targets...';
+  try {
+    const data = await fetchJSON('/api/high-value-targets?limit=50');
+    let html = `<div class="stat-card" style="margin-bottom:12px;"><div class="stat-value">${data.targets.length}</div><div class="stat-label">High-Value Targets</div></div>`;
+    if (data.targets.length) {
+      const maxS = data.targets[0].score;
+      html += '<table class="data-table"><thead><tr><th>Entity</th><th>Type</th><th>Score</th><th>Docs</th><th>Sources</th><th>Conns</th><th>Events</th><th>Strength</th></tr></thead><tbody>';
+      data.targets.forEach(t => {
+        const pct = maxS ? (t.score / maxS * 100).toFixed(0) : 0;
+        html += `<tr><td><strong>${t.name}</strong></td><td><span class="entity-tag ${t.type}">${t.type}</span></td>`;
+        html += `<td style="font-weight:600;">${t.score}</td><td>${t.doc_count}</td><td>${t.source_count}</td>`;
+        html += `<td>${t.connections}</td><td>${t.events}</td>`;
+        html += `<td><div style="width:80px;height:12px;background:var(--bg-card);border-radius:3px;overflow:hidden;display:inline-block;">`;
+        html += `<div style="width:${pct}%;height:100%;background:var(--accent);border-radius:3px;"></div></div></td></tr>`;
+      });
+      html += '</tbody></table>';
+    }
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load high-value targets</div>'; }
+}
+
+
+// ── Keyword Context ──
+
+function showKwContextView() {
+  currentView = 'kwcontext';
+  hideAllViews();
+  document.getElementById('kwcontextView').classList.add('active');
+}
+
+async function loadKwContext() {
+  const el = document.getElementById('kwcontextContent');
+  const kw = document.getElementById('kwcontextInput').value.trim();
+  if (!kw) { el.innerHTML = 'Enter a keyword to search.'; return; }
+  el.innerHTML = 'Searching...';
+  try {
+    const data = await fetchJSON('/api/keyword-context?keyword=' + encodeURIComponent(kw) + '&limit=20');
+    let html = `<div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;">${data.total} results for "<strong>${data.keyword}</strong>"</div>`;
+    if (data.snippets.length) {
+      data.snippets.forEach(s => {
+        html += `<div style="background:var(--bg-card);padding:10px 12px;border-radius:var(--radius);border:1px solid var(--border);margin-bottom:8px;">`;
+        html += `<div style="font-size:11px;font-weight:600;margin-bottom:4px;"><a href="#" onclick="openReader(${s.doc_id});return false;">${s.title}</a></div>`;
+        html += `<div style="font-size:12px;color:var(--text-secondary);line-height:1.5;word-break:break-word;">${s.snippet.replace(new RegExp('('+kw.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')','gi'),'<mark style="background:#f0ad4e;color:#000;padding:0 2px;border-radius:2px;">$1</mark>')}</div>`;
+        html += `</div>`;
+      });
+    } else {
+      html += '<div style="color:var(--text-muted);">No results found.</div>';
+    }
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to search keyword context</div>'; }
 }
 
 

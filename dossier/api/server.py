@@ -7872,6 +7872,274 @@ def entity_first_last(limit: int = 100, entity_type: str = ""):
     return {"entities": entities}
 
 
+# ── Cross-Source Entities ────────────────────────────
+
+
+@app.get("/api/cross-source-entities")
+def cross_source_entities(min_sources: int = 2, entity_type: str = ""):
+    """Entities that appear across multiple distinct sources."""
+    with get_db() as conn:
+        params: list = []
+        type_filter = ""
+        if entity_type:
+            type_filter = "AND e.type = ?"
+            params.append(entity_type)
+
+        rows = conn.execute(
+            f"SELECT e.id, e.name, e.type, "
+            f"COUNT(DISTINCT d.source) as source_count, "
+            f"COUNT(DISTINCT d.id) as doc_count, "
+            f"COALESCE(SUM(de.count), 0) as total_mentions, "
+            f"GROUP_CONCAT(DISTINCT d.source) as sources "
+            f"FROM entities e "
+            f"JOIN document_entities de ON de.entity_id = e.id "
+            f"JOIN documents d ON d.id = de.document_id "
+            f"WHERE d.source IS NOT NULL AND d.source != '' "
+            f"{type_filter} "
+            f"GROUP BY e.id HAVING source_count >= ? "
+            f"ORDER BY source_count DESC, doc_count DESC "
+            f"LIMIT 100",
+            params + [min_sources],
+        ).fetchall()
+
+    return {"entities": [dict(r) for r in rows]}
+
+
+# ── Page Count Distribution ──────────────────────────
+
+
+@app.get("/api/page-distribution")
+def page_distribution():
+    """Documents grouped by page count ranges."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT id, filename, title, pages, category, source FROM documents ORDER BY pages DESC"
+        ).fetchall()
+
+    total = len(rows)
+    buckets = {"0": 0, "1-5": 0, "6-20": 0, "21-50": 0, "51-100": 0, "101-500": 0, ">500": 0}
+    by_cat = {}
+
+    for r in rows:
+        p = r["pages"] or 0
+        cat = r["category"] or "other"
+        if cat not in by_cat:
+            by_cat[cat] = {"count": 0, "total_pages": 0}
+        by_cat[cat]["count"] += 1
+        by_cat[cat]["total_pages"] += p
+
+        if p == 0:
+            buckets["0"] += 1
+        elif p <= 5:
+            buckets["1-5"] += 1
+        elif p <= 20:
+            buckets["6-20"] += 1
+        elif p <= 50:
+            buckets["21-50"] += 1
+        elif p <= 100:
+            buckets["51-100"] += 1
+        elif p <= 500:
+            buckets["101-500"] += 1
+        else:
+            buckets[">500"] += 1
+
+    total_pages = sum((r["pages"] or 0) for r in rows)
+    largest = [dict(r) for r in rows[:20]]
+
+    return {
+        "buckets": buckets,
+        "by_category": by_cat,
+        "total_documents": total,
+        "total_pages": total_pages,
+        "avg_pages": round(total_pages / total, 1) if total else 0,
+        "largest": largest,
+    }
+
+
+# ── Entity Name Length ───────────────────────────────
+
+
+@app.get("/api/entity-name-length")
+def entity_name_length():
+    """Entity name length analytics."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT id, name, type, LENGTH(name) as name_len FROM entities ORDER BY name_len DESC"
+        ).fetchall()
+
+    total = len(rows)
+    if not total:
+        return {"entities": [], "stats": {}, "buckets": {}}
+
+    lengths = [r["name_len"] for r in rows]
+    buckets = {"1-3": 0, "4-10": 0, "11-20": 0, "21-30": 0, ">30": 0}
+    for ln in lengths:
+        if ln <= 3:
+            buckets["1-3"] += 1
+        elif ln <= 10:
+            buckets["4-10"] += 1
+        elif ln <= 20:
+            buckets["11-20"] += 1
+        elif ln <= 30:
+            buckets["21-30"] += 1
+        else:
+            buckets[">30"] += 1
+
+    longest = [dict(r) for r in rows[:30]]
+    shortest = [dict(r) for r in rows[-30:]][::-1]
+
+    return {
+        "longest": longest,
+        "shortest": shortest,
+        "stats": {
+            "total": total,
+            "avg_length": round(sum(lengths) / total, 1),
+            "max_length": max(lengths),
+            "min_length": min(lengths),
+        },
+        "buckets": buckets,
+    }
+
+
+# ── Document Ingest Timeline ────────────────────────
+
+
+@app.get("/api/ingest-timeline")
+def ingest_timeline():
+    """When documents were ingested into the system."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT SUBSTR(ingested_at, 1, 10) as day, COUNT(*) as cnt, "
+            "GROUP_CONCAT(DISTINCT category) as categories "
+            "FROM documents "
+            "WHERE ingested_at IS NOT NULL "
+            "GROUP BY day ORDER BY day"
+        ).fetchall()
+
+        total = conn.execute("SELECT COUNT(*) as cnt FROM documents").fetchone()["cnt"]
+
+    timeline = [dict(r) for r in rows]
+    return {
+        "timeline": timeline,
+        "total_documents": total,
+        "ingest_days": len(timeline),
+    }
+
+
+# ── High-Value Targets ──────────────────────────────
+
+
+@app.get("/api/high-value-targets")
+def high_value_targets(limit: int = 50):
+    """Entities scoring high across multiple metrics combined."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT e.id, e.name, e.type, "
+            "COUNT(DISTINCT de.document_id) as doc_count, "
+            "COALESCE(SUM(de.count), 0) as total_mentions, "
+            "COUNT(DISTINCT d.source) as source_count "
+            "FROM entities e "
+            "JOIN document_entities de ON de.entity_id = e.id "
+            "JOIN documents d ON d.id = de.document_id "
+            "WHERE e.type IN ('person', 'org') "
+            "GROUP BY e.id "
+            "ORDER BY doc_count DESC "
+            "LIMIT 200",
+            (),
+        ).fetchall()
+
+        # Get connection counts
+        conn_counts = {}
+        for r in rows:
+            cnt = conn.execute(
+                "SELECT COUNT(*) as cnt FROM entity_connections "
+                "WHERE entity_a_id = ? OR entity_b_id = ?",
+                (r["id"], r["id"]),
+            ).fetchone()["cnt"]
+            conn_counts[r["id"]] = cnt
+
+        # Get event counts
+        event_counts = {}
+        for r in rows:
+            cnt = conn.execute(
+                "SELECT COUNT(*) as cnt FROM event_entities WHERE entity_id = ?",
+                (r["id"],),
+            ).fetchone()["cnt"]
+            event_counts[r["id"]] = cnt
+
+    targets = []
+    for r in rows:
+        conns = conn_counts.get(r["id"], 0)
+        events = event_counts.get(r["id"], 0)
+        score = (
+            r["doc_count"] * 3
+            + r["total_mentions"] * 0.01
+            + r["source_count"] * 5
+            + conns * 2
+            + events * 0.5
+        )
+        targets.append(
+            {
+                "id": r["id"],
+                "name": r["name"],
+                "type": r["type"],
+                "doc_count": r["doc_count"],
+                "total_mentions": r["total_mentions"],
+                "source_count": r["source_count"],
+                "connections": conns,
+                "events": events,
+                "score": round(score, 1),
+            }
+        )
+
+    targets.sort(key=lambda x: x["score"], reverse=True)
+    return {"targets": targets[:limit]}
+
+
+# ── Keyword Context ──────────────────────────────────
+
+
+@app.get("/api/keyword-context")
+def keyword_context(keyword: str = "", limit: int = 20):
+    """Keywords shown with surrounding text snippets."""
+    if not keyword.strip():
+        return {"snippets": [], "keyword": ""}
+
+    with get_db() as conn:
+        kw = keyword.strip().lower()
+        rows = conn.execute(
+            "SELECT d.id, d.title, d.filename, d.raw_text "
+            "FROM documents_fts fts "
+            "JOIN documents d ON d.id = fts.rowid "
+            "WHERE documents_fts MATCH ? "
+            "LIMIT ?",
+            (kw, limit),
+        ).fetchall()
+
+    snippets = []
+    for r in rows:
+        text = r["raw_text"] or ""
+        lower_text = text.lower()
+        idx = lower_text.find(kw)
+        if idx >= 0:
+            start = max(0, idx - 100)
+            end = min(len(text), idx + len(kw) + 100)
+            snippet = (
+                ("..." if start > 0 else "") + text[start:end] + ("..." if end < len(text) else "")
+            )
+        else:
+            snippet = text[:200] + ("..." if len(text) > 200 else "")
+        snippets.append(
+            {
+                "doc_id": r["id"],
+                "title": r["title"] or r["filename"],
+                "snippet": snippet,
+            }
+        )
+
+    return {"snippets": snippets, "keyword": keyword, "total": len(snippets)}
+
+
 # ═══════════════════════════════════════════
 # STATIC FILES (serve the frontend)
 # ═══════════════════════════════════════════
