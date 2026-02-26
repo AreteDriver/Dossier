@@ -6673,6 +6673,354 @@ def flagged_hub():
 
 
 # ═══════════════════════════════════════════
+# ENTITY RELATIONSHIPS GRAPH (weighted, filterable)
+# ═══════════════════════════════════════════
+
+
+@app.get("/api/relationship-graph")
+def relationship_graph(
+    entity_type: Optional[str] = None,
+    min_weight: int = Query(1),
+    limit: int = Query(100),
+):
+    """Weighted entity relationship graph with filtering."""
+    with get_db() as conn:
+        type_filter = ""
+        params: list = [min_weight, limit]
+        if entity_type:
+            type_filter = "AND e1.type = ? AND e2.type = ?"
+            params = [min_weight] + [entity_type, entity_type] + [limit]
+
+        edges = conn.execute(
+            f"""SELECT ec.entity_a_id, ec.entity_b_id, ec.weight,
+                       e1.name as name_a, e1.type as type_a,
+                       e2.name as name_b, e2.type as type_b
+                FROM entity_connections ec
+                JOIN entities e1 ON e1.id = ec.entity_a_id
+                JOIN entities e2 ON e2.id = ec.entity_b_id
+                WHERE ec.weight >= ?
+                {type_filter}
+                ORDER BY ec.weight DESC
+                LIMIT ?""",
+            params,
+        ).fetchall()
+
+        # Collect unique nodes
+        nodes = {}
+        for e in edges:
+            if e["entity_a_id"] not in nodes:
+                nodes[e["entity_a_id"]] = {
+                    "id": e["entity_a_id"],
+                    "name": e["name_a"],
+                    "type": e["type_a"],
+                }
+            if e["entity_b_id"] not in nodes:
+                nodes[e["entity_b_id"]] = {
+                    "id": e["entity_b_id"],
+                    "name": e["name_b"],
+                    "type": e["type_b"],
+                }
+
+    return {
+        "nodes": list(nodes.values()),
+        "edges": [
+            {
+                "source": e["entity_a_id"],
+                "target": e["entity_b_id"],
+                "weight": e["weight"],
+            }
+            for e in edges
+        ],
+        "total_edges": len(edges),
+    }
+
+
+# ═══════════════════════════════════════════
+# DOCUMENT SIDE-BY-SIDE COMPARISON
+# ═══════════════════════════════════════════
+
+
+@app.get("/api/document-sidebyside")
+def document_sidebyside(doc_a: int = Query(...), doc_b: int = Query(...)):
+    """Compare two documents side by side — shared and unique entities/keywords."""
+    with get_db() as conn:
+        da = conn.execute(
+            "SELECT id, title, filename, category, source, date, pages FROM documents WHERE id = ?",
+            (doc_a,),
+        ).fetchone()
+        db = conn.execute(
+            "SELECT id, title, filename, category, source, date, pages FROM documents WHERE id = ?",
+            (doc_b,),
+        ).fetchone()
+        if not da or not db:
+            raise HTTPException(404, "Document not found")
+
+        # Entities for each doc
+        ents_a = conn.execute(
+            """SELECT e.id, e.name, e.type, de.count
+               FROM entities e JOIN document_entities de ON de.entity_id = e.id
+               WHERE de.document_id = ? ORDER BY de.count DESC""",
+            (doc_a,),
+        ).fetchall()
+        ents_b = conn.execute(
+            """SELECT e.id, e.name, e.type, de.count
+               FROM entities e JOIN document_entities de ON de.entity_id = e.id
+               WHERE de.document_id = ? ORDER BY de.count DESC""",
+            (doc_b,),
+        ).fetchall()
+
+        ids_a = {e["id"] for e in ents_a}
+        ids_b = {e["id"] for e in ents_b}
+        shared_ids = ids_a & ids_b
+
+        # Keywords for each doc
+        kw_a = conn.execute(
+            """SELECT k.word, dk.count
+               FROM keywords k JOIN document_keywords dk ON dk.keyword_id = k.id
+               WHERE dk.document_id = ? ORDER BY dk.count DESC LIMIT 30""",
+            (doc_a,),
+        ).fetchall()
+        kw_b = conn.execute(
+            """SELECT k.word, dk.count
+               FROM keywords k JOIN document_keywords dk ON dk.keyword_id = k.id
+               WHERE dk.document_id = ? ORDER BY dk.count DESC LIMIT 30""",
+            (doc_b,),
+        ).fetchall()
+
+        words_a = {k["word"] for k in kw_a}
+        words_b = {k["word"] for k in kw_b}
+
+    return {
+        "doc_a": dict(da),
+        "doc_b": dict(db),
+        "entities_a": [dict(e) for e in ents_a],
+        "entities_b": [dict(e) for e in ents_b],
+        "shared_entity_count": len(shared_ids),
+        "unique_a_count": len(ids_a - shared_ids),
+        "unique_b_count": len(ids_b - shared_ids),
+        "keywords_a": [dict(k) for k in kw_a],
+        "keywords_b": [dict(k) for k in kw_b],
+        "shared_keywords": list(words_a & words_b),
+    }
+
+
+# ═══════════════════════════════════════════
+# LOCATION FREQUENCY
+# ═══════════════════════════════════════════
+
+
+@app.get("/api/location-frequency")
+def location_frequency():
+    """Rank locations by mention frequency across the corpus."""
+    with get_db() as conn:
+        locations = conn.execute(
+            """SELECT e.id, e.name,
+                      COUNT(DISTINCT de.document_id) as doc_count,
+                      SUM(de.count) as total_mentions,
+                      GROUP_CONCAT(DISTINCT d.category) as categories,
+                      GROUP_CONCAT(DISTINCT d.source) as sources
+               FROM entities e
+               JOIN document_entities de ON de.entity_id = e.id
+               JOIN documents d ON d.id = de.document_id
+               WHERE e.type = 'place'
+               GROUP BY e.id
+               ORDER BY doc_count DESC"""
+        ).fetchall()
+
+        # Co-location pairs (places that appear together)
+        colocation = conn.execute(
+            """SELECT e1.name as place_a, e2.name as place_b,
+                      COUNT(DISTINCT de1.document_id) as shared_docs
+               FROM document_entities de1
+               JOIN document_entities de2 ON de2.document_id = de1.document_id
+                 AND de2.entity_id > de1.entity_id
+               JOIN entities e1 ON e1.id = de1.entity_id AND e1.type = 'place'
+               JOIN entities e2 ON e2.id = de2.entity_id AND e2.type = 'place'
+               GROUP BY de1.entity_id, de2.entity_id
+               HAVING shared_docs >= 3
+               ORDER BY shared_docs DESC LIMIT 20"""
+        ).fetchall()
+
+    return {
+        "locations": [dict(loc) for loc in locations],
+        "colocation_pairs": [dict(c) for c in colocation],
+    }
+
+
+# ═══════════════════════════════════════════
+# FINANCIAL RISK PROFILES (per-entity)
+# ═══════════════════════════════════════════
+
+
+@app.get("/api/financial-profiles")
+def financial_profiles(limit: int = Query(30)):
+    """Per-entity financial risk assessment."""
+    with get_db() as conn:
+        # Entities linked to documents with financial indicators
+        profiles = conn.execute(
+            """SELECT e.id, e.name, e.type,
+                      COUNT(DISTINCT fi.id) as indicator_count,
+                      AVG(fi.risk_score) as avg_risk,
+                      MAX(fi.risk_score) as max_risk,
+                      GROUP_CONCAT(DISTINCT fi.indicator_type) as indicator_types,
+                      COUNT(DISTINCT fi.document_id) as fin_doc_count
+               FROM entities e
+               JOIN document_entities de ON de.entity_id = e.id
+               JOIN financial_indicators fi ON fi.document_id = de.document_id
+               GROUP BY e.id
+               HAVING indicator_count >= 2
+               ORDER BY avg_risk DESC, indicator_count DESC
+               LIMIT ?""",
+            (limit,),
+        ).fetchall()
+
+        # Overall financial summary
+        summary = conn.execute(
+            """SELECT indicator_type, COUNT(*) as count,
+                      AVG(risk_score) as avg_risk,
+                      MAX(risk_score) as max_risk
+               FROM financial_indicators
+               GROUP BY indicator_type
+               ORDER BY avg_risk DESC"""
+        ).fetchall()
+
+    return {
+        "profiles": [dict(p) for p in profiles],
+        "summary": [dict(s) for s in summary],
+    }
+
+
+# ═══════════════════════════════════════════
+# SEARCH HISTORY (persistent)
+# ═══════════════════════════════════════════
+
+
+def _ensure_search_history_table(conn):
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS search_history (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            query TEXT NOT NULL,
+            result_count INTEGER DEFAULT 0,
+            searched_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
+
+@app.get("/api/search-history")
+def get_search_history(limit: int = Query(50)):
+    """Get recent search history."""
+    with get_db() as conn:
+        _ensure_search_history_table(conn)
+        history = conn.execute(
+            """SELECT query, result_count, searched_at, COUNT(*) as times_searched
+               FROM search_history
+               GROUP BY query
+               ORDER BY MAX(searched_at) DESC
+               LIMIT ?""",
+            (limit,),
+        ).fetchall()
+    return {"history": [dict(h) for h in history]}
+
+
+@app.post("/api/search-history")
+async def add_search_history(request: Request):
+    """Record a search to history."""
+    body = await request.json()
+    query = body.get("query", "").strip()
+    result_count = body.get("result_count", 0)
+    if not query or len(query) < 2:
+        return {"status": "skipped"}
+
+    with get_db() as conn:
+        _ensure_search_history_table(conn)
+        conn.execute(
+            "INSERT INTO search_history (query, result_count) VALUES (?, ?)",
+            (query, result_count),
+        )
+        conn.commit()
+    return {"status": "recorded"}
+
+
+@app.delete("/api/search-history")
+def clear_search_history():
+    """Clear all search history."""
+    with get_db() as conn:
+        _ensure_search_history_table(conn)
+        conn.execute("DELETE FROM search_history")
+        conn.commit()
+    return {"status": "cleared"}
+
+
+# ═══════════════════════════════════════════
+# CATEGORY DISTRIBUTION (visual breakdown)
+# ═══════════════════════════════════════════
+
+
+@app.get("/api/category-distribution")
+def category_distribution():
+    """Visual category breakdown with temporal distribution."""
+    with get_db() as conn:
+        # Category counts
+        categories = conn.execute(
+            """SELECT category, COUNT(*) as count,
+                      COALESCE(SUM(pages), 0) as total_pages,
+                      COUNT(CASE WHEN flagged = 1 THEN 1 END) as flagged_count,
+                      MIN(date) as earliest, MAX(date) as latest
+               FROM documents
+               GROUP BY category
+               ORDER BY count DESC"""
+        ).fetchall()
+
+        # Per-category temporal distribution
+        temporal = []
+        all_years = set()
+        for cat in categories:
+            yearly = conn.execute(
+                """SELECT SUBSTR(date, 1, 4) as year, COUNT(*) as count
+                   FROM documents
+                   WHERE category = ?
+                     AND date IS NOT NULL AND date != ''
+                   GROUP BY year ORDER BY year""",
+                (cat["category"],),
+            ).fetchall()
+            by_year = {y["year"]: y["count"] for y in yearly}
+            all_years.update(by_year.keys())
+            temporal.append(
+                {
+                    "category": cat["category"],
+                    "by_year": by_year,
+                }
+            )
+
+        # Top entities per category
+        cat_entities = []
+        for cat in categories[:8]:
+            top_ents = conn.execute(
+                """SELECT e.name, e.type, SUM(de.count) as mentions
+                   FROM entities e
+                   JOIN document_entities de ON de.entity_id = e.id
+                   JOIN documents d ON d.id = de.document_id
+                   WHERE d.category = ?
+                   GROUP BY e.id
+                   ORDER BY mentions DESC LIMIT 5""",
+                (cat["category"],),
+            ).fetchall()
+            cat_entities.append(
+                {
+                    "category": cat["category"],
+                    "entities": [dict(e) for e in top_ents],
+                }
+            )
+
+    return {
+        "categories": [dict(c) for c in categories],
+        "temporal": temporal,
+        "years": sorted(all_years),
+        "category_entities": cat_entities,
+    }
+
+
+# ═══════════════════════════════════════════
 # STATIC FILES (serve the frontend)
 # ═══════════════════════════════════════════
 

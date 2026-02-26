@@ -2014,6 +2014,17 @@ body::before {
 .flag-card { padding: 12px 16px; background: var(--bg-card); border-radius: var(--radius); border: 1px solid var(--border); margin-bottom: 8px; cursor: pointer; transition: border-color var(--transition); }
 .flag-card:hover { border-color: var(--accent-dim); }
 .flag-badge { font-family: var(--font-mono); font-size: 9px; padding: 2px 6px; border-radius: 8px; background: var(--accent); color: #fff; }
+
+.relgraph-view, .sidebyside-view, .locfreq-view, .finprofile-view, .searchhist-view, .catdist-view { display: none; flex-direction: column; gap: 16px; }
+.relgraph-view.active, .sidebyside-view.active, .locfreq-view.active, .finprofile-view.active, .searchhist-view.active, .catdist-view.active { display: flex; }
+.rel-edge { display: flex; align-items: center; gap: 8px; padding: 4px 0; border-bottom: 1px solid var(--border); }
+.sbs-col { flex: 1; padding: 12px; background: var(--bg-card); border-radius: var(--radius); border: 1px solid var(--border); overflow: hidden; }
+.sbs-header { font-family: var(--font-mono); font-size: 12px; font-weight: 600; color: var(--text-primary); margin-bottom: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.loc-row { display: flex; align-items: center; gap: 8px; padding: 5px 0; border-bottom: 1px solid var(--border); }
+.finprof-card { padding: 10px 14px; background: var(--bg-card); border-radius: var(--radius); border: 1px solid var(--border); margin-bottom: 6px; }
+.hist-row { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--border); cursor: pointer; }
+.hist-row:hover { background: var(--bg-hover); }
+.cat-segment { display: inline-block; height: 24px; min-width: 2px; transition: width 0.3s ease; }
 </style>
 </head>
 <body>
@@ -2314,6 +2325,30 @@ body::before {
       <div class="sidebar-item" data-view="flaghub" id="flaghubNav">
         <div class="sidebar-dot" style="background:var(--accent)"></div>
         Flagged Hub
+      </div>
+      <div class="sidebar-item" data-view="relgraph" id="relgraphNav">
+        <div class="sidebar-dot" style="background:var(--entity-org)"></div>
+        Rel. Graph
+      </div>
+      <div class="sidebar-item" data-view="sidebyside" id="sidebysideNav">
+        <div class="sidebar-dot" style="background:var(--entity-place)"></div>
+        Side-by-Side
+      </div>
+      <div class="sidebar-item" data-view="locfreq" id="locfreqNav">
+        <div class="sidebar-dot" style="background:var(--entity-date)"></div>
+        Location Freq
+      </div>
+      <div class="sidebar-item" data-view="finprofile" id="finprofileNav">
+        <div class="sidebar-dot" style="background:var(--accent)"></div>
+        Financial Profiles
+      </div>
+      <div class="sidebar-item" data-view="searchhist" id="searchhistNav">
+        <div class="sidebar-dot" style="background:var(--entity-thing)"></div>
+        Search History
+      </div>
+      <div class="sidebar-item" data-view="catdist" id="catdistNav">
+        <div class="sidebar-dot" style="background:var(--entity-person)"></div>
+        Category Dist.
       </div>
     </div>
 
@@ -3281,6 +3316,67 @@ body::before {
       <div id="flaghubContent">Loading flagged documents...</div>
     </div>
 
+    <!-- Relationship Graph View -->
+    <div class="relgraph-view" id="relgraphView">
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+        <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Relationship Graph</div>
+        <select id="relgraphType" style="background:var(--bg-tertiary);border:1px solid var(--border);border-radius:var(--radius);padding:4px 8px;font-family:var(--font-mono);font-size:11px;color:var(--text-primary);outline:none;">
+          <option value="">All Types</option>
+          <option value="person">People</option>
+          <option value="org">Organizations</option>
+          <option value="place">Places</option>
+        </select>
+        <label style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted);">Min weight:
+          <input id="relgraphMinWeight" type="number" value="5" min="1" style="width:50px;background:var(--bg-tertiary);border:1px solid var(--border);border-radius:var(--radius);padding:4px 8px;font-family:var(--font-mono);font-size:11px;color:var(--text-primary);outline:none;">
+        </label>
+        <button onclick="loadRelGraph()" class="report-btn">Load</button>
+      </div>
+      <div id="relgraphContent">Click Load to view relationships.</div>
+    </div>
+
+    <!-- Side-by-Side View -->
+    <div class="sidebyside-view" id="sidebysideView">
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+        <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Side-by-Side Compare</div>
+        <select id="sbsDocA" style="background:var(--bg-tertiary);border:1px solid var(--border);border-radius:var(--radius);padding:4px 8px;font-family:var(--font-mono);font-size:11px;color:var(--text-primary);outline:none;max-width:250px;">
+          <option value="">Document A...</option>
+        </select>
+        <span style="font-family:var(--font-mono);font-size:12px;color:var(--accent);">vs</span>
+        <select id="sbsDocB" style="background:var(--bg-tertiary);border:1px solid var(--border);border-radius:var(--radius);padding:4px 8px;font-family:var(--font-mono);font-size:11px;color:var(--text-primary);outline:none;max-width:250px;">
+          <option value="">Document B...</option>
+        </select>
+        <button onclick="loadSideBySide()" class="report-btn">Compare</button>
+      </div>
+      <div id="sidebysideContent" style="color:var(--text-muted);">Select two documents to compare.</div>
+    </div>
+
+    <!-- Location Frequency View -->
+    <div class="locfreq-view" id="locfreqView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Location Frequency</div>
+      <div id="locfreqContent">Loading location data...</div>
+    </div>
+
+    <!-- Financial Profiles View -->
+    <div class="finprofile-view" id="finprofileView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Financial Risk Profiles</div>
+      <div id="finprofileContent">Loading financial profiles...</div>
+    </div>
+
+    <!-- Search History View -->
+    <div class="searchhist-view" id="searchhistView">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Search History</div>
+        <button onclick="clearSearchHistory()" style="background:var(--bg-tertiary);border:1px solid var(--border);border-radius:var(--radius);padding:4px 10px;font-family:var(--font-mono);font-size:10px;color:var(--text-secondary);cursor:pointer;">Clear All</button>
+      </div>
+      <div id="searchhistContent">Loading search history...</div>
+    </div>
+
+    <!-- Category Distribution View -->
+    <div class="catdist-view" id="catdistView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Category Distribution</div>
+      <div id="catdistContent">Loading category data...</div>
+    </div>
+
   </main>
 
   <!-- RIGHT PANEL -->
@@ -3935,6 +4031,12 @@ function hideAllViews() {
   document.getElementById('srctimelineView').classList.remove('active');
   document.getElementById('freqrankView').classList.remove('active');
   document.getElementById('flaghubView').classList.remove('active');
+  document.getElementById('relgraphView').classList.remove('active');
+  document.getElementById('sidebysideView').classList.remove('active');
+  document.getElementById('locfreqView').classList.remove('active');
+  document.getElementById('finprofileView').classList.remove('active');
+  document.getElementById('searchhistView').classList.remove('active');
+  document.getElementById('catdistView').classList.remove('active');
 }
 
 function showDocumentView() {
@@ -4042,6 +4144,12 @@ document.querySelectorAll('.sidebar-item[data-view]').forEach(item => {
     else if (view === 'srctimeline') showSrcTimelineView();
     else if (view === 'freqrank') showFreqRankView();
     else if (view === 'flaghub') showFlagHubView();
+    else if (view === 'relgraph') showRelGraphView();
+    else if (view === 'sidebyside') showSideBySideView();
+    else if (view === 'locfreq') showLocFreqView();
+    else if (view === 'finprofile') showFinProfileView();
+    else if (view === 'searchhist') showSearchHistView();
+    else if (view === 'catdist') showCatDistView();
   });
 });
 
@@ -5147,6 +5255,12 @@ function goBackFromReader() {
   else if (readerPreviousView === 'srctimeline') showSrcTimelineView();
   else if (readerPreviousView === 'freqrank') showFreqRankView();
   else if (readerPreviousView === 'flaghub') showFlagHubView();
+  else if (readerPreviousView === 'relgraph') showRelGraphView();
+  else if (readerPreviousView === 'sidebyside') showSideBySideView();
+  else if (readerPreviousView === 'locfreq') showLocFreqView();
+  else if (readerPreviousView === 'finprofile') showFinProfileView();
+  else if (readerPreviousView === 'searchhist') showSearchHistView();
+  else if (readerPreviousView === 'catdist') showCatDistView();
   else showDocumentView();
 }
 
@@ -9722,6 +9836,364 @@ async function toggleDocFlag(docId) {
     await fetch(`/api/documents/${docId}/flag`, {method: 'POST', headers: {'Content-Type': 'application/json'}});
     if (currentView === 'flaghub') loadFlagHub();
   } catch (err) { console.error('Failed to toggle flag:', err); }
+}
+
+
+// ─── RELATIONSHIP GRAPH ───
+
+function showRelGraphView() {
+  currentView = 'relgraph';
+  hideAllViews();
+  document.getElementById('relgraphView').classList.add('active');
+}
+
+async function loadRelGraph() {
+  const el = document.getElementById('relgraphContent');
+  const entityType = document.getElementById('relgraphType').value;
+  const minWeight = document.getElementById('relgraphMinWeight').value || 5;
+  const typeParam = entityType ? `&entity_type=${entityType}` : '';
+  el.innerHTML = 'Loading relationships...';
+  try {
+    const data = await api(`/api/relationship-graph?min_weight=${minWeight}${typeParam}&limit=80`);
+    const edges = data.edges || [];
+    const nodes = data.nodes || [];
+    if (!edges.length) { el.innerHTML = '<div style="color:var(--text-muted);">No relationships found with this threshold.</div>'; return; }
+
+    const nodeMap = {};
+    nodes.forEach(n => nodeMap[n.id] = n);
+    const maxWeight = Math.max(...edges.map(e => e.weight));
+
+    let html = `<div style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted);margin-bottom:8px;">${nodes.length} entities, ${edges.length} relationships</div>`;
+    edges.forEach(e => {
+      const na = nodeMap[e.source] || {};
+      const nb = nodeMap[e.target] || {};
+      const pct = (e.weight / maxWeight) * 100;
+      html += `<div class="rel-edge">
+        <span class="entity-tag ${na.type || ''}" style="font-size:10px;min-width:100px;">${na.name || '?'}</span>
+        <div style="flex:1;height:10px;background:var(--bg-tertiary);border-radius:3px;overflow:hidden;">
+          <div style="width:${pct}%;height:100%;background:var(--entity-org);border-radius:3px;"></div>
+        </div>
+        <span style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted);min-width:30px;text-align:center;">${e.weight}</span>
+        <span class="entity-tag ${nb.type || ''}" style="font-size:10px;min-width:100px;">${nb.name || '?'}</span>
+      </div>`;
+    });
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load relationship graph</div>'; }
+}
+
+
+// ─── SIDE-BY-SIDE ───
+
+function showSideBySideView() {
+  currentView = 'sidebyside';
+  hideAllViews();
+  document.getElementById('sidebysideView').classList.add('active');
+  loadSbsPicker();
+}
+
+async function loadSbsPicker() {
+  const selA = document.getElementById('sbsDocA');
+  const selB = document.getElementById('sbsDocB');
+  if (selA.options.length > 1) return;
+  try {
+    const data = await api('/api/documents?limit=300');
+    const docs = data.documents || [];
+    docs.forEach(d => {
+      const o1 = document.createElement('option');
+      o1.value = d.id;
+      o1.textContent = `#${d.id} ${(d.title || d.filename).substring(0, 50)}`;
+      selA.appendChild(o1);
+      selB.appendChild(o1.cloneNode(true));
+    });
+  } catch (err) { console.error('Failed to load docs for SBS:', err); }
+}
+
+async function loadSideBySide() {
+  const docA = document.getElementById('sbsDocA').value;
+  const docB = document.getElementById('sbsDocB').value;
+  if (!docA || !docB) { alert('Select both documents'); return; }
+  if (docA === docB) { alert('Select two different documents'); return; }
+  const el = document.getElementById('sidebysideContent');
+  el.innerHTML = 'Comparing...';
+  try {
+    const data = await api(`/api/document-sidebyside?doc_a=${docA}&doc_b=${docB}`);
+    const da = data.doc_a, db = data.doc_b;
+
+    let html = `<div style="display:flex;gap:12px;margin-bottom:12px;">
+      <div class="stat-card" style="flex:1;"><div class="stat-value" style="color:var(--entity-date);">${data.shared_entity_count}</div><div class="stat-label">Shared Entities</div></div>
+      <div class="stat-card" style="flex:1;"><div class="stat-value" style="color:var(--entity-person);">${data.unique_a_count}</div><div class="stat-label">Unique to A</div></div>
+      <div class="stat-card" style="flex:1;"><div class="stat-value" style="color:var(--entity-place);">${data.unique_b_count}</div><div class="stat-label">Unique to B</div></div>
+      <div class="stat-card" style="flex:1;"><div class="stat-value" style="color:var(--entity-thing);">${data.shared_keywords.length}</div><div class="stat-label">Shared Keywords</div></div>
+    </div>`;
+
+    html += '<div style="display:flex;gap:12px;">';
+    // Doc A column
+    html += `<div class="sbs-col">
+      <div class="sbs-header" style="cursor:pointer;" onclick="openReader(${da.id},'sidebyside')">${da.title || da.filename}</div>
+      <div style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted);margin-bottom:8px;">${da.category} · ${da.source || ''} · ${da.pages || '?'} pages</div>
+      <div style="font-family:var(--font-mono);font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:4px;">Entities (${data.entities_a.length})</div>
+      <div style="display:flex;flex-wrap:wrap;gap:3px;margin-bottom:8px;">`;
+    data.entities_a.slice(0, 25).forEach(e => {
+      const shared = data.entities_b.some(b => b.id === e.id);
+      html += `<span class="entity-tag ${e.type}" style="font-size:9px;${shared ? 'border:1px solid var(--accent);' : ''}">${e.name} (${e.count})</span>`;
+    });
+    html += '</div>';
+    html += '<div style="font-family:var(--font-mono);font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:4px;">Keywords</div><div style="display:flex;flex-wrap:wrap;gap:3px;">';
+    data.keywords_a.slice(0, 20).forEach(k => {
+      const shared = data.shared_keywords.includes(k.word);
+      html += `<span style="font-family:var(--font-mono);font-size:10px;padding:2px 6px;border-radius:4px;background:${shared ? 'var(--accent-dim)' : 'var(--bg-tertiary)'};color:var(--text-secondary);">${k.word}</span>`;
+    });
+    html += '</div></div>';
+
+    // Doc B column
+    html += `<div class="sbs-col">
+      <div class="sbs-header" style="cursor:pointer;" onclick="openReader(${db.id},'sidebyside')">${db.title || db.filename}</div>
+      <div style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted);margin-bottom:8px;">${db.category} · ${db.source || ''} · ${db.pages || '?'} pages</div>
+      <div style="font-family:var(--font-mono);font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:4px;">Entities (${data.entities_b.length})</div>
+      <div style="display:flex;flex-wrap:wrap;gap:3px;margin-bottom:8px;">`;
+    data.entities_b.slice(0, 25).forEach(e => {
+      const shared = data.entities_a.some(a => a.id === e.id);
+      html += `<span class="entity-tag ${e.type}" style="font-size:9px;${shared ? 'border:1px solid var(--accent);' : ''}">${e.name} (${e.count})</span>`;
+    });
+    html += '</div>';
+    html += '<div style="font-family:var(--font-mono);font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:4px;">Keywords</div><div style="display:flex;flex-wrap:wrap;gap:3px;">';
+    data.keywords_b.slice(0, 20).forEach(k => {
+      const shared = data.shared_keywords.includes(k.word);
+      html += `<span style="font-family:var(--font-mono);font-size:10px;padding:2px 6px;border-radius:4px;background:${shared ? 'var(--accent-dim)' : 'var(--bg-tertiary)'};color:var(--text-secondary);">${k.word}</span>`;
+    });
+    html += '</div></div></div>';
+
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to compare documents</div>'; }
+}
+
+
+// ─── LOCATION FREQUENCY ───
+
+function showLocFreqView() {
+  currentView = 'locfreq';
+  hideAllViews();
+  document.getElementById('locfreqView').classList.add('active');
+  loadLocFreq();
+}
+
+async function loadLocFreq() {
+  const el = document.getElementById('locfreqContent');
+  try {
+    const data = await api('/api/location-frequency');
+    const locations = data.locations || [];
+    const pairs = data.colocation_pairs || [];
+    if (!locations.length) { el.innerHTML = '<div style="color:var(--text-muted);">No location entities found.</div>'; return; }
+
+    const maxDocs = Math.max(...locations.map(l => l.doc_count));
+    let html = '';
+
+    locations.forEach(l => {
+      const pct = (l.doc_count / maxDocs) * 100;
+      html += `<div class="loc-row">
+        <span class="entity-tag place" style="font-size:10px;min-width:120px;">${l.name}</span>
+        <div style="flex:1;height:12px;background:var(--bg-tertiary);border-radius:3px;overflow:hidden;">
+          <div style="width:${pct}%;height:100%;background:var(--entity-place);border-radius:3px;"></div>
+        </div>
+        <span style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted);min-width:50px;text-align:right;">${l.doc_count} docs</span>
+        <span style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted);min-width:60px;text-align:right;">${l.total_mentions} hits</span>
+      </div>`;
+    });
+
+    if (pairs.length) {
+      html += '<div style="margin-top:16px;"><div class="narrative-section-title">Co-location Pairs</div>';
+      pairs.forEach(p => {
+        html += `<div class="corr-pair">
+          <span class="entity-tag place" style="font-size:10px;">${p.place_a}</span>
+          <span class="corr-bridge">⟷ ${p.shared_docs} docs ⟷</span>
+          <span class="entity-tag place" style="font-size:10px;">${p.place_b}</span>
+        </div>`;
+      });
+      html += '</div>';
+    }
+
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load location data</div>'; }
+}
+
+
+// ─── FINANCIAL PROFILES ───
+
+function showFinProfileView() {
+  currentView = 'finprofile';
+  hideAllViews();
+  document.getElementById('finprofileView').classList.add('active');
+  loadFinProfiles();
+}
+
+async function loadFinProfiles() {
+  const el = document.getElementById('finprofileContent');
+  try {
+    const data = await api('/api/financial-profiles');
+    const profiles = data.profiles || [];
+    const summary = data.summary || [];
+
+    let html = '';
+
+    // Summary
+    if (summary.length) {
+      html += '<div style="margin-bottom:16px;"><div class="narrative-section-title">Indicator Types</div>';
+      summary.forEach(s => {
+        const riskColor = s.avg_risk > 7 ? 'var(--accent)' : s.avg_risk > 4 ? 'var(--entity-thing)' : 'var(--entity-date)';
+        html += `<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border);">
+          <span style="font-size:12px;">${s.indicator_type}</span>
+          <span style="font-family:var(--font-mono);font-size:11px;"><span style="color:${riskColor};">avg ${s.avg_risk ? s.avg_risk.toFixed(1) : '?'}</span> · max ${s.max_risk || '?'} · ${s.count} total</span>
+        </div>`;
+      });
+      html += '</div>';
+    }
+
+    // Entity profiles
+    if (profiles.length) {
+      html += '<div><div class="narrative-section-title">Entity Risk Profiles</div>';
+      profiles.forEach(p => {
+        const riskColor = p.avg_risk > 7 ? 'var(--accent)' : p.avg_risk > 4 ? 'var(--entity-thing)' : 'var(--entity-date)';
+        const types = (p.indicator_types || '').split(',').slice(0, 4).join(', ');
+        html += `<div class="finprof-card">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <span class="entity-tag ${p.type}" style="font-size:11px;">${p.name}</span>
+            <div style="font-family:var(--font-mono);font-size:12px;font-weight:700;color:${riskColor};">${p.avg_risk ? p.avg_risk.toFixed(1) : '?'}</div>
+          </div>
+          <div style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted);margin-top:4px;">${p.indicator_count} indicators · ${p.fin_doc_count} docs · max risk ${p.max_risk || '?'}</div>
+          <div style="font-size:10px;color:var(--text-muted);margin-top:2px;">${types}</div>
+        </div>`;
+      });
+      html += '</div>';
+    }
+
+    if (!profiles.length && !summary.length) {
+      html = '<div style="color:var(--text-muted);">No financial indicator data available.</div>';
+    }
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load financial profiles</div>'; }
+}
+
+
+// ─── SEARCH HISTORY ───
+
+function showSearchHistView() {
+  currentView = 'searchhist';
+  hideAllViews();
+  document.getElementById('searchhistView').classList.add('active');
+  loadSearchHistory();
+}
+
+async function loadSearchHistory() {
+  const el = document.getElementById('searchhistContent');
+  try {
+    const data = await api('/api/search-history');
+    const history = data.history || [];
+    if (!history.length) { el.innerHTML = '<div style="color:var(--text-muted);">No search history yet.</div>'; return; }
+
+    let html = '';
+    history.forEach(h => {
+      const date = h.searched_at ? new Date(h.searched_at).toLocaleString() : '';
+      html += `<div class="hist-row" onclick="document.getElementById('searchInput').value='${h.query.replace(/'/g, "\\'")}';performSearch();">
+        <span style="font-size:12px;flex:1;">${h.query}</span>
+        <span style="font-family:var(--font-mono);font-size:10px;color:var(--entity-date);">${h.result_count} results</span>
+        <span style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted);">${h.times_searched}x</span>
+        <span style="font-family:var(--font-mono);font-size:9px;color:var(--text-muted);min-width:120px;text-align:right;">${date}</span>
+      </div>`;
+    });
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load search history</div>'; }
+}
+
+async function clearSearchHistory() {
+  if (!confirm('Clear all search history?')) return;
+  try {
+    await fetch('/api/search-history', {method: 'DELETE'});
+    loadSearchHistory();
+  } catch (err) { console.error('Failed to clear history:', err); }
+}
+
+
+// ─── CATEGORY DISTRIBUTION ───
+
+function showCatDistView() {
+  currentView = 'catdist';
+  hideAllViews();
+  document.getElementById('catdistView').classList.add('active');
+  loadCatDist();
+}
+
+async function loadCatDist() {
+  const el = document.getElementById('catdistContent');
+  try {
+    const data = await api('/api/category-distribution');
+    const categories = data.categories || [];
+    const temporal = data.temporal || [];
+    const years = data.years || [];
+    const catEnts = data.category_entities || [];
+
+    if (!categories.length) { el.innerHTML = '<div style="color:var(--text-muted);">No categories found.</div>'; return; }
+
+    const totalDocs = categories.reduce((sum, c) => sum + c.count, 0);
+    const catColors = {'deposition': 'var(--category-deposition)', 'flight': 'var(--category-flight)', 'correspondence': 'var(--category-correspondence)', 'report': 'var(--category-report)', 'legal': 'var(--category-legal)', 'other': 'var(--category-other)', 'email': 'var(--entity-org)', 'financial': 'var(--entity-thing)'};
+
+    // Stacked bar
+    let html = '<div style="display:flex;border-radius:var(--radius);overflow:hidden;margin-bottom:16px;">';
+    categories.forEach(c => {
+      const pct = (c.count / totalDocs) * 100;
+      const color = catColors[c.category] || 'var(--text-muted)';
+      html += `<div class="cat-segment" style="width:${pct}%;background:${color};" title="${c.category}: ${c.count} (${pct.toFixed(1)}%)"></div>`;
+    });
+    html += '</div>';
+
+    // Legend + details
+    html += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px;margin-bottom:16px;">';
+    categories.forEach(c => {
+      const color = catColors[c.category] || 'var(--text-muted)';
+      const pct = ((c.count / totalDocs) * 100).toFixed(1);
+      html += `<div class="stat-card" style="text-align:left;padding:10px;">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
+          <div style="width:10px;height:10px;border-radius:2px;background:${color};"></div>
+          <span style="font-weight:600;font-size:12px;">${c.category}</span>
+        </div>
+        <div style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted);">${c.count} docs (${pct}%) · ${c.total_pages} pages · ${c.flagged_count} flagged</div>
+        <div style="font-family:var(--font-mono);font-size:9px;color:var(--text-muted);">${c.earliest || '?'} — ${c.latest || '?'}</div>
+      </div>`;
+    });
+    html += '</div>';
+
+    // Temporal sparklines
+    if (years.length && temporal.length) {
+      html += '<div class="narrative-section-title">Temporal Distribution</div>';
+      html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;padding-left:120px;">';
+      years.forEach(y => html += `<span style="font-family:var(--font-mono);font-size:9px;color:var(--text-muted);width:24px;text-align:center;">${y.substring(2)}</span>`);
+      html += '</div>';
+      temporal.forEach((t, i) => {
+        const color = catColors[t.category] || 'var(--text-muted)';
+        const maxVal = Math.max(...years.map(y => t.by_year[y] || 0), 1);
+        html += `<div style="display:flex;align-items:center;gap:8px;margin-bottom:3px;">
+          <span style="font-size:11px;min-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${t.category}</span>
+          <div class="trend-spark">`;
+        years.forEach(y => {
+          const count = t.by_year[y] || 0;
+          const height = count > 0 ? Math.max(2, (count / maxVal) * 20) : 0;
+          html += `<div class="trend-spark-bar" style="height:${height}px;width:24px;background:${color};" title="${y}: ${count}"></div>`;
+        });
+        html += '</div></div>';
+      });
+    }
+
+    // Top entities per category
+    if (catEnts.length) {
+      html += '<div style="margin-top:16px;" class="narrative-section-title">Top Entities by Category</div>';
+      catEnts.forEach(ce => {
+        html += `<div style="margin-bottom:8px;"><span style="font-weight:500;font-size:12px;">${ce.category}:</span> `;
+        ce.entities.forEach(e => html += `<span class="entity-tag ${e.type}" style="font-size:9px;">${e.name} (${e.mentions})</span> `);
+        html += '</div>';
+      });
+    }
+
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load category distribution</div>'; }
 }
 
 
