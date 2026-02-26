@@ -10226,6 +10226,169 @@ def page_text_coverage():
     return {"sources": [dict(r) for r in rows]}
 
 
+# ── Round 31 ──────────────────────────────────
+
+
+@app.get("/api/entity-name-length-stats")
+def entity_name_length_stats():
+    """Distribution of entity name lengths."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT "
+            "CASE "
+            "  WHEN LENGTH(name) <= 3 THEN '1-3' "
+            "  WHEN LENGTH(name) BETWEEN 4 AND 10 THEN '4-10' "
+            "  WHEN LENGTH(name) BETWEEN 11 AND 20 THEN '11-20' "
+            "  WHEN LENGTH(name) BETWEEN 21 AND 40 THEN '21-40' "
+            "  ELSE '40+' END AS bucket, "
+            "COUNT(*) AS count "
+            "FROM entities GROUP BY bucket ORDER BY MIN(LENGTH(name))"
+        ).fetchall()
+        stats = conn.execute(
+            "SELECT AVG(LENGTH(name)) AS avg_len, "
+            "MAX(LENGTH(name)) AS max_len, "
+            "MIN(LENGTH(name)) AS min_len "
+            "FROM entities"
+        ).fetchone()
+        longest = conn.execute(
+            "SELECT id, name, type, LENGTH(name) AS name_len "
+            "FROM entities ORDER BY name_len DESC LIMIT 20"
+        ).fetchall()
+    return {
+        "buckets": [dict(r) for r in rows],
+        "stats": {
+            "avg_len": round(stats["avg_len"] or 0, 1),
+            "max_len": stats["max_len"] or 0,
+            "min_len": stats["min_len"] or 0,
+        },
+        "longest": [dict(r) for r in longest],
+    }
+
+
+@app.get("/api/document-notes-summary")
+def document_notes_summary():
+    """Documents with notes vs without."""
+    with get_db() as conn:
+        with_notes = conn.execute(
+            "SELECT COUNT(*) AS cnt FROM documents WHERE notes IS NOT NULL AND LENGTH(notes) > 0"
+        ).fetchone()["cnt"]
+        total = conn.execute("SELECT COUNT(*) AS cnt FROM documents").fetchone()["cnt"]
+        recent = conn.execute(
+            "SELECT id, title, filename, notes FROM documents "
+            "WHERE notes IS NOT NULL AND LENGTH(notes) > 0 "
+            "ORDER BY id DESC LIMIT 50"
+        ).fetchall()
+    return {
+        "with_notes": with_notes,
+        "without_notes": total - with_notes,
+        "total": total,
+        "recent": [dict(r) for r in recent],
+    }
+
+
+@app.get("/api/event-date-quality")
+def event_date_quality():
+    """Events with valid vs invalid/missing dates."""
+    with get_db() as conn:
+        total = conn.execute("SELECT COUNT(*) AS cnt FROM events").fetchone()["cnt"]
+        with_date = conn.execute(
+            "SELECT COUNT(*) AS cnt FROM events WHERE event_date IS NOT NULL AND event_date != ''"
+        ).fetchone()["cnt"]
+        valid_range = conn.execute(
+            "SELECT COUNT(*) AS cnt FROM events "
+            "WHERE event_date IS NOT NULL AND event_date != '' "
+            "AND SUBSTR(event_date, 1, 4) BETWEEN '1900' AND '2100'"
+        ).fetchone()["cnt"]
+        by_precision = conn.execute(
+            "SELECT precision, COUNT(*) AS count FROM events GROUP BY precision ORDER BY count DESC"
+        ).fetchall()
+    return {
+        "total": total,
+        "with_date": with_date,
+        "without_date": total - with_date,
+        "valid_range": valid_range,
+        "out_of_range": with_date - valid_range,
+        "by_precision": [dict(r) for r in by_precision],
+    }
+
+
+@app.get("/api/source-category-matrix")
+def source_category_matrix():
+    """Category breakdown per source."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT source, category, COUNT(*) AS count "
+            "FROM documents GROUP BY source, category ORDER BY source, count DESC"
+        ).fetchall()
+    matrix = {}
+    categories = set()
+    for r in rows:
+        src = r["source"]
+        if src not in matrix:
+            matrix[src] = {}
+        matrix[src][r["category"]] = r["count"]
+        categories.add(r["category"])
+    return {
+        "sources": list(matrix.keys()),
+        "categories": sorted(categories),
+        "matrix": matrix,
+    }
+
+
+@app.get("/api/entity-type-growth")
+def entity_type_growth():
+    """Entity count by type over ingestion time."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT DATE(d.ingested_at) AS day, e.type, "
+            "COUNT(DISTINCT e.id) AS count "
+            "FROM entities e "
+            "JOIN document_entities de ON de.entity_id = e.id "
+            "JOIN documents d ON d.id = de.document_id "
+            "WHERE d.ingested_at IS NOT NULL "
+            "GROUP BY day, e.type ORDER BY day"
+        ).fetchall()
+    timeline = {}
+    for r in rows:
+        day = r["day"]
+        if day not in timeline:
+            timeline[day] = {}
+        timeline[day][r["type"]] = r["count"]
+    return {"timeline": [{"day": d, **types} for d, types in timeline.items()]}
+
+
+@app.get("/api/connection-weight-stats")
+def connection_weight_stats():
+    """Statistical summary of connection weights."""
+    with get_db() as conn:
+        stats = conn.execute(
+            "SELECT COUNT(*) AS total, "
+            "AVG(weight) AS avg_weight, "
+            "MAX(weight) AS max_weight, "
+            "MIN(weight) AS min_weight, "
+            "SUM(weight) AS total_weight "
+            "FROM entity_connections"
+        ).fetchone()
+        top = conn.execute(
+            "SELECT ea.name AS name_a, ea.type AS type_a, "
+            "eb.name AS name_b, eb.type AS type_b, ec.weight "
+            "FROM entity_connections ec "
+            "JOIN entities ea ON ea.id = ec.entity_a_id "
+            "JOIN entities eb ON eb.id = ec.entity_b_id "
+            "ORDER BY ec.weight DESC LIMIT 50"
+        ).fetchall()
+    return {
+        "stats": {
+            "total": stats["total"],
+            "avg_weight": round(stats["avg_weight"] or 0, 2),
+            "max_weight": stats["max_weight"] or 0,
+            "min_weight": stats["min_weight"] or 0,
+            "total_weight": stats["total_weight"] or 0,
+        },
+        "top_connections": [dict(r) for r in top],
+    }
+
+
 # ═══════════════════════════════════════════
 # STATIC FILES (serve the frontend)
 # ═══════════════════════════════════════════

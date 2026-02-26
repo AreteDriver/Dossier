@@ -2049,6 +2049,8 @@ body::before {
 .entspread-view.active, .docsize-view.active, .evtgaps-view.active, .srcentoverlap-view.active, .unresolvedent-view.active, .connrecip-view.active { display: flex; }
 .entlong-view, .flagratio-view, .evtcluster-view, .srcingest-view, .entsingleton-view, .pagetextcov-view { display: none; flex-direction: column; gap: 16px; }
 .entlong-view.active, .flagratio-view.active, .evtcluster-view.active, .srcingest-view.active, .entsingleton-view.active, .pagetextcov-view.active { display: flex; }
+.entnamelen-view, .docnotessummary-view, .evtdatequal-view, .srccatmatrix-view, .enttypegrowth-view, .connweightstats-view { display: none; flex-direction: column; gap: 16px; }
+.entnamelen-view.active, .docnotessummary-view.active, .evtdatequal-view.active, .srccatmatrix-view.active, .enttypegrowth-view.active, .connweightstats-view.active { display: flex; }
 .rel-edge { display: flex; align-items: center; gap: 8px; padding: 4px 0; border-bottom: 1px solid var(--border); }
 .sbs-col { flex: 1; padding: 12px; background: var(--bg-card); border-radius: var(--radius); border: 1px solid var(--border); overflow: hidden; }
 .sbs-header { font-family: var(--font-mono); font-size: 12px; font-weight: 600; color: var(--text-primary); margin-bottom: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -2765,6 +2767,30 @@ body::before {
       <div class="sidebar-item" data-view="pagetextcov" id="pagetextcovNav">
         <div class="sidebar-dot" style="background:var(--entity-org)"></div>
         Page Text Coverage
+      </div>
+      <div class="sidebar-item" data-view="entnamelen" id="entnamelenNav">
+        <div class="sidebar-dot" style="background:var(--entity-person)"></div>
+        Entity Name Length
+      </div>
+      <div class="sidebar-item" data-view="docnotessummary" id="docnotessummaryNav">
+        <div class="sidebar-dot" style="background:var(--entity-date)"></div>
+        Document Notes Summary
+      </div>
+      <div class="sidebar-item" data-view="evtdatequal" id="evtdatequalNav">
+        <div class="sidebar-dot" style="background:var(--entity-org)"></div>
+        Event Date Quality
+      </div>
+      <div class="sidebar-item" data-view="srccatmatrix" id="srccatmatrixNav">
+        <div class="sidebar-dot" style="background:var(--entity-place)"></div>
+        Source Category Matrix
+      </div>
+      <div class="sidebar-item" data-view="enttypegrowth" id="enttypegrowthNav">
+        <div class="sidebar-dot" style="background:var(--entity-person)"></div>
+        Entity Type Growth
+      </div>
+      <div class="sidebar-item" data-view="connweightstats" id="connweightstatsNav">
+        <div class="sidebar-dot" style="background:var(--entity-org)"></div>
+        Connection Weight Stats
       </div>
     </div>
 
@@ -4290,6 +4316,36 @@ body::before {
       <div id="pagetextcovContent">Loading page text coverage...</div>
     </div>
 
+    <div class="entnamelen-view" id="entnamelenView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Entity Name Length</div>
+      <div id="entnamelenContent">Loading entity name lengths...</div>
+    </div>
+
+    <div class="docnotessummary-view" id="docnotessummaryView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Document Notes Summary</div>
+      <div id="docnotessummaryContent">Loading document notes...</div>
+    </div>
+
+    <div class="evtdatequal-view" id="evtdatequalView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Event Date Quality</div>
+      <div id="evtdatequalContent">Loading event date quality...</div>
+    </div>
+
+    <div class="srccatmatrix-view" id="srccatmatrixView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Source Category Matrix</div>
+      <div id="srccatmatrixContent">Loading source category matrix...</div>
+    </div>
+
+    <div class="enttypegrowth-view" id="enttypegrowthView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Entity Type Growth</div>
+      <div id="enttypegrowthContent">Loading entity type growth...</div>
+    </div>
+
+    <div class="connweightstats-view" id="connweightstatsView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Connection Weight Stats</div>
+      <div id="connweightstatsContent">Loading connection weight stats...</div>
+    </div>
+
   </main>
 
   <!-- RIGHT PANEL -->
@@ -5046,6 +5102,12 @@ function hideAllViews() {
   document.getElementById('srcingestView').classList.remove('active');
   document.getElementById('entsingletonView').classList.remove('active');
   document.getElementById('pagetextcovView').classList.remove('active');
+  document.getElementById('entnamelenView').classList.remove('active');
+  document.getElementById('docnotessummaryView').classList.remove('active');
+  document.getElementById('evtdatequalView').classList.remove('active');
+  document.getElementById('srccatmatrixView').classList.remove('active');
+  document.getElementById('enttypegrowthView').classList.remove('active');
+  document.getElementById('connweightstatsView').classList.remove('active');
 }
 
 function showDocumentView() {
@@ -5255,6 +5317,12 @@ document.querySelectorAll('.sidebar-item[data-view]').forEach(item => {
     else if (view === 'srcingest') showSrcIngestView();
     else if (view === 'entsingleton') showEntSingletonView();
     else if (view === 'pagetextcov') showPageTextCovView();
+    else if (view === 'entnamelen') showEntNameLenView();
+    else if (view === 'docnotessummary') showDocNotesSummaryView();
+    else if (view === 'evtdatequal') showEvtDateQualView();
+    else if (view === 'srccatmatrix') showSrcCatMatrixView();
+    else if (view === 'enttypegrowth') showEntTypeGrowthView();
+    else if (view === 'connweightstats') showConnWeightStatsView();
   });
 });
 
@@ -6462,6 +6530,12 @@ function goBackFromReader() {
   else if (readerPreviousView === 'srcingest') showSrcIngestView();
   else if (readerPreviousView === 'entsingleton') showEntSingletonView();
   else if (readerPreviousView === 'pagetextcov') showPageTextCovView();
+  else if (readerPreviousView === 'entnamelen') showEntNameLenView();
+  else if (readerPreviousView === 'docnotessummary') showDocNotesSummaryView();
+  else if (readerPreviousView === 'evtdatequal') showEvtDateQualView();
+  else if (readerPreviousView === 'srccatmatrix') showSrcCatMatrixView();
+  else if (readerPreviousView === 'enttypegrowth') showEntTypeGrowthView();
+  else if (readerPreviousView === 'connweightstats') showConnWeightStatsView();
   else showDocumentView();
 }
 
@@ -14739,6 +14813,187 @@ async function loadPageTextCov() {
     html += '</tbody></table>';
     el.innerHTML = html;
   } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load page text coverage</div>'; }
+}
+
+// ── Round 31 ──────────────────────────────────
+
+function showEntNameLenView() {
+  currentView = 'entnamelen';
+  hideAllViews();
+  document.getElementById('entnamelenView').classList.add('active');
+  loadEntNameLen();
+}
+async function loadEntNameLen() {
+  const el = document.getElementById('entnamelenContent');
+  try {
+    const res = await fetch('/api/entity-name-length-stats');
+    const data = await res.json();
+    let html = `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px;">`;
+    html += `<div style="background:var(--bg-secondary);padding:12px;border-radius:6px;"><div style="font-size:11px;color:var(--text-muted);">Avg Length</div><div style="font-size:24px;font-weight:700;color:var(--text-primary);">${data.stats.avg_len}</div></div>`;
+    html += `<div style="background:var(--bg-secondary);padding:12px;border-radius:6px;"><div style="font-size:11px;color:var(--text-muted);">Max Length</div><div style="font-size:24px;font-weight:700;color:var(--text-primary);">${data.stats.max_len}</div></div>`;
+    html += `<div style="background:var(--bg-secondary);padding:12px;border-radius:6px;"><div style="font-size:11px;color:var(--text-muted);">Min Length</div><div style="font-size:24px;font-weight:700;color:var(--text-primary);">${data.stats.min_len}</div></div>`;
+    html += `</div>`;
+    html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;"><div>';
+    html += '<div style="font-size:12px;font-weight:600;margin-bottom:8px;">Length Buckets</div>';
+    const maxB = Math.max(...data.buckets.map(b => b.count));
+    data.buckets.forEach(b => {
+      const pct = maxB > 0 ? (b.count / maxB * 100) : 0;
+      html += `<div style="display:flex;align-items:center;gap:8px;padding:4px 0;"><span style="width:50px;">${b.bucket}</span><div style="flex:1;background:var(--bg-secondary);border-radius:3px;height:16px;"><div style="background:var(--accent);height:100%;width:${pct}%;border-radius:3px;"></div></div><span style="width:60px;text-align:right;font-size:12px;">${b.count.toLocaleString()}</span></div>`;
+    });
+    html += '</div><div>';
+    html += '<div style="font-size:12px;font-weight:600;margin-bottom:8px;">Longest Names</div>';
+    html += '<table style="width:100%;border-collapse:collapse;font-size:12px;">';
+    data.longest.forEach(e => {
+      html += `<tr style="border-bottom:1px solid var(--border);"><td style="padding:4px;">${e.name}</td><td style="padding:4px;"><span class="entity-tag ${e.type}" style="font-size:9px;">${e.type}</span></td><td style="text-align:right;padding:4px;">${e.name_len}</td></tr>`;
+    });
+    html += '</table></div></div>';
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load entity name lengths</div>'; }
+}
+
+function showDocNotesSummaryView() {
+  currentView = 'docnotessummary';
+  hideAllViews();
+  document.getElementById('docnotessummaryView').classList.add('active');
+  loadDocNotesSummary();
+}
+async function loadDocNotesSummary() {
+  const el = document.getElementById('docnotessummaryContent');
+  try {
+    const res = await fetch('/api/document-notes-summary');
+    const data = await res.json();
+    let html = `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px;">`;
+    html += `<div style="background:var(--bg-secondary);padding:12px;border-radius:6px;"><div style="font-size:11px;color:var(--text-muted);">With Notes</div><div style="font-size:24px;font-weight:700;color:#4ade80;">${data.with_notes}</div></div>`;
+    html += `<div style="background:var(--bg-secondary);padding:12px;border-radius:6px;"><div style="font-size:11px;color:var(--text-muted);">Without Notes</div><div style="font-size:24px;font-weight:700;color:var(--text-primary);">${data.without_notes}</div></div>`;
+    html += `<div style="background:var(--bg-secondary);padding:12px;border-radius:6px;"><div style="font-size:11px;color:var(--text-muted);">Total</div><div style="font-size:24px;font-weight:700;color:var(--text-primary);">${data.total}</div></div>`;
+    html += `</div>`;
+    if (data.recent.length) {
+      html += '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="border-bottom:2px solid var(--border);"><th style="text-align:left;padding:8px;">Document</th><th style="text-align:left;padding:8px;">Notes</th></tr></thead><tbody>';
+      data.recent.forEach(d => {
+        html += `<tr style="border-bottom:1px solid var(--border);cursor:pointer;" onclick="openReader(${d.id})"><td style="padding:8px;">${d.title || d.filename}</td><td style="padding:8px;font-size:12px;color:var(--text-muted);max-width:400px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${d.notes}</td></tr>`;
+      });
+      html += '</tbody></table>';
+    } else {
+      html += '<div style="color:var(--text-muted);padding:16px;">No documents with notes.</div>';
+    }
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load document notes summary</div>'; }
+}
+
+function showEvtDateQualView() {
+  currentView = 'evtdatequal';
+  hideAllViews();
+  document.getElementById('evtdatequalView').classList.add('active');
+  loadEvtDateQual();
+}
+async function loadEvtDateQual() {
+  const el = document.getElementById('evtdatequalContent');
+  try {
+    const res = await fetch('/api/event-date-quality');
+    const data = await res.json();
+    let html = `<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:16px;">`;
+    html += `<div style="background:var(--bg-secondary);padding:12px;border-radius:6px;"><div style="font-size:11px;color:var(--text-muted);">Total</div><div style="font-size:20px;font-weight:700;color:var(--text-primary);">${data.total.toLocaleString()}</div></div>`;
+    html += `<div style="background:var(--bg-secondary);padding:12px;border-radius:6px;"><div style="font-size:11px;color:var(--text-muted);">With Date</div><div style="font-size:20px;font-weight:700;color:#4ade80;">${data.with_date.toLocaleString()}</div></div>`;
+    html += `<div style="background:var(--bg-secondary);padding:12px;border-radius:6px;"><div style="font-size:11px;color:var(--text-muted);">No Date</div><div style="font-size:20px;font-weight:700;color:#e05555;">${data.without_date.toLocaleString()}</div></div>`;
+    html += `<div style="background:var(--bg-secondary);padding:12px;border-radius:6px;"><div style="font-size:11px;color:var(--text-muted);">Valid Range</div><div style="font-size:20px;font-weight:700;color:#4ade80;">${data.valid_range.toLocaleString()}</div></div>`;
+    html += `<div style="background:var(--bg-secondary);padding:12px;border-radius:6px;"><div style="font-size:11px;color:var(--text-muted);">Out of Range</div><div style="font-size:20px;font-weight:700;color:#facc15;">${data.out_of_range.toLocaleString()}</div></div>`;
+    html += `</div>`;
+    html += '<div style="font-size:12px;font-weight:600;margin-bottom:8px;">By Precision</div>';
+    data.by_precision.forEach(p => {
+      const pct = data.total > 0 ? (p.count / data.total * 100).toFixed(1) : 0;
+      html += `<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);"><span>${p.precision || 'unknown'}</span><span style="font-weight:600;">${p.count.toLocaleString()} (${pct}%)</span></div>`;
+    });
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load event date quality</div>'; }
+}
+
+function showSrcCatMatrixView() {
+  currentView = 'srccatmatrix';
+  hideAllViews();
+  document.getElementById('srccatmatrixView').classList.add('active');
+  loadSrcCatMatrix();
+}
+async function loadSrcCatMatrix() {
+  const el = document.getElementById('srccatmatrixContent');
+  try {
+    const res = await fetch('/api/source-category-matrix');
+    const data = await res.json();
+    let html = '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:12px;"><thead><tr style="border-bottom:2px solid var(--border);"><th style="text-align:left;padding:8px;">Source</th>';
+    data.categories.forEach(c => { html += `<th style="text-align:right;padding:8px;">${c}</th>`; });
+    html += '</tr></thead><tbody>';
+    data.sources.forEach(src => {
+      html += `<tr style="border-bottom:1px solid var(--border);"><td style="padding:8px;">${src}</td>`;
+      data.categories.forEach(c => {
+        const val = (data.matrix[src] && data.matrix[src][c]) || 0;
+        html += `<td style="text-align:right;padding:8px;${val > 0 ? 'font-weight:600;' : 'color:var(--text-muted);'}">${val}</td>`;
+      });
+      html += '</tr>';
+    });
+    html += '</tbody></table></div>';
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load source category matrix</div>'; }
+}
+
+function showEntTypeGrowthView() {
+  currentView = 'enttypegrowth';
+  hideAllViews();
+  document.getElementById('enttypegrowthView').classList.add('active');
+  loadEntTypeGrowth();
+}
+async function loadEntTypeGrowth() {
+  const el = document.getElementById('enttypegrowthContent');
+  try {
+    const res = await fetch('/api/entity-type-growth');
+    const data = await res.json();
+    if (!data.timeline.length) { el.innerHTML = '<div style="color:var(--text-muted);">No data.</div>'; return; }
+    const allTypes = new Set();
+    data.timeline.forEach(t => Object.keys(t).filter(k => k !== 'day').forEach(k => allTypes.add(k)));
+    const types = [...allTypes];
+    let html = '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="border-bottom:2px solid var(--border);"><th style="text-align:left;padding:8px;">Date</th>';
+    types.forEach(tp => { html += `<th style="text-align:right;padding:8px;">${tp}</th>`; });
+    html += '</tr></thead><tbody>';
+    data.timeline.forEach(t => {
+      html += `<tr style="border-bottom:1px solid var(--border);"><td style="padding:8px;font-family:var(--font-mono);">${t.day}</td>`;
+      types.forEach(tp => { html += `<td style="text-align:right;padding:8px;">${(t[tp] || 0).toLocaleString()}</td>`; });
+      html += '</tr>';
+    });
+    html += '</tbody></table>';
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load entity type growth</div>'; }
+}
+
+function showConnWeightStatsView() {
+  currentView = 'connweightstats';
+  hideAllViews();
+  document.getElementById('connweightstatsView').classList.add('active');
+  loadConnWeightStats();
+}
+async function loadConnWeightStats() {
+  const el = document.getElementById('connweightstatsContent');
+  try {
+    const res = await fetch('/api/connection-weight-stats');
+    const data = await res.json();
+    const s = data.stats;
+    let html = `<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:16px;">`;
+    html += `<div style="background:var(--bg-secondary);padding:12px;border-radius:6px;"><div style="font-size:11px;color:var(--text-muted);">Total</div><div style="font-size:20px;font-weight:700;color:var(--text-primary);">${s.total.toLocaleString()}</div></div>`;
+    html += `<div style="background:var(--bg-secondary);padding:12px;border-radius:6px;"><div style="font-size:11px;color:var(--text-muted);">Avg Weight</div><div style="font-size:20px;font-weight:700;color:var(--text-primary);">${s.avg_weight}</div></div>`;
+    html += `<div style="background:var(--bg-secondary);padding:12px;border-radius:6px;"><div style="font-size:11px;color:var(--text-muted);">Max Weight</div><div style="font-size:20px;font-weight:700;color:var(--text-primary);">${s.max_weight}</div></div>`;
+    html += `<div style="background:var(--bg-secondary);padding:12px;border-radius:6px;"><div style="font-size:11px;color:var(--text-muted);">Min Weight</div><div style="font-size:20px;font-weight:700;color:var(--text-primary);">${s.min_weight}</div></div>`;
+    html += `<div style="background:var(--bg-secondary);padding:12px;border-radius:6px;"><div style="font-size:11px;color:var(--text-muted);">Sum Weight</div><div style="font-size:20px;font-weight:700;color:var(--text-primary);">${s.total_weight.toLocaleString()}</div></div>`;
+    html += `</div>`;
+    if (data.top_connections.length) {
+      html += '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="border-bottom:2px solid var(--border);"><th style="text-align:left;padding:8px;">Entity A</th><th style="text-align:left;padding:8px;">Entity B</th><th style="text-align:right;padding:8px;">Weight</th></tr></thead><tbody>';
+      data.top_connections.forEach(c => {
+        html += `<tr style="border-bottom:1px solid var(--border);">`;
+        html += `<td style="padding:8px;">${c.name_a} <span class="entity-tag ${c.type_a}" style="font-size:9px;">${c.type_a}</span></td>`;
+        html += `<td style="padding:8px;">${c.name_b} <span class="entity-tag ${c.type_b}" style="font-size:9px;">${c.type_b}</span></td>`;
+        html += `<td style="text-align:right;padding:8px;font-weight:600;">${c.weight}</td>`;
+        html += `</tr>`;
+      });
+      html += '</tbody></table>';
+    }
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load connection weight stats</div>'; }
 }
 
 
