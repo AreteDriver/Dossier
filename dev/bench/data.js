@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1771624794276,
+  "lastUpdate": 1772099349318,
   "repoUrl": "https://github.com/AreteDriver/Dossier",
   "entries": {
     "Benchmark": [
@@ -648,6 +648,72 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.0009232355253352523",
             "extra": "mean: 7.1269105312512515 msec\nrounds: 96"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "AreteDriver@users.noreply.github.com",
+            "name": "AreteDriver",
+            "username": "AreteDriver"
+          },
+          "committer": {
+            "email": "AreteDriver@users.noreply.github.com",
+            "name": "AreteDriver",
+            "username": "AreteDriver"
+          },
+          "distinct": true,
+          "id": "0d322374a8f6f397a5ea5ca9a8b8aab307b74a5e",
+          "message": "fix: lower coverage threshold to 50% to match actual state\n\nServer.py grew from ~1200 to ~4800 lines across Rounds 5-9 (30 new endpoint\ngroups). New endpoints are functionally verified via curl/integration but not\nunit tested yet. Threshold will be raised as test coverage catches up.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>",
+          "timestamp": "2026-02-26T01:47:25-08:00",
+          "tree_id": "7ab1f57217f81e0f9a27362ea033626ed9c11948",
+          "url": "https://github.com/AreteDriver/Dossier/commit/0d322374a8f6f397a5ea5ca9a8b8aab307b74a5e"
+        },
+        "date": 1772099348466,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/test_benchmarks.py::TestNERBenchmark::test_extract_entities_5k",
+            "value": 121.08071582717271,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00027242190846469053",
+            "extra": "mean: 8.258953485436711 msec\nrounds: 103"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestFTS5Benchmark::test_fts5_search_500_docs",
+            "value": 1786.007546814804,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00005396581217423591",
+            "extra": "mean: 559.9080484197375 usec\nrounds: 1487"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestResolverBenchmark::test_resolve_all_200_entities",
+            "value": 13.521024468707996,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00014933586994820316",
+            "extra": "mean: 73.95889285714422 msec\nrounds: 14"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestGraphBenchmark::test_centrality_betweenness_100",
+            "value": 39.01713716345747,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00011913312430410245",
+            "extra": "mean: 25.62976355263134 msec\nrounds: 38"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestGraphBenchmark::test_communities_100",
+            "value": 237.23186791062832,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0009411922531908025",
+            "extra": "mean: 4.2152852768361075 msec\nrounds: 177"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestBulkInsertBenchmark::test_bulk_insert_100_docs",
+            "value": 176.38574687469338,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0011774414986418134",
+            "extra": "mean: 5.66939232743342 msec\nrounds: 113"
           }
         ]
       }
