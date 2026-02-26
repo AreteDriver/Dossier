@@ -1881,6 +1881,46 @@ body::before {
 /* ─── SNAPSHOTS ─── */
 .snapshots-view { display: none; flex-direction: column; gap: 16px; }
 .snapshots-view.active { display: flex; }
+
+.alerts-view { display: none; flex-direction: column; gap: 16px; }
+.alerts-view.active { display: flex; }
+.alert-keyword { display: inline-block; background: var(--accent-glow); color: var(--accent); border: 1px solid var(--accent-dim); border-radius: var(--radius); padding: 4px 12px; font-family: var(--font-mono); font-size: 12px; margin: 2px 4px; }
+.alert-match-row { display: flex; align-items: center; gap: 10px; padding: 6px 12px; border-bottom: 1px solid var(--border); font-size: 12px; cursor: pointer; transition: background var(--transition); }
+.alert-match-row:hover { background: var(--bg-hover); }
+
+.linkanalysis-view { display: none; flex-direction: column; gap: 16px; }
+.linkanalysis-view.active { display: flex; }
+.centrality-bar { height: 6px; background: var(--accent); border-radius: 3px; transition: width 0.3s ease; }
+.centrality-row { display: flex; align-items: center; gap: 12px; padding: 8px 12px; border-bottom: 1px solid var(--border); }
+.centrality-row:hover { background: var(--bg-hover); }
+.centrality-name { flex: 1; font-size: 13px; cursor: pointer; }
+.centrality-name:hover { color: var(--accent); }
+.centrality-metric { font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); min-width: 60px; text-align: right; }
+
+.notes-panel { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 14px; margin-top: 12px; }
+.note-item { padding: 10px 12px; border-bottom: 1px solid var(--border); }
+.note-item:last-child { border-bottom: none; }
+.note-meta { font-family: var(--font-mono); font-size: 10px; color: var(--text-muted); margin-bottom: 4px; }
+.note-text { font-size: 13px; color: var(--text-primary); line-height: 1.5; }
+
+.commflow-view { display: none; flex-direction: column; gap: 16px; }
+.commflow-view.active { display: flex; }
+.flow-row { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-bottom: 1px solid var(--border); font-size: 12px; }
+.flow-row:hover { background: var(--bg-hover); }
+.flow-arrow { color: var(--accent); font-weight: 600; }
+.flow-count { font-family: var(--font-mono); font-size: 11px; color: var(--entity-date); background: rgba(74, 224, 168, 0.1); padding: 2px 8px; border-radius: var(--radius); }
+
+.ocrquality-view { display: none; flex-direction: column; gap: 16px; }
+.ocrquality-view.active { display: flex; }
+.quality-bar { height: 20px; border-radius: var(--radius); display: flex; overflow: hidden; }
+.quality-segment { height: 100%; transition: width 0.3s ease; }
+
+.casefile-view { display: none; flex-direction: column; gap: 16px; }
+.casefile-view.active { display: flex; }
+.case-item-row { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-bottom: 1px solid var(--border); }
+.case-item-row:hover { background: var(--bg-hover); }
+.case-item-type { font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; padding: 2px 6px; border-radius: var(--radius); background: var(--bg-tertiary); color: var(--text-muted); min-width: 60px; text-align: center; }
+.case-item-name { flex: 1; font-size: 13px; }
 </style>
 </head>
 <body>
@@ -2045,6 +2085,26 @@ body::before {
       <div class="sidebar-item" data-view="snapshots" id="snapshotsNav">
         <div class="sidebar-dot" style="background:var(--entity-date)"></div>
         Snapshots
+      </div>
+      <div class="sidebar-item" data-view="alerts" id="alertsNav">
+        <div class="sidebar-dot" style="background:var(--accent)"></div>
+        Keyword Alerts
+      </div>
+      <div class="sidebar-item" data-view="linkanalysis" id="linkanalysisNav">
+        <div class="sidebar-dot" style="background:var(--entity-org)"></div>
+        Link Analysis
+      </div>
+      <div class="sidebar-item" data-view="commflow" id="commflowNav">
+        <div class="sidebar-dot" style="background:var(--entity-person)"></div>
+        Comm Flow
+      </div>
+      <div class="sidebar-item" data-view="ocrquality" id="ocrqualityNav">
+        <div class="sidebar-dot" style="background:var(--entity-thing)"></div>
+        OCR Quality
+      </div>
+      <div class="sidebar-item" data-view="casefile" id="casefileNav">
+        <div class="sidebar-dot" style="background:var(--entity-place)"></div>
+        Case Files
       </div>
     </div>
 
@@ -2379,6 +2439,23 @@ body::before {
         <button class="export-btn" onclick="addRedaction()" style="color:#e05555;">Redact</button>
         <button class="export-btn" onclick="crossReference()">X-Ref</button>
         <button class="export-btn" onclick="analyzeTone()">Tone</button>
+        <button class="export-btn" onclick="toggleDocNotes()">Notes</button>
+        <button class="export-btn" onclick="showOCRDetail()">OCR</button>
+      </div>
+      <div class="notes-panel" id="docNotesPanel" style="display:none;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <span style="font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);">Analyst Notes</span>
+          <span id="docNotesCount" style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted);">0</span>
+        </div>
+        <div id="docNotesList"></div>
+        <div style="display:flex;gap:8px;margin-top:8px;">
+          <input id="newDocNote" placeholder="Add note..." style="background:var(--bg-tertiary);border:1px solid var(--border);border-radius:var(--radius);padding:5px 10px;font-family:var(--font-mono);font-size:11px;color:var(--text-primary);flex:1;outline:none;">
+          <button onclick="addDocNote()" style="background:var(--bg-tertiary);border:1px solid var(--border);border-radius:var(--radius);padding:5px 12px;font-family:var(--font-mono);font-size:11px;color:var(--text-secondary);cursor:pointer;">+ Add</button>
+        </div>
+      </div>
+      <div class="notes-panel" id="ocrDetailPanel" style="display:none;">
+        <div style="font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:8px;">OCR Quality Analysis</div>
+        <div id="ocrDetailContent"></div>
       </div>
       <div class="reader-body" id="readerBody">Loading...</div>
       <div style="margin-top:12px;">
@@ -2702,6 +2779,51 @@ body::before {
       </div>
       <div id="snapshotsContent">Loading snapshots...</div>
     </div>
+
+    <!-- Keyword Alerts View -->
+    <div class="alerts-view" id="alertsView">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Keyword Alerts</div>
+        <div style="display:flex;gap:8px;">
+          <input id="newAlertKeyword" placeholder="Enter keyword..." style="background:var(--bg-tertiary);border:1px solid var(--border);border-radius:var(--radius);padding:6px 12px;font-family:var(--font-mono);font-size:12px;color:var(--text-primary);outline:none;width:200px;">
+          <button onclick="createKeywordAlert()" class="report-btn">Add Alert</button>
+        </div>
+      </div>
+      <div id="alertsContent">Loading alerts...</div>
+    </div>
+
+    <!-- Link Analysis View -->
+    <div class="linkanalysis-view" id="linkanalysisView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Link Analysis — Entity Centrality</div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <label style="font-size:11px;color:var(--text-muted);">Min connections:</label>
+        <input id="linkMinConn" type="number" value="3" min="1" max="50" style="background:var(--bg-tertiary);border:1px solid var(--border);border-radius:var(--radius);padding:4px 8px;font-family:var(--font-mono);font-size:11px;color:var(--text-primary);width:60px;outline:none;">
+        <button onclick="loadLinkAnalysis()" class="report-btn" style="padding:4px 12px;font-size:11px;">Analyze</button>
+      </div>
+      <div id="linkanalysisContent">Loading...</div>
+    </div>
+
+    <!-- Communication Flow View -->
+    <div class="commflow-view" id="commflowView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Communication Flow Analysis</div>
+      <div id="commflowContent">Loading flows...</div>
+    </div>
+
+    <!-- OCR Quality View -->
+    <div class="ocrquality-view" id="ocrqualityView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">OCR Quality Overview</div>
+      <div id="ocrqualityContent">Loading quality data...</div>
+    </div>
+
+    <!-- Case File View -->
+    <div class="casefile-view" id="casefileView">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Case Files</div>
+        <button onclick="createCaseFile()" class="report-btn">New Case File</button>
+      </div>
+      <div id="casefileContent">Loading case files...</div>
+    </div>
+
   </main>
 
   <!-- RIGHT PANEL -->
@@ -3322,6 +3444,11 @@ function hideAllViews() {
   document.getElementById('patternsView').classList.remove('active');
   document.getElementById('compareView').classList.remove('active');
   document.getElementById('snapshotsView').classList.remove('active');
+  document.getElementById('alertsView').classList.remove('active');
+  document.getElementById('linkanalysisView').classList.remove('active');
+  document.getElementById('commflowView').classList.remove('active');
+  document.getElementById('ocrqualityView').classList.remove('active');
+  document.getElementById('casefileView').classList.remove('active');
 }
 
 function showDocumentView() {
@@ -3395,6 +3522,11 @@ document.querySelectorAll('.sidebar-item[data-view]').forEach(item => {
     else if (view === 'patterns') showPatternsView();
     else if (view === 'compare') showCompareView();
     else if (view === 'snapshots') showSnapshotsView();
+    else if (view === 'alerts') showAlertsView();
+    else if (view === 'linkanalysis') showLinkAnalysisView();
+    else if (view === 'commflow') showCommFlowView();
+    else if (view === 'ocrquality') showOCRQualityView();
+    else if (view === 'casefile') showCaseFileView();
   });
 });
 
@@ -4470,6 +4602,9 @@ function goBackFromReader() {
   else if (readerPreviousView === 'clusters') showClustersView();
   else if (readerPreviousView === 'chains') showChainsView();
   else if (readerPreviousView === 'patterns') showPatternsView();
+  else if (readerPreviousView === 'alerts') showAlertsView();
+  else if (readerPreviousView === 'ocrquality') showOCRQualityView();
+  else if (readerPreviousView === 'casefile') showCaseFileView();
   else showDocumentView();
 }
 
@@ -6878,6 +7013,406 @@ async function deleteSnapshot(id) {
     await fetch(`/api/snapshots/${id}`, {method: 'DELETE'});
     loadSnapshots();
   } catch (err) { console.error('Delete snapshot failed:', err); }
+}
+
+
+// ─── KEYWORD ALERTS ───
+
+function showAlertsView() {
+  currentView = 'alerts';
+  hideAllViews();
+  document.getElementById('alertsView').classList.add('active');
+  loadKeywordAlerts();
+}
+
+async function loadKeywordAlerts() {
+  const el = document.getElementById('alertsContent');
+  try {
+    const data = await api('/api/keyword-alerts');
+    const alerts = data.alerts || [];
+    if (!alerts.length) { el.innerHTML = '<div style="color:var(--text-muted);font-size:13px;padding:20px;">No keyword alerts configured. Add one above.</div>'; return; }
+    let html = '';
+    alerts.forEach(a => {
+      html += `<div class="card" style="margin-bottom:12px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <span class="alert-keyword">${a.keyword}</span>
+          <div style="display:flex;align-items:center;gap:12px;">
+            <span style="font-family:var(--font-mono);font-size:11px;color:var(--entity-date);">${a.match_count} hits across ${a.documents.length} docs</span>
+            <button onclick="deleteKeywordAlert(${a.id})" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:14px;">×</button>
+          </div>
+        </div>`;
+      if (a.documents.length) {
+        a.documents.forEach(d => {
+          html += `<div class="alert-match-row" onclick="readerPreviousView='alerts';openReader(${d.id})">
+            <span style="font-family:var(--font-mono);font-size:11px;color:var(--accent);min-width:30px;">${d.hit_count}x</span>
+            <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${d.title || d.filename}</span>
+            <span style="font-size:10px;color:var(--text-muted);">${d.category}</span>
+          </div>`;
+        });
+      }
+      html += '</div>';
+    });
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load alerts</div>'; }
+}
+
+async function createKeywordAlert() {
+  const input = document.getElementById('newAlertKeyword');
+  const keyword = (input ? input.value : '').trim();
+  if (!keyword) return;
+  try {
+    await fetch('/api/keyword-alerts', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({keyword})
+    });
+    if (input) input.value = '';
+    logAudit('create_keyword_alert', 'keyword', 0, keyword);
+    loadKeywordAlerts();
+  } catch (err) { console.error('Create alert failed:', err); }
+}
+
+async function deleteKeywordAlert(id) {
+  try {
+    await fetch(`/api/keyword-alerts/${id}`, {method: 'DELETE'});
+    loadKeywordAlerts();
+  } catch (err) { console.error('Delete alert failed:', err); }
+}
+
+
+// ─── LINK ANALYSIS ───
+
+function showLinkAnalysisView() {
+  currentView = 'linkanalysis';
+  hideAllViews();
+  document.getElementById('linkanalysisView').classList.add('active');
+  loadLinkAnalysis();
+}
+
+async function loadLinkAnalysis() {
+  const el = document.getElementById('linkanalysisContent');
+  const minConn = document.getElementById('linkMinConn').value || 3;
+  try {
+    const data = await api(`/api/link-analysis?min_connections=${minConn}&limit=80`);
+    const entities = data.entities || [];
+    if (!entities.length) { el.innerHTML = '<div style="color:var(--text-muted);font-size:13px;padding:20px;">No entities with enough connections found.</div>'; return; }
+    let html = `<div style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted);margin-bottom:8px;">${entities.length} entities, ${data.edge_count} edges</div>`;
+    entities.forEach((e, i) => {
+      const barWidth = Math.max(e.degree_normalized * 100, 2);
+      const typeColor = e.type === 'person' ? 'var(--entity-person)' : e.type === 'place' ? 'var(--entity-place)' : e.type === 'org' ? 'var(--entity-org)' : 'var(--entity-date)';
+      html += `<div class="centrality-row">
+        <span style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted);min-width:24px;">${i+1}</span>
+        <span class="entity-tag ${e.type}" style="font-size:10px;min-width:50px;text-align:center;">${e.type}</span>
+        <span class="centrality-name" onclick="showEntityView(${e.id})">${e.name}</span>
+        <div style="width:120px;"><div class="centrality-bar" style="width:${barWidth}%;background:${typeColor};"></div></div>
+        <span class="centrality-metric">${e.connection_count} conn</span>
+        <span class="centrality-metric">${e.degree} wt</span>
+      </div>`;
+    });
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load analysis</div>'; }
+}
+
+
+// ─── ANALYST NOTES (in Reader) ───
+
+function toggleDocNotes() {
+  const panel = document.getElementById('docNotesPanel');
+  const ocrPanel = document.getElementById('ocrDetailPanel');
+  if (ocrPanel) ocrPanel.style.display = 'none';
+  if (panel.style.display === 'none') {
+    panel.style.display = 'block';
+    loadDocNotes(currentDocId);
+  } else {
+    panel.style.display = 'none';
+  }
+}
+
+async function loadDocNotes(docId) {
+  const list = document.getElementById('docNotesList');
+  const count = document.getElementById('docNotesCount');
+  try {
+    const data = await api(`/api/documents/${docId}/analyst-notes`);
+    const notes = data.notes || [];
+    count.textContent = notes.length;
+    if (!notes.length) { list.innerHTML = '<div style="color:var(--text-muted);font-size:11px;">No notes yet</div>'; return; }
+    list.innerHTML = notes.map(n => `<div class="note-item">
+      <div class="note-meta">${n.author} · ${n.created_at}</div>
+      <div class="note-text">${n.note}</div>
+      <button onclick="deleteDocNote(${n.id})" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:11px;margin-top:4px;">Delete</button>
+    </div>`).join('');
+  } catch (err) { list.innerHTML = '<div style="color:#e05555;">Failed to load notes</div>'; }
+}
+
+async function addDocNote() {
+  const input = document.getElementById('newDocNote');
+  const note = (input ? input.value : '').trim();
+  if (!note) return;
+  try {
+    await fetch(`/api/documents/${currentDocId}/analyst-notes`, {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({note})
+    });
+    if (input) input.value = '';
+    loadDocNotes(currentDocId);
+  } catch (err) { console.error('Add note failed:', err); }
+}
+
+async function deleteDocNote(noteId) {
+  try {
+    await fetch(`/api/notes/${noteId}`, {method: 'DELETE'});
+    loadDocNotes(currentDocId);
+  } catch (err) { console.error('Delete note failed:', err); }
+}
+
+
+// ─── COMMUNICATION FLOW ───
+
+function showCommFlowView() {
+  currentView = 'commflow';
+  hideAllViews();
+  document.getElementById('commflowView').classList.add('active');
+  loadCommFlow();
+}
+
+async function loadCommFlow() {
+  const el = document.getElementById('commflowContent');
+  try {
+    const data = await api('/api/communication-flow?limit=60');
+    const flows = data.flows || [];
+    const comms = data.top_communicators || [];
+
+    let html = `<div style="display:flex;gap:20px;">`;
+    // Top communicators sidebar
+    html += `<div style="min-width:220px;">
+      <div style="font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:8px;">Top Communicators</div>`;
+    comms.forEach(c => {
+      html += `<div style="display:flex;justify-content:space-between;padding:4px 8px;font-size:12px;cursor:pointer;" onclick="showEntityView(${c.id})">
+        <span style="color:var(--entity-person);">${c.name}</span>
+        <span style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted);">${c.connections} links, ${c.total_docs} docs</span>
+      </div>`;
+    });
+    html += '</div>';
+
+    // Flow list
+    html += `<div style="flex:1;">
+      <div style="font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:8px;">${flows.length} Communication Flows</div>`;
+    flows.forEach(f => {
+      html += `<div class="flow-row">
+        <span style="cursor:pointer;color:var(--entity-person);" onclick="showEntityView(${f.source_id})">${f.source_name}</span>
+        <span class="flow-arrow">⟷</span>
+        <span style="cursor:pointer;color:var(--entity-person);" onclick="showEntityView(${f.target_id})">${f.target_name}</span>
+        <span class="flow-count">${f.doc_count} docs</span>
+        <span style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted);">${f.categories || ''}</span>
+      </div>`;
+    });
+    html += '</div></div>';
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load flows</div>'; }
+}
+
+
+// ─── OCR QUALITY ───
+
+function showOCRQualityView() {
+  currentView = 'ocrquality';
+  hideAllViews();
+  document.getElementById('ocrqualityView').classList.add('active');
+  loadOCRQualityOverview();
+}
+
+async function loadOCRQualityOverview() {
+  const el = document.getElementById('ocrqualityContent');
+  try {
+    const data = await api('/api/ocr-quality-overview?limit=100');
+    const docs = data.documents || [];
+    const groups = {very_poor: [], poor: [], fair: [], good: []};
+    docs.forEach(d => { if (groups[d.estimated_quality]) groups[d.estimated_quality].push(d); });
+
+    const total = docs.length;
+    let html = `<div class="card" style="margin-bottom:16px;">
+      <div style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted);margin-bottom:8px;">Quality Distribution (${total} documents)</div>
+      <div class="quality-bar">
+        <div class="quality-segment" style="width:${(groups.good.length/total*100).toFixed(1)}%;background:var(--entity-date);" title="Good: ${groups.good.length}"></div>
+        <div class="quality-segment" style="width:${(groups.fair.length/total*100).toFixed(1)}%;background:var(--entity-thing);" title="Fair: ${groups.fair.length}"></div>
+        <div class="quality-segment" style="width:${(groups.poor.length/total*100).toFixed(1)}%;background:var(--entity-person);" title="Poor: ${groups.poor.length}"></div>
+        <div class="quality-segment" style="width:${(groups.very_poor.length/total*100).toFixed(1)}%;background:var(--accent);" title="Very Poor: ${groups.very_poor.length}"></div>
+      </div>
+      <div style="display:flex;gap:16px;margin-top:8px;font-size:11px;">
+        <span><span style="color:var(--entity-date);">●</span> Good: ${groups.good.length}</span>
+        <span><span style="color:var(--entity-thing);">●</span> Fair: ${groups.fair.length}</span>
+        <span><span style="color:var(--entity-person);">●</span> Poor: ${groups.poor.length}</span>
+        <span><span style="color:var(--accent);">●</span> Very Poor: ${groups.very_poor.length}</span>
+      </div>
+    </div>`;
+
+    // Problem documents list
+    const problems = [...groups.very_poor, ...groups.poor];
+    if (problems.length) {
+      html += `<div style="font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:8px;">Problem Documents (${problems.length})</div>`;
+      problems.forEach(d => {
+        const qColor = d.estimated_quality === 'very_poor' ? 'var(--accent)' : 'var(--entity-person)';
+        html += `<div class="anomaly-row" style="cursor:pointer;" onclick="readerPreviousView='ocrquality';openReader(${d.id})">
+          <span style="font-family:var(--font-mono);font-size:10px;color:${qColor};min-width:60px;">${d.estimated_quality}</span>
+          <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${d.title || d.filename}</span>
+          <span style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted);">${d.page_count} pgs, ${Math.round((d.avg_page_chars||0))} avg chars</span>
+        </div>`;
+      });
+    }
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load OCR quality data</div>'; }
+}
+
+async function showOCRDetail() {
+  const panel = document.getElementById('ocrDetailPanel');
+  const notesPanel = document.getElementById('docNotesPanel');
+  if (notesPanel) notesPanel.style.display = 'none';
+  if (panel.style.display !== 'none') { panel.style.display = 'none'; return; }
+  panel.style.display = 'block';
+  const el = document.getElementById('ocrDetailContent');
+  el.innerHTML = 'Analyzing...';
+  try {
+    const data = await api(`/api/documents/${currentDocId}/ocr-quality`);
+    let html = `<div style="margin-bottom:8px;font-size:12px;">Average quality: <strong style="color:${data.average_quality > 0.7 ? 'var(--entity-date)' : data.average_quality > 0.4 ? 'var(--entity-thing)' : 'var(--accent)'};">${(data.average_quality * 100).toFixed(0)}%</strong> · ${data.problem_page_count} problem pages</div>`;
+    data.pages.forEach(p => {
+      const color = p.quality_score > 0.7 ? 'var(--entity-date)' : p.quality_score > 0.4 ? 'var(--entity-thing)' : 'var(--accent)';
+      html += `<div style="display:flex;align-items:center;gap:8px;padding:3px 0;font-size:11px;">
+        <span style="font-family:var(--font-mono);min-width:30px;color:var(--text-muted);">p${p.page_number}</span>
+        <div style="flex:1;height:4px;background:var(--bg-tertiary);border-radius:2px;overflow:hidden;">
+          <div style="width:${p.quality_score*100}%;height:100%;background:${color};border-radius:2px;"></div>
+        </div>
+        <span style="font-family:var(--font-mono);min-width:35px;color:${color};">${(p.quality_score*100).toFixed(0)}%</span>
+        ${p.issues.length ? `<span style="font-family:var(--font-mono);font-size:9px;color:var(--accent);">${p.issues.join(', ')}</span>` : ''}
+      </div>`;
+    });
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to analyze OCR quality</div>'; }
+}
+
+
+// ─── CASE FILE BUILDER ───
+
+function showCaseFileView() {
+  currentView = 'casefile';
+  hideAllViews();
+  document.getElementById('casefileView').classList.add('active');
+  loadCaseFiles();
+}
+
+async function loadCaseFiles() {
+  const el = document.getElementById('casefileContent');
+  try {
+    const data = await api('/api/case-files');
+    const cases = data.case_files || [];
+    if (!cases.length) { el.innerHTML = '<div style="color:var(--text-muted);font-size:13px;padding:20px;">No case files yet. Create one to start assembling evidence.</div>'; return; }
+    let html = '';
+    cases.forEach(c => {
+      const counts = c.item_counts || {};
+      html += `<div class="card" style="margin-bottom:12px;cursor:pointer;" onclick="openCaseFile(${c.id})">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <div>
+            <div style="font-weight:600;font-size:14px;">${c.name}</div>
+            ${c.description ? `<div style="font-size:12px;color:var(--text-muted);margin-top:2px;">${c.description}</div>` : ''}
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <span style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted);">${c.total_items} items</span>
+            <button onclick="event.stopPropagation();exportCaseFile(${c.id})" class="report-btn" style="padding:3px 8px;font-size:10px;">Export</button>
+            <button onclick="event.stopPropagation();deleteCaseFile(${c.id})" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:14px;">×</button>
+          </div>
+        </div>
+        <div style="display:flex;gap:12px;margin-top:6px;font-family:var(--font-mono);font-size:10px;color:var(--text-muted);">
+          ${counts.document ? `<span>Docs: ${counts.document}</span>` : ''}
+          ${counts.entity ? `<span>Entities: ${counts.entity}</span>` : ''}
+          ${counts.chain ? `<span>Chains: ${counts.chain}</span>` : ''}
+          <span>Updated: ${c.updated_at}</span>
+        </div>
+      </div>`;
+    });
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load case files</div>'; }
+}
+
+async function createCaseFile() {
+  const name = prompt('Case file name:');
+  if (!name || !name.trim()) return;
+  const desc = prompt('Description (optional):') || '';
+  try {
+    await fetch('/api/case-files', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({name: name.trim(), description: desc.trim()})
+    });
+    loadCaseFiles();
+  } catch (err) { console.error('Create case file failed:', err); }
+}
+
+async function openCaseFile(caseId) {
+  const el = document.getElementById('casefileContent');
+  try {
+    const data = await api(`/api/case-files/${caseId}`);
+    const cf = data.case_file;
+    const items = data.items || [];
+    let html = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+      <div>
+        <button onclick="loadCaseFiles()" style="background:none;border:none;color:var(--accent);cursor:pointer;font-family:var(--font-mono);font-size:11px;">← Back to list</button>
+        <span style="font-weight:600;font-size:14px;margin-left:8px;">${cf.name}</span>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button onclick="addItemToCaseFile(${caseId},'document')" class="report-btn" style="padding:4px 10px;font-size:11px;">+ Doc</button>
+        <button onclick="addItemToCaseFile(${caseId},'entity')" class="report-btn" style="padding:4px 10px;font-size:11px;">+ Entity</button>
+        <button onclick="addItemToCaseFile(${caseId},'chain')" class="report-btn" style="padding:4px 10px;font-size:11px;">+ Chain</button>
+        <button onclick="exportCaseFile(${caseId})" class="report-btn" style="padding:4px 10px;font-size:11px;">Export</button>
+      </div>
+    </div>`;
+
+    if (!items.length) {
+      html += '<div style="color:var(--text-muted);font-size:13px;padding:20px;">No items added yet. Use the buttons above to add documents, entities, or chains.</div>';
+    } else {
+      items.forEach(item => {
+        const detail = item.detail || {};
+        const typeColors = {document: 'var(--entity-place)', entity: 'var(--entity-person)', chain: 'var(--entity-org)'};
+        html += `<div class="case-item-row">
+          <span class="case-item-type" style="color:${typeColors[item.item_type] || 'var(--text-muted)'};">${item.item_type}</span>
+          <span class="case-item-name">${detail.name || detail.title || detail.filename || `#${item.item_id}`}</span>
+          ${item.note ? `<span style="font-size:11px;color:var(--text-muted);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${item.note}</span>` : ''}
+          <button onclick="removeCaseItem(${item.id},${caseId})" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:14px;">×</button>
+        </div>`;
+      });
+    }
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load case file</div>'; }
+}
+
+async function addItemToCaseFile(caseId, itemType) {
+  const idStr = prompt(`Enter ${itemType} ID:`);
+  if (!idStr) return;
+  const itemId = parseInt(idStr, 10);
+  if (isNaN(itemId)) return;
+  const note = prompt('Note (optional):') || '';
+  try {
+    await fetch(`/api/case-files/${caseId}/items`, {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({item_type: itemType, item_id: itemId, note: note.trim()})
+    });
+    openCaseFile(caseId);
+  } catch (err) { console.error('Add item failed:', err); }
+}
+
+async function removeCaseItem(itemId, caseId) {
+  try {
+    await fetch(`/api/case-file-items/${itemId}`, {method: 'DELETE'});
+    openCaseFile(caseId);
+  } catch (err) { console.error('Remove item failed:', err); }
+}
+
+async function deleteCaseFile(id) {
+  if (!confirm('Delete this case file and all its items?')) return;
+  try {
+    await fetch(`/api/case-files/${id}`, {method: 'DELETE'});
+    loadCaseFiles();
+  } catch (err) { console.error('Delete case file failed:', err); }
+}
+
+function exportCaseFile(caseId) {
+  window.open(`/api/case-files/${caseId}/export`, '_blank');
 }
 
 

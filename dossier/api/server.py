@@ -3716,6 +3716,542 @@ def _get_doc_entities(conn, doc_id: int) -> dict:
 
 
 # ═══════════════════════════════════════════
+# KEYWORD ALERTS
+# ═══════════════════════════════════════════
+
+
+def _ensure_keyword_alerts_table(conn):
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS keyword_alerts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            keyword TEXT NOT NULL UNIQUE,
+            created_at TEXT DEFAULT (datetime('now')),
+            is_active INTEGER DEFAULT 1
+        )
+    """)
+
+
+@app.get("/api/keyword-alerts")
+def list_keyword_alerts():
+    with get_db() as conn:
+        _ensure_keyword_alerts_table(conn)
+        alerts = conn.execute(
+            "SELECT * FROM keyword_alerts ORDER BY created_at DESC"
+        ).fetchall()
+        result = []
+        for a in alerts:
+            ad = dict(a)
+            # Count matches across documents
+            matches = conn.execute("""
+                SELECT d.id, d.title, d.filename, d.category,
+                       (LENGTH(d.raw_text) - LENGTH(REPLACE(LOWER(d.raw_text), LOWER(?), ''))) / MAX(LENGTH(?), 1) as hit_count
+                FROM documents d
+                WHERE LOWER(d.raw_text) LIKE '%' || LOWER(?) || '%'
+                ORDER BY hit_count DESC
+                LIMIT 20
+            """, (ad["keyword"], ad["keyword"], ad["keyword"])).fetchall()
+            ad["match_count"] = sum(m["hit_count"] for m in matches)
+            ad["documents"] = [dict(m) for m in matches]
+            result.append(ad)
+    return {"alerts": result}
+
+
+@app.post("/api/keyword-alerts")
+async def create_keyword_alert(request: Request):
+    body = await request.json()
+    keyword = body.get("keyword", "").strip()
+    if not keyword:
+        raise HTTPException(400, "keyword required")
+    with get_db() as conn:
+        _ensure_keyword_alerts_table(conn)
+        conn.execute(
+            "INSERT OR IGNORE INTO keyword_alerts (keyword) VALUES (?)", (keyword,)
+        )
+        _log_audit(conn, "create_keyword_alert", "keyword", 0, keyword)
+    return {"keyword": keyword, "created": True}
+
+
+@app.delete("/api/keyword-alerts/{alert_id}")
+def delete_keyword_alert(alert_id: int):
+    with get_db() as conn:
+        _ensure_keyword_alerts_table(conn)
+        conn.execute("DELETE FROM keyword_alerts WHERE id = ?", (alert_id,))
+    return {"deleted": True}
+
+
+# ═══════════════════════════════════════════
+# LINK ANALYSIS (CENTRALITY METRICS)
+# ═══════════════════════════════════════════
+
+
+@app.get("/api/link-analysis")
+def link_analysis(
+    min_connections: int = Query(3, ge=1, le=50),
+    limit: int = Query(50, ge=10, le=200),
+):
+    """Compute centrality metrics for entity network."""
+    with get_db() as conn:
+        # Build adjacency from co-occurring entities
+        edges = conn.execute("""
+            SELECT de1.entity_id as src, de2.entity_id as dst, COUNT(*) as weight
+            FROM document_entities de1
+            JOIN document_entities de2 ON de1.document_id = de2.document_id
+              AND de1.entity_id < de2.entity_id
+            GROUP BY de1.entity_id, de2.entity_id
+            HAVING weight >= ?
+            ORDER BY weight DESC
+            LIMIT 5000
+        """, (min_connections,)).fetchall()
+
+        if not edges:
+            return {"entities": [], "edge_count": 0}
+
+        # Compute degree centrality manually
+        degree = {}
+        for e in edges:
+            degree[e["src"]] = degree.get(e["src"], 0) + e["weight"]
+            degree[e["dst"]] = degree.get(e["dst"], 0) + e["weight"]
+
+        # Get top entities by degree
+        top_ids = sorted(degree, key=degree.get, reverse=True)[:limit]
+        if not top_ids:
+            return {"entities": [], "edge_count": len(edges)}
+
+        placeholders = ",".join("?" * len(top_ids))
+        entities = conn.execute(
+            f"SELECT id, name, type FROM entities WHERE id IN ({placeholders})",
+            top_ids
+        ).fetchall()
+
+        entity_map = {e["id"]: dict(e) for e in entities}
+        max_degree = max(degree.values()) if degree else 1
+
+        result = []
+        for eid in top_ids:
+            if eid in entity_map:
+                ent = entity_map[eid]
+                ent["degree"] = degree[eid]
+                ent["degree_normalized"] = round(degree[eid] / max_degree, 4)
+                # Count unique connections
+                connections = set()
+                for e in edges:
+                    if e["src"] == eid:
+                        connections.add(e["dst"])
+                    elif e["dst"] == eid:
+                        connections.add(e["src"])
+                ent["connection_count"] = len(connections)
+                result.append(ent)
+
+    return {"entities": result, "edge_count": len(edges)}
+
+
+# ═══════════════════════════════════════════
+# ANALYST NOTES
+# ═══════════════════════════════════════════
+
+
+def _ensure_analyst_notes_table(conn):
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS analyst_notes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            document_id INTEGER NOT NULL,
+            note TEXT NOT NULL,
+            author TEXT DEFAULT 'analyst',
+            created_at TEXT DEFAULT (datetime('now'))
+        )
+    """)
+
+
+@app.get("/api/documents/{doc_id}/analyst-notes")
+def get_analyst_notes(doc_id: int):
+    with get_db() as conn:
+        _ensure_analyst_notes_table(conn)
+        notes = conn.execute(
+            "SELECT * FROM analyst_notes WHERE document_id = ? ORDER BY created_at DESC",
+            (doc_id,)
+        ).fetchall()
+    return {"document_id": doc_id, "notes": [dict(n) for n in notes]}
+
+
+@app.post("/api/documents/{doc_id}/analyst-notes")
+async def add_analyst_note(doc_id: int, request: Request):
+    body = await request.json()
+    note = body.get("note", "").strip()
+    author = body.get("author", "analyst").strip()
+    if not note:
+        raise HTTPException(400, "note required")
+    with get_db() as conn:
+        doc = conn.execute("SELECT id FROM documents WHERE id = ?", (doc_id,)).fetchone()
+        if not doc:
+            raise HTTPException(404, "Document not found")
+        _ensure_analyst_notes_table(conn)
+        cur = conn.execute(
+            "INSERT INTO analyst_notes (document_id, note, author) VALUES (?, ?, ?)",
+            (doc_id, note, author)
+        )
+        _log_audit(conn, "add_note", "document", doc_id, note[:100])
+    return {"id": cur.lastrowid, "document_id": doc_id, "note": note, "author": author}
+
+
+@app.delete("/api/notes/{note_id}")
+def delete_note(note_id: int):
+    with get_db() as conn:
+        _ensure_analyst_notes_table(conn)
+        conn.execute("DELETE FROM analyst_notes WHERE id = ?", (note_id,))
+    return {"deleted": True}
+
+
+# ═══════════════════════════════════════════
+# COMMUNICATION FLOW
+# ═══════════════════════════════════════════
+
+
+@app.get("/api/communication-flow")
+def communication_flow(
+    entity_id: int = Query(None),
+    limit: int = Query(50, ge=10, le=200),
+):
+    """Analyze entity-to-entity communication patterns from correspondence docs."""
+    with get_db() as conn:
+        base_query = """
+            SELECT e1.id as source_id, e1.name as source_name, e1.type as source_type,
+                   e2.id as target_id, e2.name as target_name, e2.type as target_type,
+                   COUNT(DISTINCT de1.document_id) as doc_count,
+                   GROUP_CONCAT(DISTINCT d.category) as categories,
+                   MIN(d.date) as first_contact,
+                   MAX(d.date) as last_contact
+            FROM document_entities de1
+            JOIN document_entities de2 ON de1.document_id = de2.document_id
+              AND de1.entity_id < de2.entity_id
+            JOIN entities e1 ON e1.id = de1.entity_id
+            JOIN entities e2 ON e2.id = de2.entity_id
+            JOIN documents d ON d.id = de1.document_id
+            WHERE e1.type = 'person' AND e2.type = 'person'
+        """
+        params = []
+        if entity_id:
+            base_query += " AND (de1.entity_id = ? OR de2.entity_id = ?)"
+            params.extend([entity_id, entity_id])
+
+        base_query += """
+            GROUP BY e1.id, e2.id
+            HAVING doc_count >= 2
+            ORDER BY doc_count DESC
+            LIMIT ?
+        """
+        params.append(limit)
+
+        flows = conn.execute(base_query, params).fetchall()
+
+        # Get top communicators
+        communicators = {}
+        for f in flows:
+            fd = dict(f)
+            for key in ["source_id", "target_id"]:
+                eid = fd[key]
+                if eid not in communicators:
+                    communicators[eid] = {"id": eid, "name": fd["source_name"] if key == "source_id" else fd["target_name"], "connections": 0, "total_docs": 0}
+                communicators[eid]["connections"] += 1
+                communicators[eid]["total_docs"] += fd["doc_count"]
+
+        top_communicators = sorted(communicators.values(), key=lambda x: x["total_docs"], reverse=True)[:20]
+
+    return {
+        "flows": [dict(f) for f in flows],
+        "top_communicators": top_communicators,
+        "total_flows": len(flows),
+    }
+
+
+# ═══════════════════════════════════════════
+# OCR QUALITY VIEWER
+# ═══════════════════════════════════════════
+
+
+@app.get("/api/documents/{doc_id}/ocr-quality")
+def document_ocr_quality(doc_id: int):
+    """Analyze OCR quality per page for a document."""
+    with get_db() as conn:
+        doc = conn.execute("SELECT id, title, filename, raw_text, pages FROM documents WHERE id = ?", (doc_id,)).fetchone()
+        if not doc:
+            raise HTTPException(404, "Document not found")
+
+        raw = doc["raw_text"] or ""
+        # Split on form-feed or into ~3000 char chunks
+        if "\f" in raw:
+            chunks = [c for c in raw.split("\f") if c.strip()]
+        elif len(raw) > 3000:
+            chunks = [raw[i:i+3000] for i in range(0, len(raw), 3000)]
+        else:
+            chunks = [raw] if raw else []
+
+        page_quality = []
+        total_score = 0
+        for idx, text in enumerate(chunks):
+            chars = len(text)
+
+            # Quality heuristics
+            alpha_ratio = sum(1 for c in text if c.isalpha()) / max(chars, 1)
+            space_ratio = sum(1 for c in text if c == ' ') / max(chars, 1)
+            garbage_chars = sum(1 for c in text if ord(c) > 127 and not c.isalpha()) / max(chars, 1)
+            word_count = len(text.split())
+            avg_word_len = sum(len(w) for w in text.split()) / max(word_count, 1)
+
+            # Score: 0-1
+            score = 1.0
+            if chars < 50:
+                score *= 0.3  # Very short page
+            if alpha_ratio < 0.4:
+                score *= 0.5  # Low alpha content
+            if garbage_chars > 0.05:
+                score *= 0.4  # High garbage
+            if space_ratio < 0.05 or space_ratio > 0.5:
+                score *= 0.6  # Abnormal spacing
+            if avg_word_len > 15 or avg_word_len < 2:
+                score *= 0.5  # Abnormal word lengths
+
+            score = round(min(max(score, 0), 1), 3)
+            total_score += score
+
+            page_quality.append({
+                "page_number": idx + 1,
+                "char_count": chars,
+                "word_count": word_count,
+                "quality_score": score,
+                "alpha_ratio": round(alpha_ratio, 3),
+                "issues": (
+                    (["short_text"] if chars < 50 else []) +
+                    (["low_alpha"] if alpha_ratio < 0.4 else []) +
+                    (["garbage_chars"] if garbage_chars > 0.05 else []) +
+                    (["spacing_abnormal"] if space_ratio < 0.05 or space_ratio > 0.5 else []) +
+                    (["word_length_abnormal"] if avg_word_len > 15 or avg_word_len < 2 else [])
+                ),
+            })
+
+        avg_score = round(total_score / max(len(chunks), 1), 3)
+        problem_pages = [p for p in page_quality if p["quality_score"] < 0.5]
+
+    return {
+        "document": {"id": doc["id"], "title": doc["title"], "filename": doc["filename"]},
+        "page_count": len(chunks),
+        "average_quality": avg_score,
+        "problem_page_count": len(problem_pages),
+        "pages": page_quality,
+    }
+
+
+@app.get("/api/ocr-quality-overview")
+def ocr_quality_overview(limit: int = Query(50, ge=10, le=200)):
+    """Overview of OCR quality across all documents."""
+    with get_db() as conn:
+        docs = conn.execute("""
+            SELECT d.id, d.title, d.filename, d.category,
+                   d.pages as page_count,
+                   LENGTH(d.raw_text) as total_chars,
+                   CASE WHEN d.pages > 0 THEN LENGTH(d.raw_text) / d.pages ELSE LENGTH(d.raw_text) END as avg_page_chars
+            FROM documents d
+            WHERE d.raw_text IS NOT NULL
+            ORDER BY avg_page_chars ASC
+            LIMIT ?
+        """, (limit,)).fetchall()
+
+        result = []
+        for d in docs:
+            dd = dict(d)
+            avg_chars = dd["avg_page_chars"] or 0
+            # Simple quality estimate based on average chars per page
+            if avg_chars > 500:
+                dd["estimated_quality"] = "good"
+            elif avg_chars > 200:
+                dd["estimated_quality"] = "fair"
+            elif avg_chars > 50:
+                dd["estimated_quality"] = "poor"
+            else:
+                dd["estimated_quality"] = "very_poor"
+            result.append(dd)
+
+    return {"documents": result}
+
+
+# ═══════════════════════════════════════════
+# CASE FILE BUILDER
+# ═══════════════════════════════════════════
+
+
+def _ensure_case_files_table(conn):
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS case_files (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            description TEXT DEFAULT '',
+            created_at TEXT DEFAULT (datetime('now')),
+            updated_at TEXT DEFAULT (datetime('now'))
+        )
+    """)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS case_file_items (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            case_file_id INTEGER NOT NULL,
+            item_type TEXT NOT NULL,
+            item_id INTEGER NOT NULL,
+            note TEXT DEFAULT '',
+            sort_order INTEGER DEFAULT 0,
+            added_at TEXT DEFAULT (datetime('now')),
+            UNIQUE(case_file_id, item_type, item_id)
+        )
+    """)
+
+
+@app.get("/api/case-files")
+def list_case_files():
+    with get_db() as conn:
+        _ensure_case_files_table(conn)
+        cases = conn.execute(
+            "SELECT * FROM case_files ORDER BY updated_at DESC"
+        ).fetchall()
+        result = []
+        for c in cases:
+            cd = dict(c)
+            items = conn.execute(
+                "SELECT item_type, COUNT(*) as count FROM case_file_items WHERE case_file_id = ? GROUP BY item_type",
+                (cd["id"],)
+            ).fetchall()
+            cd["item_counts"] = {i["item_type"]: i["count"] for i in items}
+            cd["total_items"] = sum(i["count"] for i in items)
+            result.append(cd)
+    return {"case_files": result}
+
+
+@app.post("/api/case-files")
+async def create_case_file(request: Request):
+    body = await request.json()
+    name = body.get("name", "").strip()
+    desc = body.get("description", "").strip()
+    if not name:
+        raise HTTPException(400, "name required")
+    with get_db() as conn:
+        _ensure_case_files_table(conn)
+        cur = conn.execute(
+            "INSERT INTO case_files (name, description) VALUES (?, ?)", (name, desc)
+        )
+        _log_audit(conn, "create_case_file", "case_file", cur.lastrowid, name)
+    return {"id": cur.lastrowid, "name": name}
+
+
+@app.get("/api/case-files/{case_id}")
+def get_case_file(case_id: int):
+    with get_db() as conn:
+        _ensure_case_files_table(conn)
+        cf = conn.execute("SELECT * FROM case_files WHERE id = ?", (case_id,)).fetchone()
+        if not cf:
+            raise HTTPException(404, "Case file not found")
+        items = conn.execute(
+            "SELECT * FROM case_file_items WHERE case_file_id = ? ORDER BY sort_order, added_at",
+            (case_id,)
+        ).fetchall()
+
+        enriched = []
+        for item in items:
+            d = dict(item)
+            if d["item_type"] == "document":
+                doc = conn.execute("SELECT id, title, filename, category FROM documents WHERE id = ?", (d["item_id"],)).fetchone()
+                d["detail"] = dict(doc) if doc else None
+            elif d["item_type"] == "entity":
+                ent = conn.execute("SELECT id, name, type FROM entities WHERE id = ?", (d["item_id"],)).fetchone()
+                d["detail"] = dict(ent) if ent else None
+            elif d["item_type"] == "chain":
+                ch = conn.execute("SELECT id, name, description FROM evidence_chains WHERE id = ?", (d["item_id"],)).fetchone()
+                d["detail"] = dict(ch) if ch else None
+            else:
+                d["detail"] = None
+            enriched.append(d)
+
+    return {"case_file": dict(cf), "items": enriched}
+
+
+@app.post("/api/case-files/{case_id}/items")
+async def add_case_file_item(case_id: int, request: Request):
+    body = await request.json()
+    item_type = body.get("item_type", "").strip()
+    item_id = body.get("item_id", 0)
+    note = body.get("note", "").strip()
+    if item_type not in ("document", "entity", "chain"):
+        raise HTTPException(400, "item_type must be document, entity, or chain")
+    with get_db() as conn:
+        _ensure_case_files_table(conn)
+        cf = conn.execute("SELECT id FROM case_files WHERE id = ?", (case_id,)).fetchone()
+        if not cf:
+            raise HTTPException(404, "Case file not found")
+        max_order = conn.execute(
+            "SELECT COALESCE(MAX(sort_order), 0) FROM case_file_items WHERE case_file_id = ?",
+            (case_id,)
+        ).fetchone()[0]
+        conn.execute(
+            "INSERT OR IGNORE INTO case_file_items (case_file_id, item_type, item_id, note, sort_order) VALUES (?, ?, ?, ?, ?)",
+            (case_id, item_type, item_id, note, max_order + 1)
+        )
+        conn.execute("UPDATE case_files SET updated_at = datetime('now') WHERE id = ?", (case_id,))
+    return {"added": True}
+
+
+@app.delete("/api/case-file-items/{item_id}")
+def remove_case_file_item(item_id: int):
+    with get_db() as conn:
+        _ensure_case_files_table(conn)
+        conn.execute("DELETE FROM case_file_items WHERE id = ?", (item_id,))
+    return {"deleted": True}
+
+
+@app.delete("/api/case-files/{case_id}")
+def delete_case_file(case_id: int):
+    with get_db() as conn:
+        _ensure_case_files_table(conn)
+        conn.execute("DELETE FROM case_file_items WHERE case_file_id = ?", (case_id,))
+        conn.execute("DELETE FROM case_files WHERE id = ?", (case_id,))
+    return {"deleted": True}
+
+
+@app.get("/api/case-files/{case_id}/export")
+def export_case_file(case_id: int):
+    """Export case file as structured HTML report."""
+    with get_db() as conn:
+        _ensure_case_files_table(conn)
+        cf = conn.execute("SELECT * FROM case_files WHERE id = ?", (case_id,)).fetchone()
+        if not cf:
+            raise HTTPException(404, "Case file not found")
+        items = conn.execute(
+            "SELECT * FROM case_file_items WHERE case_file_id = ? ORDER BY sort_order, added_at",
+            (case_id,)
+        ).fetchall()
+
+        html = f"<h1>Case File: {cf['name']}</h1>"
+        html += f"<p><em>{cf['description']}</em></p>"
+        html += f"<p>Generated: {cf['created_at']}</p><hr>"
+
+        for item in items:
+            d = dict(item)
+            if d["item_type"] == "document":
+                doc = conn.execute("SELECT id, title, filename, category FROM documents WHERE id = ?", (d["item_id"],)).fetchone()
+                if doc:
+                    html += f"<h3>Document: {doc['title'] or doc['filename']}</h3>"
+                    html += f"<p>Category: {doc['category']} | ID: {doc['id']}</p>"
+            elif d["item_type"] == "entity":
+                ent = conn.execute("SELECT id, name, type FROM entities WHERE id = ?", (d["item_id"],)).fetchone()
+                if ent:
+                    html += f"<h3>Entity: {ent['name']} ({ent['type']})</h3>"
+            elif d["item_type"] == "chain":
+                ch = conn.execute("SELECT id, name, description FROM evidence_chains WHERE id = ?", (d["item_id"],)).fetchone()
+                if ch:
+                    html += f"<h3>Evidence Chain: {ch['name']}</h3>"
+                    html += f"<p>{ch['description']}</p>"
+            if d["note"]:
+                html += f"<blockquote>{d['note']}</blockquote>"
+            html += "<hr>"
+
+    return HTMLResponse(html)
+
+
+# ═══════════════════════════════════════════
 # STATIC FILES (serve the frontend)
 # ═══════════════════════════════════════════
 
