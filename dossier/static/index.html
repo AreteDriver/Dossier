@@ -1830,6 +1830,57 @@ body::before {
   background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 14px;
   margin-top: 12px;
 }
+
+/* ─── EVIDENCE CHAINS ─── */
+.chains-view { display: none; flex-direction: column; gap: 16px; }
+.chains-view.active { display: flex; }
+.chain-step {
+  display: flex; gap: 14px; align-items: flex-start; padding: 12px 14px;
+  border-left: 3px solid var(--accent); margin-left: 20px; position: relative;
+}
+.chain-step::before {
+  content: attr(data-num); position: absolute; left: -32px; top: 10px;
+  width: 22px; height: 22px; border-radius: 50%; background: var(--accent);
+  color: #fff; font-family: var(--font-mono); font-size: 11px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+}
+
+/* ─── PATTERNS VIEW ─── */
+.patterns-view { display: none; flex-direction: column; gap: 16px; }
+.patterns-view.active { display: flex; }
+
+/* ─── COMPARE VIEW ─── */
+.compare-view { display: none; flex-direction: column; gap: 16px; }
+.compare-view.active { display: flex; }
+.compare-pane {
+  flex: 1; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg);
+  padding: 14px; overflow: auto; max-height: 400px;
+}
+.compare-pane-title {
+  font-family: var(--font-mono); font-size: 12px; font-weight: 600; margin-bottom: 8px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+/* ─── ALIASES ─── */
+.alias-chip {
+  display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 20px;
+  font-family: var(--font-mono); font-size: 11px; background: rgba(155,109,224,0.12);
+  border: 1px solid rgba(155,109,224,0.3); color: var(--entity-org); margin: 2px;
+}
+
+/* ─── TONE ANALYSIS ─── */
+.tone-bar {
+  height: 20px; border-radius: var(--radius); overflow: hidden; background: var(--bg-tertiary);
+  margin: 4px 0;
+}
+.tone-fill {
+  height: 100%; border-radius: var(--radius); display: flex; align-items: center;
+  padding-left: 8px; font-family: var(--font-mono); font-size: 9px; color: #fff; font-weight: 600;
+}
+
+/* ─── SNAPSHOTS ─── */
+.snapshots-view { display: none; flex-direction: column; gap: 16px; }
+.snapshots-view.active { display: flex; }
 </style>
 </head>
 <body>
@@ -1978,6 +2029,22 @@ body::before {
       <div class="sidebar-item" data-view="audit" id="auditNav">
         <div class="sidebar-dot" style="background:var(--text-muted)"></div>
         Audit Trail
+      </div>
+      <div class="sidebar-item" data-view="chains" id="chainsNav">
+        <div class="sidebar-dot" style="background:var(--accent)"></div>
+        Evidence Chains
+      </div>
+      <div class="sidebar-item" data-view="patterns" id="patternsNav">
+        <div class="sidebar-dot" style="background:var(--entity-thing)"></div>
+        Pattern Detection
+      </div>
+      <div class="sidebar-item" data-view="compare" id="compareNav">
+        <div class="sidebar-dot" style="background:var(--entity-place)"></div>
+        Document Compare
+      </div>
+      <div class="sidebar-item" data-view="snapshots" id="snapshotsNav">
+        <div class="sidebar-dot" style="background:var(--entity-date)"></div>
+        Snapshots
       </div>
     </div>
 
@@ -2311,6 +2378,7 @@ body::before {
         <button class="export-btn" onclick="addAnnotation()">Annotate</button>
         <button class="export-btn" onclick="addRedaction()" style="color:#e05555;">Redact</button>
         <button class="export-btn" onclick="crossReference()">X-Ref</button>
+        <button class="export-btn" onclick="analyzeTone()">Tone</button>
       </div>
       <div class="reader-body" id="readerBody">Loading...</div>
       <div style="margin-top:12px;">
@@ -2594,6 +2662,45 @@ body::before {
         </div>
         <button onclick="generateReport()">HTML Report</button>
       </div>
+    </div>
+
+    <!-- EVIDENCE CHAINS VIEW -->
+    <div class="chains-view" id="chainsView">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Evidence Chains</div>
+        <div style="display:flex;gap:8px;">
+          <input id="newChainName" placeholder="Chain name..." style="background:var(--bg-tertiary);border:1px solid var(--border);border-radius:var(--radius);padding:6px 10px;font-family:var(--font-mono);font-size:11px;color:var(--text-primary);outline:none;">
+          <button onclick="createChain()" style="background:var(--accent-glow);border:1px solid var(--accent-dim);border-radius:var(--radius);padding:6px 14px;font-family:var(--font-mono);font-size:11px;color:var(--accent);cursor:pointer;">+ New Chain</button>
+        </div>
+      </div>
+      <div id="chainsContent">Loading chains...</div>
+    </div>
+
+    <!-- PATTERNS VIEW -->
+    <div class="patterns-view" id="patternsView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Pattern Detection</div>
+      <div id="patternsContent">Loading patterns...</div>
+    </div>
+
+    <!-- COMPARE VIEW -->
+    <div class="compare-view" id="compareView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Document Comparison</div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <input id="compareDocA" type="number" placeholder="Doc ID A" style="width:100px;background:var(--bg-tertiary);border:1px solid var(--border);border-radius:var(--radius);padding:8px;font-family:var(--font-mono);font-size:12px;color:var(--text-primary);outline:none;">
+        <span style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted);">vs</span>
+        <input id="compareDocB" type="number" placeholder="Doc ID B" style="width:100px;background:var(--bg-tertiary);border:1px solid var(--border);border-radius:var(--radius);padding:8px;font-family:var(--font-mono);font-size:12px;color:var(--text-primary);outline:none;">
+        <button onclick="compareDocuments()" style="background:var(--bg-tertiary);border:1px solid var(--border);border-radius:var(--radius);padding:8px 14px;font-family:var(--font-mono);font-size:11px;color:var(--text-secondary);cursor:pointer;">Compare</button>
+      </div>
+      <div id="compareContent"></div>
+    </div>
+
+    <!-- SNAPSHOTS VIEW -->
+    <div class="snapshots-view" id="snapshotsView">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Investigation Snapshots</div>
+        <button onclick="createSnapshot()" class="report-btn">Save Snapshot</button>
+      </div>
+      <div id="snapshotsContent">Loading snapshots...</div>
     </div>
   </main>
 
@@ -3211,6 +3318,10 @@ function hideAllViews() {
   document.getElementById('auditView').classList.remove('active');
   document.getElementById('mergeView').classList.remove('active');
   document.getElementById('clustersView').classList.remove('active');
+  document.getElementById('chainsView').classList.remove('active');
+  document.getElementById('patternsView').classList.remove('active');
+  document.getElementById('compareView').classList.remove('active');
+  document.getElementById('snapshotsView').classList.remove('active');
 }
 
 function showDocumentView() {
@@ -3280,6 +3391,10 @@ document.querySelectorAll('.sidebar-item[data-view]').forEach(item => {
     else if (view === 'clusters') showClustersView();
     else if (view === 'merge') showMergeView();
     else if (view === 'audit') showAuditView();
+    else if (view === 'chains') showChainsView();
+    else if (view === 'patterns') showPatternsView();
+    else if (view === 'compare') showCompareView();
+    else if (view === 'snapshots') showSnapshotsView();
   });
 });
 
@@ -4353,6 +4468,8 @@ function goBackFromReader() {
   else if (readerPreviousView === 'duplicates') showDuplicatesView();
   else if (readerPreviousView === 'risk') showRiskView();
   else if (readerPreviousView === 'clusters') showClustersView();
+  else if (readerPreviousView === 'chains') showChainsView();
+  else if (readerPreviousView === 'patterns') showPatternsView();
   else showDocumentView();
 }
 
@@ -5245,6 +5362,16 @@ async function loadEntityProfile(entityId) {
       </div>
     </div>`;
 
+    // Aliases
+    html += `<div class="entity-section">
+      <div class="entity-section-title">Aliases</div>
+      <div id="entityAliasesContainer"><span style="color:var(--text-muted);font-size:11px;">Loading...</span></div>
+      <div style="margin-top:8px;display:flex;gap:8px;">
+        <input id="newAliasInput" placeholder="Add alias..." style="background:var(--bg-tertiary);border:1px solid var(--border);border-radius:var(--radius);padding:5px 10px;font-family:var(--font-mono);font-size:11px;color:var(--text-primary);flex:1;outline:none;">
+        <button onclick="addAlias(${entityId})" style="background:var(--bg-tertiary);border:1px solid var(--border);border-radius:var(--radius);padding:5px 12px;font-family:var(--font-mono);font-size:11px;color:var(--text-secondary);cursor:pointer;">+ Add</button>
+      </div>
+    </div>`;
+
     // Documents
     html += `<div class="entity-section">
       <div class="entity-section-title">Documents (${e.documents.length})</div>`;
@@ -5289,6 +5416,9 @@ async function loadEntityProfile(entityId) {
     </div>`;
 
     el.innerHTML = html;
+
+    // Load aliases
+    loadAliases(entityId);
 
     // Load similar docs for first document
     if (e.documents.length) {
@@ -6284,6 +6414,470 @@ async function crossReference() {
     console.error('Cross-reference failed:', err);
     container.innerHTML = '<div class="xref-panel"><div style="color:#e05555;">Cross-reference search failed</div></div>';
   }
+}
+
+
+// ─── EVIDENCE CHAINS ───
+
+function showChainsView() {
+  currentView = 'chains';
+  hideAllViews();
+  document.getElementById('chainsView').classList.add('active');
+  loadChains();
+}
+
+async function loadChains() {
+  const el = document.getElementById('chainsContent');
+  el.innerHTML = 'Loading chains...';
+  try {
+    const data = await api('/api/evidence-chains');
+    if (!data.chains.length) {
+      el.innerHTML = '<div style="color:var(--text-muted);font-size:13px;padding:20px 0;">No evidence chains yet. Create one above.</div>';
+      return;
+    }
+    let html = '';
+    data.chains.forEach(c => {
+      html += `<div class="entity-section" style="cursor:pointer;" onclick="viewChain(${c.id})">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <div>
+            <span style="font-weight:600;font-size:14px;">${c.name}</span>
+            <span style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted);margin-left:10px;">${c.link_count} links</span>
+          </div>
+          <div style="display:flex;gap:6px;">
+            <button onclick="event.stopPropagation();exportChain(${c.id})" style="background:var(--bg-tertiary);border:1px solid var(--border);border-radius:var(--radius);padding:3px 10px;font-family:var(--font-mono);font-size:10px;color:var(--text-secondary);cursor:pointer;">Export</button>
+            <button onclick="event.stopPropagation();deleteChain(${c.id})" style="background:var(--bg-tertiary);border:1px solid var(--border);border-radius:var(--radius);padding:3px 10px;font-family:var(--font-mono);font-size:10px;color:#e05555;cursor:pointer;">Delete</button>
+          </div>
+        </div>
+        ${c.description ? `<div style="font-size:12px;color:var(--text-secondary);margin-top:4px;">${c.description}</div>` : ''}
+        <div style="font-family:var(--font-mono);font-size:9px;color:var(--text-muted);margin-top:4px;">${c.created_at || ''}</div>
+      </div>`;
+    });
+    el.innerHTML = html;
+  } catch (err) {
+    console.error('Load chains failed:', err);
+    el.innerHTML = '<div style="color:#e05555;padding:20px;">Failed to load chains</div>';
+  }
+}
+
+async function createChain() {
+  const name = document.getElementById('newChainName').value.trim();
+  if (!name) { alert('Enter a chain name'); return; }
+  const desc = prompt('Description (optional):') || '';
+  try {
+    await fetch('/api/evidence-chains', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({name, description: desc})
+    });
+    document.getElementById('newChainName').value = '';
+    loadChains();
+  } catch (err) { console.error('Create chain failed:', err); }
+}
+
+async function viewChain(chainId) {
+  const el = document.getElementById('chainsContent');
+  el.innerHTML = 'Loading chain...';
+  try {
+    const data = await api(`/api/evidence-chains/${chainId}`);
+    let html = `<div style="margin-bottom:12px;">
+      <button onclick="loadChains()" style="background:var(--bg-tertiary);border:1px solid var(--border);border-radius:var(--radius);padding:5px 12px;font-family:var(--font-mono);font-size:11px;color:var(--text-secondary);cursor:pointer;">← All Chains</button>
+      <span style="font-size:16px;font-weight:600;margin-left:12px;">${data.chain.name}</span>
+    </div>`;
+
+    if (data.links.length) {
+      data.links.forEach(l => {
+        html += `<div class="chain-step" data-num="${l.position}">
+          <div style="flex:1;">
+            <div style="font-size:13px;font-weight:500;">[${l.link_type}] ${l.target_name || '#' + l.target_id}</div>
+            ${l.narrative ? `<div style="font-size:12px;color:var(--text-secondary);margin-top:4px;">${l.narrative}</div>` : ''}
+          </div>
+          <span style="font-size:10px;color:var(--text-muted);cursor:pointer;" onclick="deleteChainLink(${l.id},${chainId})">×</span>
+        </div>`;
+      });
+    } else {
+      html += '<div style="color:var(--text-muted);font-size:12px;padding:20px 0;">No links yet. Add documents or entities below.</div>';
+    }
+
+    html += `<div style="margin-top:16px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+      <select id="chainLinkType" style="background:var(--bg-tertiary);border:1px solid var(--border);border-radius:var(--radius);padding:6px;font-family:var(--font-mono);font-size:11px;color:var(--text-primary);">
+        <option value="document">Document</option>
+        <option value="entity">Entity</option>
+      </select>
+      <input id="chainLinkId" type="number" placeholder="ID" style="width:80px;background:var(--bg-tertiary);border:1px solid var(--border);border-radius:var(--radius);padding:6px;font-family:var(--font-mono);font-size:11px;color:var(--text-primary);outline:none;">
+      <input id="chainNarrative" placeholder="Narrative note..." style="flex:1;min-width:200px;background:var(--bg-tertiary);border:1px solid var(--border);border-radius:var(--radius);padding:6px 10px;font-family:var(--font-mono);font-size:11px;color:var(--text-primary);outline:none;">
+      <button onclick="addChainLink(${chainId})" style="background:var(--accent-glow);border:1px solid var(--accent-dim);border-radius:var(--radius);padding:6px 14px;font-family:var(--font-mono);font-size:11px;color:var(--accent);cursor:pointer;">+ Add Link</button>
+    </div>`;
+    el.innerHTML = html;
+  } catch (err) {
+    console.error('View chain failed:', err);
+    el.innerHTML = '<div style="color:#e05555;padding:20px;">Failed to load chain</div>';
+  }
+}
+
+async function addChainLink(chainId) {
+  const linkType = document.getElementById('chainLinkType').value;
+  const targetId = parseInt(document.getElementById('chainLinkId').value);
+  const narrative = document.getElementById('chainNarrative').value.trim();
+  if (!targetId) { alert('Enter a target ID'); return; }
+  try {
+    await fetch(`/api/evidence-chains/${chainId}/links`, {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({link_type: linkType, target_id: targetId, narrative})
+    });
+    viewChain(chainId);
+  } catch (err) { console.error('Add link failed:', err); }
+}
+
+async function deleteChainLink(linkId, chainId) {
+  try {
+    await fetch(`/api/evidence-chain-links/${linkId}`, {method: 'DELETE'});
+    viewChain(chainId);
+  } catch (err) { console.error('Delete link failed:', err); }
+}
+
+async function deleteChain(chainId) {
+  if (!confirm('Delete this evidence chain?')) return;
+  try {
+    await fetch(`/api/evidence-chains/${chainId}`, {method: 'DELETE'});
+    loadChains();
+  } catch (err) { console.error('Delete chain failed:', err); }
+}
+
+async function exportChain(chainId) {
+  try {
+    const data = await api(`/api/evidence-chains/${chainId}/export`);
+    const win = window.open('', '_blank');
+    win.document.write(data.html);
+    win.document.close();
+  } catch (err) { console.error('Export chain failed:', err); }
+}
+
+
+// ─── PATTERN DETECTION ───
+
+function showPatternsView() {
+  currentView = 'patterns';
+  hideAllViews();
+  document.getElementById('patternsView').classList.add('active');
+  loadPatterns();
+}
+
+async function loadPatterns() {
+  const el = document.getElementById('patternsContent');
+  el.innerHTML = 'Detecting patterns...';
+  try {
+    const data = await api('/api/patterns?window_days=30&min_occurrences=3');
+    let html = '';
+
+    // Co-appearances
+    html += `<div class="entity-section">
+      <div class="entity-section-title">Recurring Co-Appearances (${data.co_appearances.length})</div>`;
+    if (data.co_appearances.length) {
+      data.co_appearances.forEach(p => {
+        html += `<div class="anomaly-row">
+          <span class="anomaly-badge" style="background:rgba(224,201,74,0.15);color:var(--entity-thing);">${p.co_dates}x</span>
+          <span class="entity-tag ${p.type_a}" style="cursor:pointer;" onclick="openEntityByName('${p.entity_a.replace(/'/g,"\\'")}')"> ${p.entity_a}</span>
+          <span style="color:var(--text-muted);margin:0 4px;">↔</span>
+          <span class="entity-tag ${p.type_b}" style="cursor:pointer;" onclick="openEntityByName('${p.entity_b.replace(/'/g,"\\'")}')"> ${p.entity_b}</span>
+          <span style="flex:1;"></span>
+          <span style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted);">${p.first_seen || ''} → ${p.last_seen || ''}</span>
+        </div>`;
+      });
+    } else {
+      html += '<div style="color:var(--text-muted);font-size:12px;padding:8px 0;">No recurring co-appearances detected</div>';
+    }
+    html += '</div>';
+
+    // Activity bursts
+    html += `<div class="entity-section">
+      <div class="entity-section-title">Activity Bursts (${data.activity_bursts.length})</div>`;
+    if (data.activity_bursts.length) {
+      data.activity_bursts.slice(0, 20).forEach(b => {
+        html += `<div class="anomaly-row" style="cursor:pointer;" onclick="showEntityView(${b.entity_id})">
+          <span class="anomaly-badge spike">${b.event_count} events</span>
+          <span class="entity-tag ${b.type}">${b.name}</span>
+          <span style="flex:1;"></span>
+          <span style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted);">${b.month}</span>
+        </div>`;
+      });
+    } else {
+      html += '<div style="color:var(--text-muted);font-size:12px;padding:8px 0;">No activity bursts detected</div>';
+    }
+    html += '</div>';
+
+    // Cross-category entities
+    html += `<div class="entity-section">
+      <div class="entity-section-title">Cross-Category Entities (${data.cross_category.length})</div>`;
+    if (data.cross_category.length) {
+      data.cross_category.forEach(c => {
+        html += `<div class="anomaly-row" style="cursor:pointer;" onclick="showEntityView(${c.entity_id})">
+          <span class="entity-tag ${c.type}">${c.name}</span>
+          <span style="flex:1;font-size:11px;color:var(--text-muted);margin-left:8px;">${c.categories}</span>
+          <span style="font-family:var(--font-mono);font-size:10px;color:var(--text-secondary);">${c.doc_count} docs · ${c.category_count} categories</span>
+        </div>`;
+      });
+    } else {
+      html += '<div style="color:var(--text-muted);font-size:12px;padding:8px 0;">No cross-category entities detected</div>';
+    }
+    html += '</div>';
+
+    el.innerHTML = html;
+  } catch (err) {
+    console.error('Pattern detection failed:', err);
+    el.innerHTML = '<div style="color:#e05555;padding:20px;">Failed to detect patterns</div>';
+  }
+}
+
+
+// ─── DOCUMENT COMPARISON ───
+
+function showCompareView() {
+  currentView = 'compare';
+  hideAllViews();
+  document.getElementById('compareView').classList.add('active');
+}
+
+async function compareDocuments() {
+  const idA = parseInt(document.getElementById('compareDocA').value);
+  const idB = parseInt(document.getElementById('compareDocB').value);
+  if (!idA || !idB) { alert('Enter both document IDs'); return; }
+  const el = document.getElementById('compareContent');
+  el.innerHTML = 'Comparing documents...';
+  try {
+    const data = await api(`/api/compare-documents?doc_a=${idA}&doc_b=${idB}`);
+    const s = data.stats;
+    let html = `<div style="display:flex;gap:12px;margin-bottom:12px;">
+      <div class="entity-stat-pill">Jaccard: ${(s.jaccard * 100).toFixed(0)}%</div>
+      <div class="entity-stat-pill">Shared: ${s.shared} entities</div>
+      <div class="entity-stat-pill">A: ${s.entities_a} entities</div>
+      <div class="entity-stat-pill">B: ${s.entities_b} entities</div>
+    </div>`;
+
+    // Side-by-side text preview
+    html += `<div style="display:flex;gap:12px;">
+      <div class="compare-pane">
+        <div class="compare-pane-title" style="cursor:pointer;" onclick="openReader(${data.doc_a.id})">${data.doc_a.title}</div>
+        <div style="font-family:var(--font-mono);font-size:9px;color:var(--text-muted);margin-bottom:6px;">${data.doc_a.category} · ${data.doc_a.pages} pg</div>
+        <div style="font-size:11px;color:var(--text-secondary);white-space:pre-wrap;line-height:1.5;">${(data.doc_a.text_preview || '').substring(0, 1000)}</div>
+      </div>
+      <div class="compare-pane">
+        <div class="compare-pane-title" style="cursor:pointer;" onclick="openReader(${data.doc_b.id})">${data.doc_b.title}</div>
+        <div style="font-family:var(--font-mono);font-size:9px;color:var(--text-muted);margin-bottom:6px;">${data.doc_b.category} · ${data.doc_b.pages} pg</div>
+        <div style="font-size:11px;color:var(--text-secondary);white-space:pre-wrap;line-height:1.5;">${(data.doc_b.text_preview || '').substring(0, 1000)}</div>
+      </div>
+    </div>`;
+
+    // Shared entities
+    if (data.shared_entities.length) {
+      html += `<div class="entity-section" style="margin-top:12px;">
+        <div class="entity-section-title">Shared Entities (${data.shared_entities.length})</div>
+        <div style="display:flex;flex-wrap:wrap;gap:4px;">`;
+      data.shared_entities.forEach(e => {
+        html += `<span class="entity-tag ${e.type}" style="font-size:11px;">${e.name}</span>`;
+      });
+      html += '</div></div>';
+    }
+
+    // Unique to each
+    html += '<div style="display:flex;gap:12px;margin-top:8px;">';
+    if (data.only_a.length) {
+      html += `<div class="entity-section" style="flex:1;">
+        <div class="entity-section-title">Only in Doc A (${data.only_a.length})</div>
+        <div style="display:flex;flex-wrap:wrap;gap:4px;">`;
+      data.only_a.forEach(e => html += `<span class="entity-tag ${e.type}" style="font-size:10px;">${e.name}</span>`);
+      html += '</div></div>';
+    }
+    if (data.only_b.length) {
+      html += `<div class="entity-section" style="flex:1;">
+        <div class="entity-section-title">Only in Doc B (${data.only_b.length})</div>
+        <div style="display:flex;flex-wrap:wrap;gap:4px;">`;
+      data.only_b.forEach(e => html += `<span class="entity-tag ${e.type}" style="font-size:10px;">${e.name}</span>`);
+      html += '</div></div>';
+    }
+    html += '</div>';
+
+    el.innerHTML = html;
+  } catch (err) {
+    console.error('Compare failed:', err);
+    el.innerHTML = '<div style="color:#e05555;padding:20px;">Failed to compare documents</div>';
+  }
+}
+
+
+// ─── ENTITY ALIASES ───
+
+async function loadAliases(entityId) {
+  const container = document.getElementById('entityAliasesContainer');
+  if (!container) return;
+  try {
+    const data = await api(`/api/entities/${entityId}/aliases`);
+    const aliases = data.aliases || [];
+    if (!aliases.length) {
+      container.innerHTML = '<span style="color:var(--text-muted);font-size:11px;">No aliases</span>';
+      return;
+    }
+    container.innerHTML = aliases.map(a =>
+      `<span class="entity-tag-chip">${a.alias_name} <span class="remove-tag" onclick="deleteAlias(${a.id},${entityId})">×</span></span>`
+    ).join('');
+  } catch (err) {
+    container.innerHTML = '<span style="color:var(--text-muted);font-size:11px;">Failed to load</span>';
+  }
+}
+
+async function addAlias(entityId) {
+  const input = document.getElementById('newAliasInput');
+  const alias = (input ? input.value : '').trim();
+  if (!alias) return;
+  try {
+    await fetch(`/api/entities/${entityId}/aliases`, {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({alias: alias})
+    });
+    if (input) input.value = '';
+    loadAliases(entityId);
+  } catch (err) { console.error('Add alias failed:', err); }
+}
+
+async function deleteAlias(aliasId, entityId) {
+  try {
+    await fetch(`/api/aliases/${aliasId}`, {method: 'DELETE'});
+    loadAliases(entityId);
+  } catch (err) { console.error('Delete alias failed:', err); }
+}
+
+
+// ─── TONE ANALYSIS ───
+
+async function analyzeTone() {
+  if (!selectedDocId) return;
+  let container = document.getElementById('readerTone');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'readerTone';
+    const readerView = document.getElementById('readerView');
+    const xref = document.getElementById('readerXRef');
+    if (xref) readerView.insertBefore(container, xref);
+    else readerView.appendChild(container);
+  }
+  container.innerHTML = '<div class="xref-panel">Analyzing tone...</div>';
+  try {
+    const data = await api(`/api/documents/${selectedDocId}/tone`);
+    const TONE_COLORS = {threat:'#e05555',urgency:'#e0a84a',evasion:'#9b6de0',legal_exposure:'#4a9de0',financial:'#4ae0a8',secrecy:'#e0c94a'};
+    let html = `<div class="xref-panel">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <span style="font-family:var(--font-mono);font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:2px;color:var(--accent);">Tone Analysis</span>
+        <span style="font-size:10px;color:var(--text-muted);cursor:pointer;" onclick="document.getElementById('readerTone').innerHTML='';">Close</span>
+      </div>
+      <div style="font-family:var(--font-mono);font-size:12px;margin-bottom:10px;">Overall Score: <span style="color:${data.overall_score > 0.5 ? '#e05555' : data.overall_score > 0.3 ? '#e0a84a' : '#4ae0a8'};font-weight:600;">${(data.overall_score * 100).toFixed(0)}%</span></div>`;
+
+    for (const [cat, info] of Object.entries(data.analysis)) {
+      const color = TONE_COLORS[cat] || '#888';
+      const pct = Math.min(info.density * 50, 100);
+      html += `<div style="margin-bottom:6px;">
+        <div style="display:flex;justify-content:space-between;font-size:11px;">
+          <span style="text-transform:capitalize;color:var(--text-secondary);">${cat.replace('_',' ')}</span>
+          <span style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted);">${info.count} hits</span>
+        </div>
+        <div class="tone-bar"><div class="tone-fill" style="width:${pct}%;background:${color};">${info.count > 0 ? info.density.toFixed(1) + '/k' : ''}</div></div>`;
+      if (info.hits.length) {
+        html += `<div style="font-size:10px;color:var(--text-muted);margin-top:2px;">${info.hits.map(h => `${h.keyword}(${h.count})`).join(', ')}</div>`;
+      }
+      html += '</div>';
+    }
+    html += '</div>';
+    container.innerHTML = html;
+    logAudit('tone_analysis', 'document', selectedDocId, `Score: ${data.overall_score}`);
+  } catch (err) {
+    console.error('Tone analysis failed:', err);
+    container.innerHTML = '<div class="xref-panel"><div style="color:#e05555;">Tone analysis failed</div></div>';
+  }
+}
+
+
+// ─── INVESTIGATION SNAPSHOTS ───
+
+function showSnapshotsView() {
+  currentView = 'snapshots';
+  hideAllViews();
+  document.getElementById('snapshotsView').classList.add('active');
+  loadSnapshots();
+}
+
+async function loadSnapshots() {
+  const el = document.getElementById('snapshotsContent');
+  el.innerHTML = 'Loading snapshots...';
+  try {
+    const data = await api('/api/snapshots');
+    if (!data.snapshots.length) {
+      el.innerHTML = '<div style="color:var(--text-muted);font-size:13px;padding:20px 0;">No snapshots yet. Click "Save Snapshot" to capture current investigation state.</div>';
+      return;
+    }
+    let html = '';
+    data.snapshots.forEach(s => {
+      html += `<div class="entity-section">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <div>
+            <span style="font-weight:600;font-size:14px;">${s.name}</span>
+            <span style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted);margin-left:10px;">${s.created_at || ''}</span>
+          </div>
+          <div style="display:flex;gap:6px;">
+            <button onclick="viewSnapshot(${s.id})" style="background:var(--bg-tertiary);border:1px solid var(--border);border-radius:var(--radius);padding:3px 10px;font-family:var(--font-mono);font-size:10px;color:var(--text-secondary);cursor:pointer;">View</button>
+            <button onclick="deleteSnapshot(${s.id})" style="background:var(--bg-tertiary);border:1px solid var(--border);border-radius:var(--radius);padding:3px 10px;font-family:var(--font-mono);font-size:10px;color:#e05555;cursor:pointer;">Delete</button>
+          </div>
+        </div>
+        ${s.description ? `<div style="font-size:12px;color:var(--text-secondary);margin-top:4px;">${s.description}</div>` : ''}
+      </div>`;
+    });
+    el.innerHTML = html;
+  } catch (err) {
+    console.error('Load snapshots failed:', err);
+    el.innerHTML = '<div style="color:#e05555;padding:20px;">Failed to load snapshots</div>';
+  }
+}
+
+async function createSnapshot() {
+  const name = prompt('Name this snapshot:');
+  if (!name) return;
+  const desc = prompt('Description (optional):') || '';
+  try {
+    await fetch('/api/snapshots', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({name, description: desc})
+    });
+    loadSnapshots();
+  } catch (err) { console.error('Create snapshot failed:', err); }
+}
+
+async function viewSnapshot(id) {
+  const el = document.getElementById('snapshotsContent');
+  try {
+    const data = await api(`/api/snapshots/${id}`);
+    const sd = data.snapshot_data;
+    let html = `<div style="margin-bottom:12px;">
+      <button onclick="loadSnapshots()" style="background:var(--bg-tertiary);border:1px solid var(--border);border-radius:var(--radius);padding:5px 12px;font-family:var(--font-mono);font-size:11px;color:var(--text-secondary);cursor:pointer;">← All Snapshots</button>
+      <span style="font-size:16px;font-weight:600;margin-left:12px;">${data.name}</span>
+      <span style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted);margin-left:10px;">${data.created_at}</span>
+    </div>`;
+    html += `<div class="entity-section">
+      <div class="entity-section-title">Snapshot State</div>
+      <div class="anomaly-row"><span>Watchlist entries:</span><span style="flex:1;"></span><span style="font-family:var(--font-mono);">${sd.watchlist ? sd.watchlist.length : 0}</span></div>
+      <div class="anomaly-row"><span>Tags:</span><span style="flex:1;"></span><span style="font-family:var(--font-mono);">${sd.tags ? sd.tags.length : 0}</span></div>
+      <div class="anomaly-row"><span>Annotations:</span><span style="flex:1;"></span><span style="font-family:var(--font-mono);">${sd.annotations_count || 0}</span></div>
+      <div class="anomaly-row"><span>Board items:</span><span style="flex:1;"></span><span style="font-family:var(--font-mono);">${sd.board_items || 0}</span></div>
+      <div class="anomaly-row"><span>Flagged docs:</span><span style="flex:1;"></span><span style="font-family:var(--font-mono);">${sd.flagged_docs ? sd.flagged_docs.length : 0}</span></div>
+    </div>`;
+    el.innerHTML = html;
+  } catch (err) {
+    console.error('View snapshot failed:', err);
+    el.innerHTML = '<div style="color:#e05555;padding:20px;">Failed to view snapshot</div>';
+  }
+}
+
+async function deleteSnapshot(id) {
+  if (!confirm('Delete this snapshot?')) return;
+  try {
+    await fetch(`/api/snapshots/${id}`, {method: 'DELETE'});
+    loadSnapshots();
+  } catch (err) { console.error('Delete snapshot failed:', err); }
 }
 
 

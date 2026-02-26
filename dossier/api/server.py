@@ -3193,6 +3193,500 @@ def cross_references(
 
 
 # ═══════════════════════════════════════════
+# EVIDENCE CHAINS
+# ═══════════════════════════════════════════
+
+
+def _ensure_evidence_chains_table(conn):
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS evidence_chains (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            description TEXT DEFAULT '',
+            created_at TEXT DEFAULT (datetime('now')),
+            updated_at TEXT DEFAULT (datetime('now'))
+        )
+    """)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS evidence_chain_links (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            chain_id INTEGER NOT NULL,
+            position INTEGER NOT NULL,
+            link_type TEXT NOT NULL DEFAULT 'document',
+            target_id INTEGER NOT NULL,
+            narrative TEXT DEFAULT '',
+            FOREIGN KEY (chain_id) REFERENCES evidence_chains(id)
+        )
+    """)
+
+
+@app.get("/api/evidence-chains")
+def list_evidence_chains():
+    with get_db() as conn:
+        _ensure_evidence_chains_table(conn)
+        chains = conn.execute("SELECT * FROM evidence_chains ORDER BY updated_at DESC").fetchall()
+        result = []
+        for c in chains:
+            links = conn.execute(
+                "SELECT COUNT(*) as cnt FROM evidence_chain_links WHERE chain_id = ?", (c["id"],)
+            ).fetchone()
+            result.append({**dict(c), "link_count": links["cnt"]})
+    return {"chains": result}
+
+
+@app.get("/api/evidence-chains/{chain_id}")
+def get_evidence_chain(chain_id: int):
+    with get_db() as conn:
+        _ensure_evidence_chains_table(conn)
+        chain = conn.execute("SELECT * FROM evidence_chains WHERE id = ?", (chain_id,)).fetchone()
+        if not chain:
+            raise HTTPException(404, "Chain not found")
+        links = conn.execute("""
+            SELECT ecl.*, CASE ecl.link_type
+                WHEN 'document' THEN (SELECT title FROM documents WHERE id = ecl.target_id)
+                WHEN 'entity' THEN (SELECT name FROM entities WHERE id = ecl.target_id)
+                ELSE '' END as target_name,
+                CASE ecl.link_type
+                WHEN 'entity' THEN (SELECT type FROM entities WHERE id = ecl.target_id)
+                ELSE '' END as target_entity_type
+            FROM evidence_chain_links ecl
+            WHERE ecl.chain_id = ?
+            ORDER BY ecl.position
+        """, (chain_id,)).fetchall()
+    return {"chain": dict(chain), "links": [dict(l) for l in links]}
+
+
+@app.post("/api/evidence-chains")
+async def create_evidence_chain(request: Request):
+    body = await request.json()
+    name = body.get("name", "").strip()
+    if not name:
+        raise HTTPException(400, "name required")
+    with get_db() as conn:
+        _ensure_evidence_chains_table(conn)
+        cur = conn.execute(
+            "INSERT INTO evidence_chains (name, description) VALUES (?, ?)",
+            (name, body.get("description", "")),
+        )
+        _log_audit(conn, "create_chain", "chain", cur.lastrowid, name)
+    return {"id": cur.lastrowid, "name": name}
+
+
+@app.post("/api/evidence-chains/{chain_id}/links")
+async def add_chain_link(chain_id: int, request: Request):
+    body = await request.json()
+    link_type = body.get("link_type", "document")
+    target_id = body.get("target_id")
+    narrative = body.get("narrative", "")
+    if not target_id:
+        raise HTTPException(400, "target_id required")
+    with get_db() as conn:
+        _ensure_evidence_chains_table(conn)
+        max_pos = conn.execute(
+            "SELECT COALESCE(MAX(position), 0) FROM evidence_chain_links WHERE chain_id = ?", (chain_id,)
+        ).fetchone()[0]
+        conn.execute(
+            "INSERT INTO evidence_chain_links (chain_id, position, link_type, target_id, narrative) VALUES (?, ?, ?, ?, ?)",
+            (chain_id, max_pos + 1, link_type, target_id, narrative),
+        )
+        conn.execute("UPDATE evidence_chains SET updated_at = datetime('now') WHERE id = ?", (chain_id,))
+    return {"added": True, "position": max_pos + 1}
+
+
+@app.delete("/api/evidence-chains/{chain_id}")
+def delete_evidence_chain(chain_id: int):
+    with get_db() as conn:
+        _ensure_evidence_chains_table(conn)
+        conn.execute("DELETE FROM evidence_chain_links WHERE chain_id = ?", (chain_id,))
+        conn.execute("DELETE FROM evidence_chains WHERE id = ?", (chain_id,))
+    return {"deleted": True}
+
+
+@app.delete("/api/evidence-chain-links/{link_id}")
+def delete_chain_link(link_id: int):
+    with get_db() as conn:
+        _ensure_evidence_chains_table(conn)
+        conn.execute("DELETE FROM evidence_chain_links WHERE id = ?", (link_id,))
+    return {"deleted": True}
+
+
+@app.get("/api/evidence-chains/{chain_id}/export")
+def export_evidence_chain(chain_id: int):
+    """Export evidence chain as HTML case brief."""
+    import datetime
+    with get_db() as conn:
+        _ensure_evidence_chains_table(conn)
+        chain = conn.execute("SELECT * FROM evidence_chains WHERE id = ?", (chain_id,)).fetchone()
+        if not chain:
+            raise HTTPException(404, "Chain not found")
+        links = conn.execute("""
+            SELECT ecl.*, CASE ecl.link_type
+                WHEN 'document' THEN (SELECT title FROM documents WHERE id = ecl.target_id)
+                WHEN 'entity' THEN (SELECT name FROM entities WHERE id = ecl.target_id)
+                ELSE '' END as target_name
+            FROM evidence_chain_links ecl WHERE ecl.chain_id = ? ORDER BY ecl.position
+        """, (chain_id,)).fetchall()
+
+    now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+    html = f"""<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Case Brief: {chain['name']}</title>
+<style>body{{font-family:'Helvetica Neue',sans-serif;max-width:800px;margin:0 auto;padding:40px;color:#222;line-height:1.6;}}
+h1{{color:#c4473a;border-bottom:3px solid #c4473a;padding-bottom:10px;}}
+.step{{display:flex;gap:16px;margin:16px 0;padding:16px;border-left:4px solid #c4473a;background:#f9f9f9;border-radius:0 8px 8px 0;}}
+.step-num{{font-size:24px;font-weight:700;color:#c4473a;min-width:40px;text-align:center;}}
+.step-body h3{{margin:0 0 4px;}} .step-body p{{margin:4px 0;color:#555;font-size:14px;}}
+.meta{{color:#888;font-size:11px;}}</style></head><body>
+<h1>Case Brief: {chain['name']}</h1>
+<p>{chain['description']}</p><p class="meta">Generated: {now} | {len(links)} links</p>"""
+    for l in links:
+        html += f"""<div class="step"><div class="step-num">{l['position']}</div><div class="step-body">
+<h3>[{l['link_type'].title()}] {l['target_name'] or f"#{l['target_id']}"}</h3>
+<p>{l['narrative'] or '<em>No narrative</em>'}</p></div></div>"""
+    html += "</body></html>"
+    return {"html": html, "name": chain["name"]}
+
+
+# ═══════════════════════════════════════════
+# PATTERN DETECTION
+# ═══════════════════════════════════════════
+
+
+@app.get("/api/patterns")
+def detect_patterns(
+    window_days: int = Query(30, ge=7, le=365),
+    min_occurrences: int = Query(3, ge=2, le=20),
+):
+    """Detect recurring behavioral patterns across time windows."""
+    with get_db() as conn:
+        # 1. Recurring entity co-appearances via shared documents per date
+        coappearance = conn.execute("""
+            WITH dated_entities AS (
+                SELECT DISTINCT de.entity_id, e.name, e.type, ev.event_date
+                FROM events ev
+                JOIN document_entities de ON de.document_id = ev.document_id
+                JOIN entities e ON e.id = de.entity_id
+                WHERE ev.confidence >= 0.5
+                  AND ev.event_date IS NOT NULL AND LENGTH(ev.event_date) >= 10
+                  AND e.type IN ('person', 'place', 'org')
+            )
+            SELECT d1.name as entity_a, d1.type as type_a,
+                   d2.name as entity_b, d2.type as type_b,
+                   COUNT(DISTINCT d1.event_date) as co_dates,
+                   MIN(d1.event_date) as first_seen,
+                   MAX(d1.event_date) as last_seen
+            FROM dated_entities d1
+            JOIN dated_entities d2 ON d1.event_date = d2.event_date
+              AND d1.entity_id < d2.entity_id
+            WHERE d1.type = 'person'
+            GROUP BY d1.entity_id, d2.entity_id
+            HAVING co_dates >= ?
+            ORDER BY co_dates DESC
+            LIMIT 30
+        """, (min_occurrences,)).fetchall()
+
+        # 2. Entity activity bursts — entities with event clusters
+        bursts = conn.execute("""
+            SELECT e.name, e.type, e.id as entity_id,
+                   SUBSTR(ev.event_date, 1, 7) as month,
+                   COUNT(*) as event_count
+            FROM events ev
+            JOIN document_entities de ON de.document_id = ev.document_id
+            JOIN entities e ON e.id = de.entity_id
+            WHERE e.type = 'person' AND ev.event_date IS NOT NULL
+              AND LENGTH(ev.event_date) >= 7 AND ev.confidence >= 0.5
+            GROUP BY e.id, month
+            HAVING COUNT(*) >= ?
+            ORDER BY event_count DESC
+            LIMIT 40
+        """, (min_occurrences,)).fetchall()
+
+        # 3. Document category sequences — same entity appearing in docs of different categories
+        category_patterns = conn.execute("""
+            SELECT e.name, e.type, e.id as entity_id,
+                   GROUP_CONCAT(DISTINCT d.category) as categories,
+                   COUNT(DISTINCT d.category) as category_count,
+                   COUNT(DISTINCT d.id) as doc_count
+            FROM document_entities de
+            JOIN entities e ON e.id = de.entity_id
+            JOIN documents d ON d.id = de.document_id
+            WHERE e.type IN ('person', 'org')
+            GROUP BY e.id
+            HAVING COUNT(DISTINCT d.category) >= 3
+            ORDER BY category_count DESC, doc_count DESC
+            LIMIT 20
+        """).fetchall()
+
+    return {
+        "co_appearances": [dict(r) for r in coappearance],
+        "activity_bursts": [dict(r) for r in bursts],
+        "cross_category": [dict(r) for r in category_patterns],
+    }
+
+
+# ═══════════════════════════════════════════
+# DOCUMENT COMPARISON
+# ═══════════════════════════════════════════
+
+
+@app.get("/api/compare-documents")
+def compare_documents(
+    doc_a: int = Query(...),
+    doc_b: int = Query(...),
+):
+    """Compare two documents: shared entities, unique entities, text overlap indicators."""
+    with get_db() as conn:
+        a = conn.execute("SELECT id, title, filename, category, source, pages, raw_text FROM documents WHERE id = ?", (doc_a,)).fetchone()
+        b = conn.execute("SELECT id, title, filename, category, source, pages, raw_text FROM documents WHERE id = ?", (doc_b,)).fetchone()
+        if not a or not b:
+            raise HTTPException(404, "Document not found")
+
+        # Entities for each doc
+        ents_a = conn.execute("""
+            SELECT e.id, e.name, e.type, de.count
+            FROM document_entities de JOIN entities e ON e.id = de.entity_id
+            WHERE de.document_id = ? ORDER BY de.count DESC
+        """, (doc_a,)).fetchall()
+        ents_b = conn.execute("""
+            SELECT e.id, e.name, e.type, de.count
+            FROM document_entities de JOIN entities e ON e.id = de.entity_id
+            WHERE de.document_id = ? ORDER BY de.count DESC
+        """, (doc_b,)).fetchall()
+
+        ids_a = {e["id"] for e in ents_a}
+        ids_b = {e["id"] for e in ents_b}
+        shared_ids = ids_a & ids_b
+
+        shared = [dict(e) for e in ents_a if e["id"] in shared_ids]
+        only_a = [dict(e) for e in ents_a if e["id"] not in shared_ids][:20]
+        only_b = [dict(e) for e in ents_b if e["id"] not in shared_ids][:20]
+
+        # Text excerpts (first 2000 chars each)
+        text_a = (a["raw_text"] or "")[:2000]
+        text_b = (b["raw_text"] or "")[:2000]
+
+    return {
+        "doc_a": {"id": a["id"], "title": a["title"] or a["filename"], "category": a["category"], "source": a["source"], "pages": a["pages"], "text_preview": text_a},
+        "doc_b": {"id": b["id"], "title": b["title"] or b["filename"], "category": b["category"], "source": b["source"], "pages": b["pages"], "text_preview": text_b},
+        "shared_entities": shared[:30],
+        "only_a": only_a,
+        "only_b": only_b,
+        "stats": {
+            "entities_a": len(ids_a), "entities_b": len(ids_b),
+            "shared": len(shared_ids),
+            "jaccard": round(len(shared_ids) / max(len(ids_a | ids_b), 1), 3),
+        },
+    }
+
+
+# ═══════════════════════════════════════════
+# ENTITY ALIASES
+# ═══════════════════════════════════════════
+
+
+def _ensure_aliases_table(conn):
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS entity_aliases (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            entity_id INTEGER NOT NULL,
+            alias_name TEXT NOT NULL,
+            UNIQUE(entity_id, alias_name)
+        )
+    """)
+
+
+@app.get("/api/entities/{entity_id}/aliases")
+def get_aliases(entity_id: int):
+    with get_db() as conn:
+        _ensure_aliases_table(conn)
+        rows = conn.execute(
+            "SELECT * FROM entity_aliases WHERE entity_id = ? ORDER BY alias_name", (entity_id,)
+        ).fetchall()
+    return {"entity_id": entity_id, "aliases": [dict(r) for r in rows]}
+
+
+@app.post("/api/entities/{entity_id}/aliases")
+async def add_alias(entity_id: int, request: Request):
+    body = await request.json()
+    alias = body.get("alias", "").strip()
+    if not alias:
+        raise HTTPException(400, "alias required")
+    with get_db() as conn:
+        entity = conn.execute("SELECT id FROM entities WHERE id = ?", (entity_id,)).fetchone()
+        if not entity:
+            raise HTTPException(404, "Entity not found")
+        _ensure_aliases_table(conn)
+        conn.execute("INSERT OR IGNORE INTO entity_aliases (entity_id, alias_name) VALUES (?, ?)", (entity_id, alias))
+        _log_audit(conn, "add_alias", "entity", entity_id, alias)
+    return {"entity_id": entity_id, "alias": alias, "added": True}
+
+
+@app.delete("/api/aliases/{alias_id}")
+def delete_alias(alias_id: int):
+    with get_db() as conn:
+        _ensure_aliases_table(conn)
+        conn.execute("DELETE FROM entity_aliases WHERE id = ?", (alias_id,))
+    return {"deleted": True}
+
+
+@app.get("/api/aliases/resolve")
+def resolve_alias(name: str = Query(...)):
+    """Look up an alias and return the canonical entity."""
+    with get_db() as conn:
+        _ensure_aliases_table(conn)
+        # Check aliases first
+        alias_match = conn.execute("""
+            SELECT ea.entity_id, e.name, e.type, ea.alias_name
+            FROM entity_aliases ea
+            JOIN entities e ON e.id = ea.entity_id
+            WHERE LOWER(ea.alias_name) = LOWER(?)
+        """, (name,)).fetchone()
+        if alias_match:
+            return {"resolved": True, "entity": dict(alias_match), "via": "alias"}
+        # Fall back to direct entity name match
+        direct = conn.execute(
+            "SELECT id as entity_id, name, type FROM entities WHERE LOWER(name) = LOWER(?)", (name,)
+        ).fetchone()
+        if direct:
+            return {"resolved": True, "entity": dict(direct), "via": "direct"}
+    return {"resolved": False, "query": name}
+
+
+# ═══════════════════════════════════════════
+# SENTIMENT & TONE ANALYSIS
+# ═══════════════════════════════════════════
+
+
+@app.get("/api/documents/{doc_id}/tone")
+def analyze_tone(doc_id: int):
+    """Analyze document tone using keyword-based markers."""
+    with get_db() as conn:
+        doc = conn.execute("SELECT id, title, filename, raw_text FROM documents WHERE id = ?", (doc_id,)).fetchone()
+        if not doc:
+            raise HTTPException(404, "Document not found")
+
+        text = (doc["raw_text"] or "").lower()
+        text_len = max(len(text), 1)
+
+        # Keyword-based tone markers
+        markers = {
+            "threat": ["threat", "warn", "danger", "risk", "harm", "attack", "violent", "kill", "weapon"],
+            "urgency": ["urgent", "immediately", "asap", "critical", "emergency", "deadline", "rush", "time-sensitive"],
+            "evasion": ["deny", "refuse", "decline", "no comment", "plead the fifth", "i don't recall", "i don't remember", "cannot recall", "i have no"],
+            "legal_exposure": ["liability", "lawsuit", "prosecution", "criminal", "indictment", "guilty", "plaintiff", "defendant", "settlement", "subpoena"],
+            "financial": ["payment", "transfer", "wire", "account", "fund", "invest", "dollar", "million", "billion", "transaction"],
+            "secrecy": ["confidential", "secret", "classified", "private", "restricted", "do not distribute", "off the record", "between us"],
+        }
+
+        analysis = {}
+        total_score = 0
+        for category, keywords in markers.items():
+            hits = []
+            count = 0
+            for kw in keywords:
+                kw_count = text.count(kw)
+                if kw_count:
+                    hits.append({"keyword": kw, "count": kw_count})
+                    count += kw_count
+            density = round(count / (text_len / 1000), 3)  # per 1000 chars
+            analysis[category] = {"count": count, "density": density, "hits": sorted(hits, key=lambda h: -h["count"])[:5]}
+            total_score += min(density * 10, 10)  # cap each category at 10
+
+        overall_score = round(min(total_score / 60, 1.0), 3)  # normalize to 0-1
+
+    return {
+        "document_id": doc_id,
+        "title": doc["title"] or doc["filename"],
+        "overall_score": overall_score,
+        "analysis": analysis,
+        "text_length": len(doc["raw_text"] or ""),
+    }
+
+
+# ═══════════════════════════════════════════
+# INVESTIGATION SNAPSHOTS
+# ═══════════════════════════════════════════
+
+
+def _ensure_snapshots_table(conn):
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS investigation_snapshots (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            description TEXT DEFAULT '',
+            snapshot_data TEXT NOT NULL,
+            created_at TEXT DEFAULT (datetime('now'))
+        )
+    """)
+
+
+@app.get("/api/snapshots")
+def list_snapshots():
+    with get_db() as conn:
+        _ensure_snapshots_table(conn)
+        rows = conn.execute("SELECT id, name, description, created_at FROM investigation_snapshots ORDER BY created_at DESC").fetchall()
+    return {"snapshots": [dict(r) for r in rows]}
+
+
+@app.post("/api/snapshots")
+async def create_snapshot(request: Request):
+    """Save current investigation state as a named snapshot."""
+    body = await request.json()
+    name = body.get("name", "").strip()
+    if not name:
+        raise HTTPException(400, "name required")
+
+    with get_db() as conn:
+        _ensure_snapshots_table(conn)
+        _ensure_watchlist_table(conn)
+        _ensure_tags_table(conn)
+        _ensure_annotations_table(conn)
+        _ensure_board_table(conn)
+
+        # Gather current state
+        watchlist = [dict(r) for r in conn.execute("SELECT entity_id, notes FROM watchlist").fetchall()]
+        tags = [dict(r) for r in conn.execute("SELECT entity_id, tag FROM entity_tags").fetchall()]
+        annotations = [dict(r) for r in conn.execute("SELECT document_id, start_offset, end_offset, text, note, color FROM annotations").fetchall()]
+        board = [dict(r) for r in conn.execute("SELECT document_id, x, y, notes FROM board_items").fetchall()]
+        flagged = [r["id"] for r in conn.execute("SELECT id FROM documents WHERE flagged = 1").fetchall()]
+
+        snapshot_data = json.dumps({
+            "watchlist": watchlist,
+            "tags": tags,
+            "annotations_count": len(annotations),
+            "board_items": len(board),
+            "flagged_docs": flagged,
+            "filters": body.get("filters", {}),
+        })
+
+        cur = conn.execute(
+            "INSERT INTO investigation_snapshots (name, description, snapshot_data) VALUES (?, ?, ?)",
+            (name, body.get("description", ""), snapshot_data),
+        )
+        _log_audit(conn, "create_snapshot", "snapshot", cur.lastrowid, name)
+
+    return {"id": cur.lastrowid, "name": name}
+
+
+@app.get("/api/snapshots/{snapshot_id}")
+def get_snapshot(snapshot_id: int):
+    with get_db() as conn:
+        _ensure_snapshots_table(conn)
+        row = conn.execute("SELECT * FROM investigation_snapshots WHERE id = ?", (snapshot_id,)).fetchone()
+        if not row:
+            raise HTTPException(404, "Snapshot not found")
+        result = dict(row)
+        result["snapshot_data"] = json.loads(result["snapshot_data"])
+    return result
+
+
+@app.delete("/api/snapshots/{snapshot_id}")
+def delete_snapshot(snapshot_id: int):
+    with get_db() as conn:
+        _ensure_snapshots_table(conn)
+        conn.execute("DELETE FROM investigation_snapshots WHERE id = ?", (snapshot_id,))
+    return {"deleted": True}
+
+
+# ═══════════════════════════════════════════
 # HELPERS
 # ═══════════════════════════════════════════
 
