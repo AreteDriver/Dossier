@@ -2001,6 +2001,19 @@ body::before {
 .meta-badge.annotation { background: var(--entity-thing); color: #000; }
 .meta-badge.analyst_note { background: var(--entity-org); color: #fff; }
 .meta-badge.audit { background: var(--entity-date); color: #000; }
+
+.kwcooccur-view, .netpaths-view, .docsent-view, .srctimeline-view, .freqrank-view, .flaghub-view { display: none; flex-direction: column; gap: 16px; }
+.kwcooccur-view.active, .netpaths-view.active, .docsent-view.active, .srctimeline-view.active, .freqrank-view.active, .flaghub-view.active { display: flex; }
+.kw-pair { display: flex; align-items: center; gap: 8px; padding: 5px 0; border-bottom: 1px solid var(--border); }
+.path-node { display: inline-flex; align-items: center; gap: 4px; }
+.path-arrow { font-family: var(--font-mono); font-size: 14px; color: var(--accent); margin: 0 4px; }
+.tone-bar { height: 18px; border-radius: 3px; display: flex; align-items: center; padding: 0 6px; font-family: var(--font-mono); font-size: 10px; color: #fff; }
+.src-timeline-row { display: flex; align-items: center; gap: 8px; margin-bottom: 3px; }
+.src-spark { display: flex; align-items: flex-end; gap: 1px; height: 24px; }
+.src-spark-bar { width: 10px; border-radius: 1px 1px 0 0; min-height: 1px; }
+.flag-card { padding: 12px 16px; background: var(--bg-card); border-radius: var(--radius); border: 1px solid var(--border); margin-bottom: 8px; cursor: pointer; transition: border-color var(--transition); }
+.flag-card:hover { border-color: var(--accent-dim); }
+.flag-badge { font-family: var(--font-mono); font-size: 9px; padding: 2px 6px; border-radius: 8px; background: var(--accent); color: #fff; }
 </style>
 </head>
 <body>
@@ -2277,6 +2290,30 @@ body::before {
       <div class="sidebar-item" data-view="invtimeline" id="invtimelineNav">
         <div class="sidebar-dot" style="background:var(--accent)"></div>
         Inv. Timeline
+      </div>
+      <div class="sidebar-item" data-view="kwcooccur" id="kwcooccurNav">
+        <div class="sidebar-dot" style="background:var(--entity-thing)"></div>
+        Keyword Co-occur
+      </div>
+      <div class="sidebar-item" data-view="netpaths" id="netpathsNav">
+        <div class="sidebar-dot" style="background:var(--entity-org)"></div>
+        Network Paths
+      </div>
+      <div class="sidebar-item" data-view="docsent" id="docsentNav">
+        <div class="sidebar-dot" style="background:var(--entity-person)"></div>
+        Doc Sentiment
+      </div>
+      <div class="sidebar-item" data-view="srctimeline" id="srctimelineNav">
+        <div class="sidebar-dot" style="background:var(--entity-date)"></div>
+        Source Timeline
+      </div>
+      <div class="sidebar-item" data-view="freqrank" id="freqrankNav">
+        <div class="sidebar-dot" style="background:var(--entity-place)"></div>
+        Frequency Rank
+      </div>
+      <div class="sidebar-item" data-view="flaghub" id="flaghubNav">
+        <div class="sidebar-dot" style="background:var(--accent)"></div>
+        Flagged Hub
       </div>
     </div>
 
@@ -3191,6 +3228,59 @@ body::before {
       <div id="invtimelineContent">Loading investigation timeline...</div>
     </div>
 
+    <!-- Keyword Co-occurrence View -->
+    <div class="kwcooccur-view" id="kwcooccurView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Keyword Co-occurrence</div>
+      <div id="kwcooccurContent">Loading keyword pairs...</div>
+    </div>
+
+    <!-- Network Paths View -->
+    <div class="netpaths-view" id="netpathsView">
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+        <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Network Paths</div>
+        <select id="netpathFrom" style="background:var(--bg-tertiary);border:1px solid var(--border);border-radius:var(--radius);padding:4px 8px;font-family:var(--font-mono);font-size:11px;color:var(--text-primary);outline:none;max-width:200px;">
+          <option value="">From...</option>
+        </select>
+        <span style="font-family:var(--font-mono);font-size:12px;color:var(--accent);">→</span>
+        <select id="netpathTo" style="background:var(--bg-tertiary);border:1px solid var(--border);border-radius:var(--radius);padding:4px 8px;font-family:var(--font-mono);font-size:11px;color:var(--text-primary);outline:none;max-width:200px;">
+          <option value="">To...</option>
+        </select>
+        <button onclick="findEntityPath()" class="report-btn">Find Path</button>
+      </div>
+      <div id="netpathsContent" style="color:var(--text-muted);">Select two entities and click Find Path.</div>
+    </div>
+
+    <!-- Document Sentiment View -->
+    <div class="docsent-view" id="docsentView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Document Sentiment</div>
+      <div id="docsentContent">Loading sentiment data...</div>
+    </div>
+
+    <!-- Source Timeline View -->
+    <div class="srctimeline-view" id="srctimelineView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Source Timeline</div>
+      <div id="srctimelineContent">Loading source timeline...</div>
+    </div>
+
+    <!-- Frequency Rank View -->
+    <div class="freqrank-view" id="freqrankView">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Entity Frequency Rank</div>
+        <select id="freqrankType" onchange="loadFreqRank()" style="background:var(--bg-tertiary);border:1px solid var(--border);border-radius:var(--radius);padding:4px 8px;font-family:var(--font-mono);font-size:11px;color:var(--text-primary);outline:none;">
+          <option value="person">People</option>
+          <option value="org">Organizations</option>
+          <option value="place">Places</option>
+        </select>
+      </div>
+      <div id="freqrankContent">Loading frequency data...</div>
+    </div>
+
+    <!-- Flagged Hub View -->
+    <div class="flaghub-view" id="flaghubView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Flagged Documents Hub</div>
+      <div id="flaghubContent">Loading flagged documents...</div>
+    </div>
+
   </main>
 
   <!-- RIGHT PANEL -->
@@ -3839,6 +3929,12 @@ function hideAllViews() {
   document.getElementById('flightsView').classList.remove('active');
   document.getElementById('xrefmatrixView').classList.remove('active');
   document.getElementById('invtimelineView').classList.remove('active');
+  document.getElementById('kwcooccurView').classList.remove('active');
+  document.getElementById('netpathsView').classList.remove('active');
+  document.getElementById('docsentView').classList.remove('active');
+  document.getElementById('srctimelineView').classList.remove('active');
+  document.getElementById('freqrankView').classList.remove('active');
+  document.getElementById('flaghubView').classList.remove('active');
 }
 
 function showDocumentView() {
@@ -3940,6 +4036,12 @@ document.querySelectorAll('.sidebar-item[data-view]').forEach(item => {
     else if (view === 'flights') showFlightsView();
     else if (view === 'xrefmatrix') showXRefMatrixView();
     else if (view === 'invtimeline') showInvTimelineView();
+    else if (view === 'kwcooccur') showKwCooccurView();
+    else if (view === 'netpaths') showNetPathsView();
+    else if (view === 'docsent') showDocSentView();
+    else if (view === 'srctimeline') showSrcTimelineView();
+    else if (view === 'freqrank') showFreqRankView();
+    else if (view === 'flaghub') showFlagHubView();
   });
 });
 
@@ -5039,6 +5141,12 @@ function goBackFromReader() {
   else if (readerPreviousView === 'flights') showFlightsView();
   else if (readerPreviousView === 'xrefmatrix') showXRefMatrixView();
   else if (readerPreviousView === 'invtimeline') showInvTimelineView();
+  else if (readerPreviousView === 'kwcooccur') showKwCooccurView();
+  else if (readerPreviousView === 'netpaths') showNetPathsView();
+  else if (readerPreviousView === 'docsent') showDocSentView();
+  else if (readerPreviousView === 'srctimeline') showSrcTimelineView();
+  else if (readerPreviousView === 'freqrank') showFreqRankView();
+  else if (readerPreviousView === 'flaghub') showFlagHubView();
   else showDocumentView();
 }
 
@@ -9306,6 +9414,314 @@ async function loadInvTimeline() {
 
     el.innerHTML = html;
   } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load investigation timeline</div>'; }
+}
+
+
+// ─── KEYWORD CO-OCCURRENCE ───
+
+function showKwCooccurView() {
+  currentView = 'kwcooccur';
+  hideAllViews();
+  document.getElementById('kwcooccurView').classList.add('active');
+  loadKwCooccur();
+}
+
+async function loadKwCooccur() {
+  const el = document.getElementById('kwcooccurContent');
+  try {
+    const data = await api('/api/keyword-cooccurrence?limit=40');
+    const pairs = data.pairs || [];
+    if (!pairs.length) { el.innerHTML = '<div style="color:var(--text-muted);">No keyword co-occurrence data found.</div>'; return; }
+
+    const maxShared = Math.max(...pairs.map(p => p.shared_docs));
+    let html = '';
+    pairs.forEach(p => {
+      const pct = (p.shared_docs / maxShared) * 100;
+      html += `<div class="kw-pair">
+        <span style="font-family:var(--font-mono);font-size:11px;min-width:120px;text-align:right;color:var(--entity-thing);">${p.word_a}</span>
+        <span style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted);">+</span>
+        <span style="font-family:var(--font-mono);font-size:11px;min-width:120px;color:var(--entity-thing);">${p.word_b}</span>
+        <div style="flex:1;height:12px;background:var(--bg-tertiary);border-radius:3px;overflow:hidden;">
+          <div style="width:${pct}%;height:100%;background:var(--entity-thing);border-radius:3px;opacity:0.7;"></div>
+        </div>
+        <span style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted);min-width:40px;text-align:right;">${p.shared_docs} docs</span>
+      </div>`;
+    });
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load keyword co-occurrence</div>'; }
+}
+
+
+// ─── NETWORK PATHS ───
+
+function showNetPathsView() {
+  currentView = 'netpaths';
+  hideAllViews();
+  document.getElementById('netpathsView').classList.add('active');
+  loadNetPathPicker();
+}
+
+async function loadNetPathPicker() {
+  const fromSel = document.getElementById('netpathFrom');
+  const toSel = document.getElementById('netpathTo');
+  if (fromSel.options.length > 1) return;
+  try {
+    const data = await api('/api/entity-path-suggestions');
+    const entities = data.entities || [];
+    entities.forEach(e => {
+      const opt1 = document.createElement('option');
+      opt1.value = e.id;
+      opt1.textContent = `${e.name} (${e.type})`;
+      fromSel.appendChild(opt1);
+      const opt2 = opt1.cloneNode(true);
+      toSel.appendChild(opt2);
+    });
+  } catch (err) { console.error('Failed to load entity suggestions:', err); }
+}
+
+async function findEntityPath() {
+  const fromId = document.getElementById('netpathFrom').value;
+  const toId = document.getElementById('netpathTo').value;
+  if (!fromId || !toId) { alert('Select both entities'); return; }
+  if (fromId === toId) { alert('Select two different entities'); return; }
+
+  const el = document.getElementById('netpathsContent');
+  el.innerHTML = 'Searching for path...';
+  try {
+    const data = await api(`/api/entity-path?from_id=${fromId}&to_id=${toId}`);
+    let html = '';
+    if (data.found) {
+      html += `<div style="font-family:var(--font-mono);font-size:12px;color:var(--entity-date);margin-bottom:12px;">${data.hops} hop${data.hops !== 1 ? 's' : ''} found</div>`;
+      html += '<div style="display:flex;align-items:center;flex-wrap:wrap;gap:4px;padding:16px;background:var(--bg-card);border-radius:var(--radius);border:1px solid var(--border);">';
+      data.path.forEach((node, i) => {
+        if (i > 0) html += '<span class="path-arrow">→</span>';
+        html += `<span class="entity-tag ${node.type || 'person'}" style="font-size:12px;">${node.name || '?'}</span>`;
+      });
+      html += '</div>';
+    } else {
+      html = `<div style="color:var(--text-muted);">No path found between <strong>${data.from.name}</strong> and <strong>${data.to.name}</strong> (max 8 hops).</div>`;
+    }
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to find path</div>'; }
+}
+
+
+// ─── DOCUMENT SENTIMENT ───
+
+function showDocSentView() {
+  currentView = 'docsent';
+  hideAllViews();
+  document.getElementById('docsentView').classList.add('active');
+  loadDocSentiment();
+}
+
+async function loadDocSentiment() {
+  const el = document.getElementById('docsentContent');
+  try {
+    const data = await api('/api/document-sentiment');
+    const tones = data.tone_distribution || [];
+    const docs = data.documents || [];
+    const severity = data.severity_distribution || [];
+
+    let html = '';
+
+    // Tone distribution
+    if (tones.length) {
+      const maxCount = Math.max(...tones.map(t => t.count));
+      const toneColors = {formal: 'var(--entity-place)', urgent: 'var(--accent)', neutral: 'var(--text-muted)', threatening: '#e05555', evasive: 'var(--entity-thing)', emotional: 'var(--entity-person)'};
+      html += '<div style="margin-bottom:16px;"><div class="narrative-section-title">Tone Distribution</div>';
+      tones.forEach(t => {
+        const pct = (t.count / maxCount) * 100;
+        const color = toneColors[t.label] || 'var(--entity-org)';
+        html += `<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+          <span style="font-size:12px;min-width:100px;">${t.label}</span>
+          <div style="flex:1;height:18px;background:var(--bg-tertiary);border-radius:3px;overflow:hidden;">
+            <div class="tone-bar" style="width:${pct}%;background:${color};">${t.count}</div>
+          </div>
+          <span style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted);min-width:50px;">${t.avg_score ? t.avg_score.toFixed(2) : '—'}</span>
+        </div>`;
+      });
+      html += '</div>';
+    }
+
+    // Severity distribution
+    if (severity.length) {
+      html += '<div style="margin-bottom:16px;"><div class="narrative-section-title">Severity Distribution</div>';
+      html += '<div style="display:flex;gap:12px;">';
+      const sevColors = {low: 'var(--entity-date)', medium: 'var(--entity-thing)', high: 'var(--accent)', critical: '#e05555'};
+      severity.forEach(s => {
+        html += `<div class="stat-card" style="flex:1;">
+          <div class="stat-value" style="color:${sevColors[s.severity] || 'var(--text-primary)'};">${s.count}</div>
+          <div class="stat-label">${s.severity || 'unknown'}</div>
+        </div>`;
+      });
+      html += '</div></div>';
+    }
+
+    // Top scored documents
+    if (docs.length) {
+      html += '<div><div class="narrative-section-title">Documents by Tone Score</div>';
+      docs.forEach(d => {
+        html += `<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--border);cursor:pointer;" onclick="openReader(${d.id},'docsent')">
+          <span style="font-size:12px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${d.title || d.filename}</span>
+          <span style="font-family:var(--font-mono);font-size:10px;color:var(--entity-place);">${d.tone}</span>
+          <span style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted);">${d.score ? d.score.toFixed(2) : ''}</span>
+        </div>`;
+      });
+      html += '</div>';
+    }
+
+    if (!tones.length && !docs.length) {
+      html = '<div style="color:var(--text-muted);">No sentiment data available. Run forensic analysis on documents first.</div>';
+    }
+
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load sentiment data</div>'; }
+}
+
+
+// ─── SOURCE TIMELINE ───
+
+function showSrcTimelineView() {
+  currentView = 'srctimeline';
+  hideAllViews();
+  document.getElementById('srctimelineView').classList.add('active');
+  loadSrcTimeline();
+}
+
+async function loadSrcTimeline() {
+  const el = document.getElementById('srctimelineContent');
+  try {
+    const data = await api('/api/source-timeline');
+    const sources = data.sources || [];
+    const years = data.years || [];
+
+    if (!sources.length) { el.innerHTML = '<div style="color:var(--text-muted);">No source data available.</div>'; return; }
+
+    const colors = ['var(--entity-person)', 'var(--entity-place)', 'var(--entity-org)', 'var(--entity-date)', 'var(--entity-thing)', 'var(--accent)'];
+
+    // Year headers
+    let html = '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;padding-left:200px;">';
+    years.forEach(y => {
+      html += `<span style="font-family:var(--font-mono);font-size:9px;color:var(--text-muted);width:30px;text-align:center;">${y.substring(2)}</span>`;
+    });
+    html += '</div>';
+
+    sources.forEach((s, i) => {
+      const maxVal = Math.max(...years.map(y => s.by_year[y] || 0), 1);
+      const color = colors[i % colors.length];
+      html += `<div class="src-timeline-row">
+        <span style="font-size:11px;min-width:190px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${s.source}">${s.source}</span>
+        <div class="src-spark">`;
+      years.forEach(y => {
+        const count = s.by_year[y] || 0;
+        const height = count > 0 ? Math.max(2, (count / maxVal) * 24) : 0;
+        html += `<div class="src-spark-bar" style="height:${height}px;background:${color};width:30px;" title="${y}: ${count}"></div>`;
+      });
+      html += `</div>
+        <span style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted);min-width:40px;text-align:right;">${s.total}</span>
+      </div>`;
+    });
+
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load source timeline</div>'; }
+}
+
+
+// ─── FREQUENCY RANK ───
+
+function showFreqRankView() {
+  currentView = 'freqrank';
+  hideAllViews();
+  document.getElementById('freqrankView').classList.add('active');
+  loadFreqRank();
+}
+
+async function loadFreqRank() {
+  const el = document.getElementById('freqrankContent');
+  const entityType = document.getElementById('freqrankType').value || 'person';
+  try {
+    const data = await api(`/api/entity-frequency?entity_type=${entityType}&limit=25`);
+    const entities = data.entities || [];
+    const years = data.years || [];
+
+    if (!entities.length) { el.innerHTML = '<div style="color:var(--text-muted);">No entity frequency data available.</div>'; return; }
+
+    // Header
+    let html = '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;padding-left:200px;">';
+    years.forEach(y => {
+      html += `<span style="font-family:var(--font-mono);font-size:9px;color:var(--text-muted);width:28px;text-align:center;">${y.substring(2)}</span>`;
+    });
+    html += '<span style="font-family:var(--font-mono);font-size:9px;color:var(--text-muted);min-width:50px;text-align:right;">Total</span></div>';
+
+    entities.forEach(e => {
+      const maxVal = Math.max(...years.map(y => e.by_year[y] || 0), 1);
+      html += `<div class="trend-row">
+        <span style="font-size:11px;min-width:190px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${e.name}">${e.name}</span>
+        <div class="trend-spark">`;
+      years.forEach(y => {
+        const count = e.by_year[y] || 0;
+        const height = count > 0 ? Math.max(2, (count / maxVal) * 20) : 0;
+        html += `<div class="trend-spark-bar" style="height:${height}px;width:28px;" title="${y}: ${count} mentions"></div>`;
+      });
+      html += `</div>
+        <span style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted);min-width:50px;text-align:right;">${e.total_mentions}</span>
+      </div>`;
+    });
+
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load frequency data</div>'; }
+}
+
+
+// ─── FLAGGED HUB ───
+
+function showFlagHubView() {
+  currentView = 'flaghub';
+  hideAllViews();
+  document.getElementById('flaghubView').classList.add('active');
+  loadFlagHub();
+}
+
+async function loadFlagHub() {
+  const el = document.getElementById('flaghubContent');
+  try {
+    const data = await api('/api/flagged-hub');
+    const flagged = data.flagged || [];
+
+    if (!flagged.length) {
+      el.innerHTML = '<div style="color:var(--text-muted);">No flagged documents. Flag documents from the reader view to track them here.</div>';
+      return;
+    }
+
+    let html = `<div style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted);margin-bottom:8px;">${data.total} flagged documents</div>`;
+
+    flagged.forEach(d => {
+      html += `<div class="flag-card" onclick="openReader(${d.id},'flaghub')">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+          <div>
+            <span style="font-weight:600;">${d.title || d.filename}</span>
+            <span class="flag-badge" style="margin-left:8px;">FLAGGED</span>
+          </div>
+          <span style="font-family:var(--font-mono);font-size:10px;color:var(--entity-date);">${d.date || 'Undated'}</span>
+        </div>
+        <div style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted);margin-top:2px;">${d.category} · ${d.source || 'unknown'} · ${d.pages || '?'} pages · ${d.analyst_notes} notes · ${d.annotations} annotations</div>
+        ${d.notes ? '<div style="font-size:11px;color:var(--text-secondary);margin-top:4px;font-style:italic;">' + d.notes.substring(0, 150) + '</div>' : ''}
+        <div style="display:flex;flex-wrap:wrap;gap:3px;margin-top:6px;">
+          ${d.entities.map(e => '<span class="entity-tag ' + e.type + '" style="font-size:9px;">' + e.name + '</span>').join('')}
+        </div>
+      </div>`;
+    });
+
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load flagged documents</div>'; }
+}
+
+async function toggleDocFlag(docId) {
+  try {
+    await fetch(`/api/documents/${docId}/flag`, {method: 'POST', headers: {'Content-Type': 'application/json'}});
+    if (currentView === 'flaghub') loadFlagHub();
+  } catch (err) { console.error('Failed to toggle flag:', err); }
 }
 
 

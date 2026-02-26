@@ -6384,6 +6384,295 @@ def investigation_timeline():
 
 
 # ═══════════════════════════════════════════
+# KEYWORD CO-OCCURRENCE
+# ═══════════════════════════════════════════
+
+
+@app.get("/api/keyword-cooccurrence")
+def keyword_cooccurrence(limit: int = Query(40)):
+    """Find keywords that frequently appear together in the same documents."""
+    with get_db() as conn:
+        pairs = conn.execute(
+            """SELECT k1.word as word_a, k2.word as word_b,
+                      COUNT(DISTINCT dk1.document_id) as shared_docs
+               FROM document_keywords dk1
+               JOIN document_keywords dk2 ON dk2.document_id = dk1.document_id
+                 AND dk2.keyword_id > dk1.keyword_id
+               JOIN keywords k1 ON k1.id = dk1.keyword_id
+               JOIN keywords k2 ON k2.id = dk2.keyword_id
+               WHERE k1.doc_count >= 5 AND k2.doc_count >= 5
+               GROUP BY dk1.keyword_id, dk2.keyword_id
+               HAVING shared_docs >= 3
+               ORDER BY shared_docs DESC
+               LIMIT ?""",
+            (limit,),
+        ).fetchall()
+
+    return {"pairs": [dict(p) for p in pairs]}
+
+
+# ═══════════════════════════════════════════
+# ENTITY NETWORK PATHS (shortest path)
+# ═══════════════════════════════════════════
+
+
+@app.get("/api/entity-path")
+def entity_path(from_id: int = Query(...), to_id: int = Query(...)):
+    """Find shortest path between two entities via connections."""
+    with get_db() as conn:
+        from_ent = conn.execute(
+            "SELECT id, name, type FROM entities WHERE id = ?", (from_id,)
+        ).fetchone()
+        to_ent = conn.execute(
+            "SELECT id, name, type FROM entities WHERE id = ?", (to_id,)
+        ).fetchone()
+        if not from_ent or not to_ent:
+            raise HTTPException(404, "Entity not found")
+
+        # Build adjacency from entity_connections
+        edges = conn.execute(
+            "SELECT entity_a_id, entity_b_id, weight FROM entity_connections"
+        ).fetchall()
+
+        adj: dict[int, list[tuple[int, int]]] = {}
+        for e in edges:
+            a, b, w = e["entity_a_id"], e["entity_b_id"], e["weight"]
+            adj.setdefault(a, []).append((b, w))
+            adj.setdefault(b, []).append((a, w))
+
+        # BFS for shortest path
+        from collections import deque
+
+        visited = {from_id}
+        queue = deque([(from_id, [from_id])])
+        found_path = None
+
+        while queue and not found_path:
+            current, path = queue.popleft()
+            if len(path) > 8:
+                break
+            for neighbor, _ in adj.get(current, []):
+                if neighbor == to_id:
+                    found_path = path + [neighbor]
+                    break
+                if neighbor not in visited:
+                    visited.add(neighbor)
+                    queue.append((neighbor, path + [neighbor]))
+
+        # Resolve names for the path
+        path_details = []
+        if found_path:
+            placeholders = ",".join("?" * len(found_path))
+            ents = conn.execute(
+                f"SELECT id, name, type FROM entities WHERE id IN ({placeholders})",
+                found_path,
+            ).fetchall()
+            ent_map = {e["id"]: dict(e) for e in ents}
+            path_details = [ent_map.get(eid, {"id": eid}) for eid in found_path]
+
+    return {
+        "from": dict(from_ent),
+        "to": dict(to_ent),
+        "path": path_details,
+        "hops": len(path_details) - 1 if path_details else -1,
+        "found": found_path is not None,
+    }
+
+
+@app.get("/api/entity-path-suggestions")
+def entity_path_suggestions():
+    """Get top entities for path-finding dropdowns."""
+    with get_db() as conn:
+        entities = conn.execute(
+            """SELECT e.id, e.name, e.type, COUNT(DISTINCT de.document_id) as doc_count
+               FROM entities e
+               JOIN document_entities de ON de.entity_id = e.id
+               GROUP BY e.id
+               ORDER BY doc_count DESC LIMIT 200"""
+        ).fetchall()
+    return {"entities": [dict(e) for e in entities]}
+
+
+# ═══════════════════════════════════════════
+# DOCUMENT SENTIMENT (tone distribution)
+# ═══════════════════════════════════════════
+
+
+@app.get("/api/document-sentiment")
+def document_sentiment(limit: int = Query(50)):
+    """Analyze document tone distribution across corpus using forensic analysis data."""
+    with get_db() as conn:
+        # Get tone/sentiment from document_forensics
+        tones = conn.execute(
+            """SELECT df.label, COUNT(*) as count, AVG(df.score) as avg_score
+               FROM document_forensics df
+               WHERE df.analysis_type = 'tone'
+               GROUP BY df.label
+               ORDER BY count DESC"""
+        ).fetchall()
+
+        # Per-document tone breakdown
+        doc_tones = conn.execute(
+            """SELECT d.id, d.title, d.filename, d.category,
+                      df.label as tone, df.score
+               FROM document_forensics df
+               JOIN documents d ON d.id = df.document_id
+               WHERE df.analysis_type = 'tone'
+               ORDER BY df.score DESC
+               LIMIT ?""",
+            (limit,),
+        ).fetchall()
+
+        # Severity distribution
+        severity_dist = conn.execute(
+            """SELECT severity, COUNT(*) as count
+               FROM document_forensics
+               GROUP BY severity
+               ORDER BY count DESC"""
+        ).fetchall()
+
+    return {
+        "tone_distribution": [dict(t) for t in tones],
+        "documents": [dict(d) for d in doc_tones],
+        "severity_distribution": [dict(s) for s in severity_dist],
+    }
+
+
+# ═══════════════════════════════════════════
+# SOURCE TIMELINE (per-source temporal distribution)
+# ═══════════════════════════════════════════
+
+
+@app.get("/api/source-timeline")
+def source_timeline():
+    """Per-source document distribution over time."""
+    with get_db() as conn:
+        sources = conn.execute(
+            """SELECT DISTINCT source FROM documents
+               WHERE source IS NOT NULL AND source != ''
+               ORDER BY source"""
+        ).fetchall()
+
+        result = []
+        all_years = set()
+        for src in sources:
+            yearly = conn.execute(
+                """SELECT SUBSTR(date, 1, 4) as year, COUNT(*) as count
+                   FROM documents
+                   WHERE source = ?
+                     AND date IS NOT NULL AND date != ''
+                   GROUP BY year ORDER BY year""",
+                (src["source"],),
+            ).fetchall()
+            by_year = {y["year"]: y["count"] for y in yearly}
+            all_years.update(by_year.keys())
+            total = conn.execute(
+                "SELECT COUNT(*) FROM documents WHERE source = ?", (src["source"],)
+            ).fetchone()[0]
+            result.append({"source": src["source"], "total": total, "by_year": by_year})
+
+    return {"sources": result, "years": sorted(all_years)}
+
+
+# ═══════════════════════════════════════════
+# ENTITY FREQUENCY RANK (over time)
+# ═══════════════════════════════════════════
+
+
+@app.get("/api/entity-frequency")
+def entity_frequency(entity_type: str = Query("person"), limit: int = Query(20)):
+    """Entity mention frequency over time."""
+    with get_db() as conn:
+        # Top entities
+        top = conn.execute(
+            """SELECT e.id, e.name, COUNT(DISTINCT de.document_id) as doc_count,
+                      SUM(de.count) as total_mentions
+               FROM entities e
+               JOIN document_entities de ON de.entity_id = e.id
+               WHERE e.type = ?
+               GROUP BY e.id
+               ORDER BY doc_count DESC LIMIT ?""",
+            (entity_type, limit),
+        ).fetchall()
+
+        all_years = set()
+        results = []
+        for ent in top:
+            yearly = conn.execute(
+                """SELECT SUBSTR(d.date, 1, 4) as year, SUM(de.count) as mentions
+                   FROM document_entities de
+                   JOIN documents d ON d.id = de.document_id
+                   WHERE de.entity_id = ?
+                     AND d.date IS NOT NULL AND d.date != ''
+                   GROUP BY year ORDER BY year""",
+                (ent["id"],),
+            ).fetchall()
+            by_year = {y["year"]: y["mentions"] for y in yearly}
+            all_years.update(by_year.keys())
+            results.append(
+                {
+                    "id": ent["id"],
+                    "name": ent["name"],
+                    "doc_count": ent["doc_count"],
+                    "total_mentions": ent["total_mentions"],
+                    "by_year": by_year,
+                }
+            )
+
+    return {"entities": results, "years": sorted(all_years), "type": entity_type}
+
+
+# ═══════════════════════════════════════════
+# FLAGGED DOCUMENTS HUB
+# ═══════════════════════════════════════════
+
+
+@app.get("/api/flagged-hub")
+def flagged_hub():
+    """Centralized view for flagged/bookmarked documents with notes and entities."""
+    with get_db() as conn:
+        flagged = conn.execute(
+            """SELECT d.id, d.title, d.filename, d.category, d.source, d.date,
+                      d.pages, d.notes, d.flagged
+               FROM documents d
+               WHERE d.flagged = 1
+               ORDER BY d.date DESC"""
+        ).fetchall()
+
+        results = []
+        for doc in flagged:
+            entities = conn.execute(
+                """SELECT e.name, e.type, de.count
+                   FROM entities e
+                   JOIN document_entities de ON de.entity_id = e.id
+                   WHERE de.document_id = ?
+                   ORDER BY de.count DESC LIMIT 8""",
+                (doc["id"],),
+            ).fetchall()
+
+            note_count = conn.execute(
+                "SELECT COUNT(*) FROM analyst_notes WHERE document_id = ?",
+                (doc["id"],),
+            ).fetchone()[0]
+
+            annotation_count = conn.execute(
+                "SELECT COUNT(*) FROM annotations WHERE document_id = ?",
+                (doc["id"],),
+            ).fetchone()[0]
+
+            results.append(
+                {
+                    **dict(doc),
+                    "entities": [dict(e) for e in entities],
+                    "analyst_notes": note_count,
+                    "annotations": annotation_count,
+                }
+            )
+
+    return {"flagged": results, "total": len(results)}
+
+
+# ═══════════════════════════════════════════
 # STATIC FILES (serve the frontend)
 # ═══════════════════════════════════════════
 
