@@ -8434,6 +8434,248 @@ def entity_pair_history(entity_a: int = 0, entity_b: int = 0):
     }
 
 
+# ── Financial Entity Links ───────────────────────────
+
+
+@app.get("/api/financial-entity-links")
+def financial_entity_links(limit: int = 50):
+    """Entities connected to financial indicators."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT e.id, e.name, e.type, "
+            "COUNT(DISTINCT fi.id) as indicator_count, "
+            "SUM(fi.risk_score) as total_risk, "
+            "GROUP_CONCAT(DISTINCT fi.indicator_type) as indicator_types, "
+            "COUNT(DISTINCT fi.document_id) as doc_count "
+            "FROM entities e "
+            "JOIN document_entities de ON de.entity_id = e.id "
+            "JOIN financial_indicators fi ON fi.document_id = de.document_id "
+            "GROUP BY e.id "
+            "ORDER BY indicator_count DESC, total_risk DESC "
+            "LIMIT ?",
+            (limit,),
+        ).fetchall()
+
+    return {"entities": [dict(r) for r in rows]}
+
+
+# ── Document Cluster by Source ───────────────────────
+
+
+@app.get("/api/doc-source-cluster")
+def doc_source_cluster():
+    """Docs grouped by source with entity overlap stats."""
+    with get_db() as conn:
+        sources = conn.execute(
+            "SELECT source, COUNT(*) as doc_count, "
+            "SUM(pages) as total_pages "
+            "FROM documents "
+            "WHERE source IS NOT NULL AND source != '' "
+            "GROUP BY source ORDER BY doc_count DESC"
+        ).fetchall()
+
+        clusters = []
+        for s in sources:
+            ent_count = conn.execute(
+                "SELECT COUNT(DISTINCT de.entity_id) as cnt "
+                "FROM document_entities de "
+                "JOIN documents d ON d.id = de.document_id "
+                "WHERE d.source = ?",
+                (s["source"],),
+            ).fetchone()["cnt"]
+
+            top_ents = conn.execute(
+                "SELECT e.name, e.type, SUM(de.count) as mentions "
+                "FROM entities e "
+                "JOIN document_entities de ON de.entity_id = e.id "
+                "JOIN documents d ON d.id = de.document_id "
+                "WHERE d.source = ? "
+                "GROUP BY e.id ORDER BY mentions DESC LIMIT 5",
+                (s["source"],),
+            ).fetchall()
+
+            cats = conn.execute(
+                "SELECT category, COUNT(*) as cnt FROM documents "
+                "WHERE source = ? GROUP BY category ORDER BY cnt DESC",
+                (s["source"],),
+            ).fetchall()
+
+            clusters.append(
+                {
+                    "source": s["source"],
+                    "doc_count": s["doc_count"],
+                    "total_pages": s["total_pages"] or 0,
+                    "unique_entities": ent_count,
+                    "top_entities": [dict(e) for e in top_ents],
+                    "categories": [dict(c) for c in cats],
+                }
+            )
+
+    return {"clusters": clusters}
+
+
+# ── Timeline Gaps ────────────────────────────────────
+
+
+@app.get("/api/timeline-gaps")
+def timeline_gaps(min_gap_days: int = 30):
+    """Largest gaps in the event timeline."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT DISTINCT event_date FROM events "
+            "WHERE event_date IS NOT NULL AND event_date != '' "
+            "AND LENGTH(event_date) >= 10 "
+            "ORDER BY event_date"
+        ).fetchall()
+
+    from datetime import datetime
+
+    dates = []
+    for r in rows:
+        try:
+            dates.append(datetime.strptime(r["event_date"][:10], "%Y-%m-%d"))
+        except ValueError:
+            continue
+
+    gaps = []
+    for i in range(1, len(dates)):
+        delta = (dates[i] - dates[i - 1]).days
+        if delta >= min_gap_days:
+            gaps.append(
+                {
+                    "start": dates[i - 1].strftime("%Y-%m-%d"),
+                    "end": dates[i].strftime("%Y-%m-%d"),
+                    "gap_days": delta,
+                }
+            )
+
+    gaps.sort(key=lambda x: x["gap_days"], reverse=True)
+    return {
+        "gaps": gaps,
+        "total_gaps": len(gaps),
+        "total_dates": len(dates),
+        "date_range": {
+            "start": dates[0].strftime("%Y-%m-%d") if dates else None,
+            "end": dates[-1].strftime("%Y-%m-%d") if dates else None,
+        },
+    }
+
+
+# ── Entity Degree Distribution ───────────────────────
+
+
+@app.get("/api/entity-degree-distribution")
+def entity_degree_distribution():
+    """How many connections each entity has."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT e.id, e.name, e.type, "
+            "(SELECT COUNT(*) FROM entity_connections ec "
+            " WHERE ec.entity_a_id = e.id OR ec.entity_b_id = e.id) as degree "
+            "FROM entities e "
+            "WHERE (SELECT COUNT(*) FROM entity_connections ec "
+            "  WHERE ec.entity_a_id = e.id OR ec.entity_b_id = e.id) > 0 "
+            "ORDER BY degree DESC"
+        ).fetchall()
+
+    entities = [dict(r) for r in rows]
+    degrees = [e["degree"] for e in entities]
+
+    buckets = {"1": 0, "2-5": 0, "6-10": 0, "11-25": 0, "26-50": 0, ">50": 0}
+    for d in degrees:
+        if d == 1:
+            buckets["1"] += 1
+        elif d <= 5:
+            buckets["2-5"] += 1
+        elif d <= 10:
+            buckets["6-10"] += 1
+        elif d <= 25:
+            buckets["11-25"] += 1
+        elif d <= 50:
+            buckets["26-50"] += 1
+        else:
+            buckets[">50"] += 1
+
+    return {
+        "entities": entities[:100],
+        "total_connected": len(entities),
+        "avg_degree": round(sum(degrees) / len(degrees), 1) if degrees else 0,
+        "max_degree": max(degrees) if degrees else 0,
+        "buckets": buckets,
+    }
+
+
+# ── Multi-Mention Docs ──────────────────────────────
+
+
+@app.get("/api/multi-mention-docs")
+def multi_mention_docs(limit: int = 50):
+    """Documents with highest entity diversity."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT d.id, d.title, d.filename, d.category, d.source, d.pages, "
+            "COUNT(DISTINCT de.entity_id) as unique_entities, "
+            "SUM(de.count) as total_mentions "
+            "FROM documents d "
+            "JOIN document_entities de ON de.document_id = d.id "
+            "GROUP BY d.id "
+            "ORDER BY unique_entities DESC "
+            "LIMIT ?",
+            (limit,),
+        ).fetchall()
+
+    return {"documents": [dict(r) for r in rows]}
+
+
+# ── Flagged Summary ──────────────────────────────────
+
+
+@app.get("/api/flagged-summary")
+def flagged_summary():
+    """Summary dashboard of all flagged documents."""
+    with get_db() as conn:
+        flagged = conn.execute(
+            "SELECT d.id, d.title, d.filename, d.category, d.source, d.date, "
+            "d.pages, d.notes, d.flagged "
+            "FROM documents d WHERE d.flagged = 1 "
+            "ORDER BY d.id"
+        ).fetchall()
+
+        total = conn.execute("SELECT COUNT(*) as cnt FROM documents").fetchone()["cnt"]
+
+        # Entity counts in flagged docs
+        if flagged:
+            fids = [f["id"] for f in flagged]
+            ph = ",".join("?" * len(fids))
+            top_ents = conn.execute(
+                f"SELECT e.name, e.type, COUNT(DISTINCT de.document_id) as doc_count, "
+                f"SUM(de.count) as mentions "
+                f"FROM entities e "
+                f"JOIN document_entities de ON de.entity_id = e.id "
+                f"WHERE de.document_id IN ({ph}) "
+                f"GROUP BY e.id ORDER BY doc_count DESC LIMIT 20",
+                fids,
+            ).fetchall()
+
+            by_cat = conn.execute(
+                f"SELECT category, COUNT(*) as cnt FROM documents "
+                f"WHERE id IN ({ph}) GROUP BY category ORDER BY cnt DESC",
+                fids,
+            ).fetchall()
+        else:
+            top_ents = []
+            by_cat = []
+
+    return {
+        "flagged": [dict(f) for f in flagged],
+        "total_flagged": len(flagged),
+        "total_documents": total,
+        "pct_flagged": round(len(flagged) / total * 100, 1) if total else 0,
+        "top_entities": [dict(e) for e in top_ents],
+        "by_category": [dict(c) for c in by_cat],
+    }
+
+
 # ═══════════════════════════════════════════
 # STATIC FILES (serve the frontend)
 # ═══════════════════════════════════════════

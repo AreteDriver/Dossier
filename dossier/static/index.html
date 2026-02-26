@@ -2027,6 +2027,8 @@ body::before {
 .xsource-view.active, .pagedist-view.active, .namelen-view.active, .ingesttl-view.active, .hvt-view.active, .kwcontext-view.active { display: flex; }
 .entconnmap-view, .docwords-view, .mentionheat-view, .srcquality-view, .eventcal-view, .pairhist-view { display: none; flex-direction: column; gap: 16px; }
 .entconnmap-view.active, .docwords-view.active, .mentionheat-view.active, .srcquality-view.active, .eventcal-view.active, .pairhist-view.active { display: flex; }
+.finentlinks-view, .docsrccluster-view, .tlgaps-view, .degreedist-view, .multimention-view, .flagsummary-view { display: none; flex-direction: column; gap: 16px; }
+.finentlinks-view.active, .docsrccluster-view.active, .tlgaps-view.active, .degreedist-view.active, .multimention-view.active, .flagsummary-view.active { display: flex; }
 .rel-edge { display: flex; align-items: center; gap: 8px; padding: 4px 0; border-bottom: 1px solid var(--border); }
 .sbs-col { flex: 1; padding: 12px; background: var(--bg-card); border-radius: var(--radius); border: 1px solid var(--border); overflow: hidden; }
 .sbs-header { font-family: var(--font-mono); font-size: 12px; font-weight: 600; color: var(--text-primary); margin-bottom: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -2479,6 +2481,30 @@ body::before {
       <div class="sidebar-item" data-view="pairhist" id="pairhistNav">
         <div class="sidebar-dot" style="background:var(--entity-person)"></div>
         Entity Pair History
+      </div>
+      <div class="sidebar-item" data-view="finentlinks" id="finentlinksNav">
+        <div class="sidebar-dot" style="background:var(--entity-org)"></div>
+        Financial Links
+      </div>
+      <div class="sidebar-item" data-view="docsrccluster" id="docsrcclusterNav">
+        <div class="sidebar-dot" style="background:var(--entity-place)"></div>
+        Source Clusters
+      </div>
+      <div class="sidebar-item" data-view="tlgaps" id="tlgapsNav">
+        <div class="sidebar-dot" style="background:#e05555"></div>
+        Timeline Gaps
+      </div>
+      <div class="sidebar-item" data-view="degreedist" id="degreedistNav">
+        <div class="sidebar-dot" style="background:var(--entity-person)"></div>
+        Degree Dist.
+      </div>
+      <div class="sidebar-item" data-view="multimention" id="multimentionNav">
+        <div class="sidebar-dot" style="background:var(--entity-org)"></div>
+        Multi-Mention Docs
+      </div>
+      <div class="sidebar-item" data-view="flagsummary" id="flagsummaryNav">
+        <div class="sidebar-dot" style="background:var(--entity-place)"></div>
+        Flagged Summary
       </div>
     </div>
 
@@ -3674,6 +3700,36 @@ body::before {
       <div id="pairhistContent">Enter two entity IDs to see co-occurrence history.</div>
     </div>
 
+    <div class="finentlinks-view" id="finentlinksView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Financial Entity Links</div>
+      <div id="finentlinksContent">Loading financial links...</div>
+    </div>
+
+    <div class="docsrccluster-view" id="docsrcclusterView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Source Clusters</div>
+      <div id="docsrcclusterContent">Loading source clusters...</div>
+    </div>
+
+    <div class="tlgaps-view" id="tlgapsView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Timeline Gaps</div>
+      <div id="tlgapsContent">Loading timeline gaps...</div>
+    </div>
+
+    <div class="degreedist-view" id="degreedistView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Entity Degree Distribution</div>
+      <div id="degreedistContent">Loading degree distribution...</div>
+    </div>
+
+    <div class="multimention-view" id="multimentionView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Multi-Mention Documents</div>
+      <div id="multimentionContent">Loading multi-mention docs...</div>
+    </div>
+
+    <div class="flagsummary-view" id="flagsummaryView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Flagged Summary</div>
+      <div id="flagsummaryContent">Loading flagged summary...</div>
+    </div>
+
   </main>
 
   <!-- RIGHT PANEL -->
@@ -4364,6 +4420,12 @@ function hideAllViews() {
   document.getElementById('srcqualityView').classList.remove('active');
   document.getElementById('eventcalView').classList.remove('active');
   document.getElementById('pairhistView').classList.remove('active');
+  document.getElementById('finentlinksView').classList.remove('active');
+  document.getElementById('docsrcclusterView').classList.remove('active');
+  document.getElementById('tlgapsView').classList.remove('active');
+  document.getElementById('degreedistView').classList.remove('active');
+  document.getElementById('multimentionView').classList.remove('active');
+  document.getElementById('flagsummaryView').classList.remove('active');
 }
 
 function showDocumentView() {
@@ -4507,6 +4569,12 @@ document.querySelectorAll('.sidebar-item[data-view]').forEach(item => {
     else if (view === 'srcquality') showSrcQualityView();
     else if (view === 'eventcal') showEventCalView();
     else if (view === 'pairhist') showPairHistView();
+    else if (view === 'finentlinks') showFinEntLinksView();
+    else if (view === 'docsrccluster') showDocSrcClusterView();
+    else if (view === 'tlgaps') showTlGapsView();
+    else if (view === 'degreedist') showDegreeDistView();
+    else if (view === 'multimention') showMultiMentionView();
+    else if (view === 'flagsummary') showFlagSummaryView();
   });
 });
 
@@ -5648,6 +5716,12 @@ function goBackFromReader() {
   else if (readerPreviousView === 'srcquality') showSrcQualityView();
   else if (readerPreviousView === 'eventcal') showEventCalView();
   else if (readerPreviousView === 'pairhist') showPairHistView();
+  else if (readerPreviousView === 'finentlinks') showFinEntLinksView();
+  else if (readerPreviousView === 'docsrccluster') showDocSrcClusterView();
+  else if (readerPreviousView === 'tlgaps') showTlGapsView();
+  else if (readerPreviousView === 'degreedist') showDegreeDistView();
+  else if (readerPreviousView === 'multimention') showMultiMentionView();
+  else if (readerPreviousView === 'flagsummary') showFlagSummaryView();
   else showDocumentView();
 }
 
@@ -11782,6 +11856,234 @@ async function loadPairHist() {
     }
     el.innerHTML = html;
   } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load pair history</div>'; }
+}
+
+
+// ── Financial Entity Links ──
+
+function showFinEntLinksView() {
+  currentView = 'finentlinks';
+  hideAllViews();
+  document.getElementById('finentlinksView').classList.add('active');
+  loadFinEntLinks();
+}
+
+async function loadFinEntLinks() {
+  const el = document.getElementById('finentlinksContent');
+  el.innerHTML = 'Loading financial entity links...';
+  try {
+    const data = await fetchJSON('/api/financial-entity-links?limit=50');
+    let html = `<div class="stat-card" style="margin-bottom:12px;"><div class="stat-value">${data.entities.length}</div><div class="stat-label">Entities with Financial Links</div></div>`;
+    if (data.entities.length) {
+      html += '<table class="data-table"><thead><tr><th>Entity</th><th>Type</th><th>Indicators</th><th>Risk Score</th><th>Docs</th><th>Indicator Types</th></tr></thead><tbody>';
+      data.entities.forEach(e => {
+        const riskColor = e.total_risk > 10 ? '#e05555' : e.total_risk > 5 ? '#f0ad4e' : 'var(--text-secondary)';
+        html += `<tr><td><strong>${e.name}</strong></td><td><span class="entity-tag ${e.type}">${e.type}</span></td>`;
+        html += `<td>${e.indicator_count}</td><td style="color:${riskColor};font-weight:600;">${e.total_risk || 0}</td>`;
+        html += `<td>${e.doc_count}</td><td style="font-size:10px;color:var(--text-muted);">${e.indicator_types || ''}</td></tr>`;
+      });
+      html += '</tbody></table>';
+    } else {
+      html += '<div style="color:var(--text-muted);">No financial entity links found.</div>';
+    }
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load financial links</div>'; }
+}
+
+
+// ── Source Clusters ──
+
+function showDocSrcClusterView() {
+  currentView = 'docsrccluster';
+  hideAllViews();
+  document.getElementById('docsrcclusterView').classList.add('active');
+  loadDocSrcCluster();
+}
+
+async function loadDocSrcCluster() {
+  const el = document.getElementById('docsrcclusterContent');
+  el.innerHTML = 'Loading source clusters...';
+  try {
+    const data = await fetchJSON('/api/doc-source-cluster');
+    let html = `<div class="stat-card" style="margin-bottom:12px;"><div class="stat-value">${data.clusters.length}</div><div class="stat-label">Source Clusters</div></div>`;
+    data.clusters.forEach(c => {
+      html += `<div style="background:var(--bg-card);padding:12px;border-radius:var(--radius);border:1px solid var(--border);margin-bottom:8px;">`;
+      html += `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">`;
+      html += `<strong style="font-size:13px;">${c.source}</strong>`;
+      html += `<span style="font-size:11px;color:var(--text-muted);">${c.doc_count} docs · ${c.total_pages} pages · ${c.unique_entities} entities</span></div>`;
+      if (c.categories.length) {
+        html += '<div style="margin-bottom:4px;">';
+        c.categories.forEach(cat => html += `<span style="font-size:10px;background:var(--bg-primary);padding:2px 6px;border-radius:3px;margin-right:4px;">${cat.category}: ${cat.cnt}</span>`);
+        html += '</div>';
+      }
+      if (c.top_entities.length) {
+        c.top_entities.forEach(e => html += `<span class="entity-tag ${e.type}" style="font-size:9px;">${e.name} (${e.mentions})</span> `);
+      }
+      html += '</div>';
+    });
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load source clusters</div>'; }
+}
+
+
+// ── Timeline Gaps ──
+
+function showTlGapsView() {
+  currentView = 'tlgaps';
+  hideAllViews();
+  document.getElementById('tlgapsView').classList.add('active');
+  loadTlGaps();
+}
+
+async function loadTlGaps() {
+  const el = document.getElementById('tlgapsContent');
+  el.innerHTML = 'Analyzing timeline gaps...';
+  try {
+    const data = await fetchJSON('/api/timeline-gaps?min_gap_days=30');
+    let html = `<div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:12px;">`;
+    html += `<div class="stat-card"><div class="stat-value">${data.total_gaps}</div><div class="stat-label">Gaps (30+ days)</div></div>`;
+    html += `<div class="stat-card"><div class="stat-value">${data.total_dates}</div><div class="stat-label">Unique Dates</div></div>`;
+    if (data.date_range.start) html += `<div class="stat-card"><div class="stat-value" style="font-size:13px;">${data.date_range.start}</div><div class="stat-label">First Date</div></div>`;
+    if (data.date_range.end) html += `<div class="stat-card"><div class="stat-value" style="font-size:13px;">${data.date_range.end}</div><div class="stat-label">Last Date</div></div>`;
+    html += `</div>`;
+
+    if (data.gaps.length) {
+      const maxG = data.gaps[0].gap_days;
+      html += '<table class="data-table"><thead><tr><th>Start</th><th>End</th><th>Gap (days)</th><th>Size</th></tr></thead><tbody>';
+      data.gaps.forEach(g => {
+        const pct = maxG ? (g.gap_days / maxG * 100).toFixed(0) : 0;
+        const color = g.gap_days > 365 ? '#e05555' : g.gap_days > 90 ? '#f0ad4e' : 'var(--text-secondary)';
+        html += `<tr><td>${g.start}</td><td>${g.end}</td><td style="color:${color};font-weight:500;">${g.gap_days}</td>`;
+        html += `<td><div style="width:100px;height:12px;background:var(--bg-card);border-radius:3px;overflow:hidden;display:inline-block;">`;
+        html += `<div style="width:${pct}%;height:100%;background:${color};border-radius:3px;"></div></div></td></tr>`;
+      });
+      html += '</tbody></table>';
+    }
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load timeline gaps</div>'; }
+}
+
+
+// ── Entity Degree Distribution ──
+
+function showDegreeDistView() {
+  currentView = 'degreedist';
+  hideAllViews();
+  document.getElementById('degreedistView').classList.add('active');
+  loadDegreeDist();
+}
+
+async function loadDegreeDist() {
+  const el = document.getElementById('degreedistContent');
+  el.innerHTML = 'Computing degree distribution...';
+  try {
+    const data = await fetchJSON('/api/entity-degree-distribution');
+    let html = `<div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:12px;">`;
+    html += `<div class="stat-card"><div class="stat-value">${data.total_connected}</div><div class="stat-label">Connected Entities</div></div>`;
+    html += `<div class="stat-card"><div class="stat-value">${data.avg_degree}</div><div class="stat-label">Avg Degree</div></div>`;
+    html += `<div class="stat-card"><div class="stat-value">${data.max_degree}</div><div class="stat-label">Max Degree</div></div>`;
+    html += `</div>`;
+
+    const buckets = Object.entries(data.buckets);
+    const maxB = Math.max(...buckets.map(b => b[1]));
+    html += '<div style="font-size:12px;font-weight:600;margin-bottom:8px;color:var(--text-secondary);">Degree Ranges</div>';
+    buckets.forEach(([label, cnt]) => {
+      const pct = maxB ? (cnt / maxB * 100).toFixed(0) : 0;
+      html += `<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">`;
+      html += `<span style="width:50px;font-size:11px;text-align:right;color:var(--text-muted);">${label}</span>`;
+      html += `<div style="flex:1;height:18px;background:var(--bg-card);border-radius:3px;overflow:hidden;">`;
+      html += `<div style="width:${pct}%;height:100%;background:var(--accent);border-radius:3px;"></div></div>`;
+      html += `<span style="width:40px;font-size:11px;color:var(--text-secondary);">${cnt}</span></div>`;
+    });
+
+    if (data.entities.length) {
+      html += '<div style="font-size:12px;font-weight:600;margin:12px 0 8px;color:var(--text-secondary);">Most Connected Entities</div>';
+      html += '<table class="data-table"><thead><tr><th>Entity</th><th>Type</th><th>Degree</th></tr></thead><tbody>';
+      data.entities.slice(0, 30).forEach(e => {
+        html += `<tr><td><strong>${e.name}</strong></td><td><span class="entity-tag ${e.type}">${e.type}</span></td><td>${e.degree}</td></tr>`;
+      });
+      html += '</tbody></table>';
+    }
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load degree distribution</div>'; }
+}
+
+
+// ── Multi-Mention Docs ──
+
+function showMultiMentionView() {
+  currentView = 'multimention';
+  hideAllViews();
+  document.getElementById('multimentionView').classList.add('active');
+  loadMultiMention();
+}
+
+async function loadMultiMention() {
+  const el = document.getElementById('multimentionContent');
+  el.innerHTML = 'Loading multi-mention docs...';
+  try {
+    const data = await fetchJSON('/api/multi-mention-docs?limit=50');
+    let html = `<div class="stat-card" style="margin-bottom:12px;"><div class="stat-value">${data.documents.length}</div><div class="stat-label">Top Docs by Entity Diversity</div></div>`;
+    if (data.documents.length) {
+      html += '<table class="data-table"><thead><tr><th>Document</th><th>Category</th><th>Source</th><th>Unique Entities</th><th>Total Mentions</th><th>Pages</th></tr></thead><tbody>';
+      data.documents.forEach(d => {
+        html += `<tr><td><a href="#" onclick="openReader(${d.id});return false;">${(d.title || d.filename).substring(0,45)}</a></td>`;
+        html += `<td>${d.category||''}</td><td>${d.source||''}</td>`;
+        html += `<td style="font-weight:600;">${d.unique_entities}</td><td>${d.total_mentions}</td><td>${d.pages||0}</td></tr>`;
+      });
+      html += '</tbody></table>';
+    }
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load multi-mention docs</div>'; }
+}
+
+
+// ── Flagged Summary ──
+
+function showFlagSummaryView() {
+  currentView = 'flagsummary';
+  hideAllViews();
+  document.getElementById('flagsummaryView').classList.add('active');
+  loadFlagSummary();
+}
+
+async function loadFlagSummary() {
+  const el = document.getElementById('flagsummaryContent');
+  el.innerHTML = 'Loading flagged summary...';
+  try {
+    const data = await fetchJSON('/api/flagged-summary');
+    let html = `<div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:12px;">`;
+    html += `<div class="stat-card"><div class="stat-value">${data.total_flagged}</div><div class="stat-label">Flagged</div></div>`;
+    html += `<div class="stat-card"><div class="stat-value">${data.total_documents}</div><div class="stat-label">Total Docs</div></div>`;
+    html += `<div class="stat-card"><div class="stat-value">${data.pct_flagged}%</div><div class="stat-label">% Flagged</div></div>`;
+    html += `</div>`;
+
+    if (data.by_category.length) {
+      html += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">';
+      data.by_category.forEach(c => html += `<span style="font-size:11px;background:var(--bg-card);padding:3px 8px;border-radius:3px;">${c.category}: ${c.cnt}</span>`);
+      html += '</div>';
+    }
+
+    if (data.top_entities.length) {
+      html += '<div style="font-size:12px;font-weight:600;margin-bottom:6px;color:var(--text-secondary);">Top Entities in Flagged Docs</div>';
+      html += '<div style="margin-bottom:12px;">';
+      data.top_entities.forEach(e => html += `<span class="entity-tag ${e.type}" style="font-size:9px;">${e.name} (${e.doc_count})</span> `);
+      html += '</div>';
+    }
+
+    if (data.flagged.length) {
+      html += '<table class="data-table"><thead><tr><th>Document</th><th>Category</th><th>Source</th><th>Date</th><th>Notes</th></tr></thead><tbody>';
+      data.flagged.forEach(d => {
+        html += `<tr><td><a href="#" onclick="openReader(${d.id});return false;">${(d.title || d.filename).substring(0,45)}</a></td>`;
+        html += `<td>${d.category||''}</td><td>${d.source||''}</td><td>${d.date||''}</td>`;
+        html += `<td style="font-size:11px;color:var(--text-muted);">${(d.notes||'').substring(0,50)}</td></tr>`;
+      });
+      html += '</tbody></table>';
+    } else {
+      html += '<div style="color:var(--text-muted);">No flagged documents.</div>';
+    }
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load flagged summary</div>'; }
 }
 
 
