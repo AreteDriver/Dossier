@@ -2071,6 +2071,8 @@ body::before {
 .entbetween-view.active, .docsrcdiv-view.active, .evtburst-view.active, .srcuniqent-view.active, .entlifecycle-view.active, .conngrowth-view.active { display: flex; }
 .entsrcloyalty-view, .docpageoutlier-view, .evtconftrend-view, .srcingestcad-view, .entconndensity-view, .conntempoverlap-view { display: none; flex-direction: column; gap: 16px; }
 .entsrcloyalty-view.active, .docpageoutlier-view.active, .evtconftrend-view.active, .srcingestcad-view.active, .entconndensity-view.active, .conntempoverlap-view.active { display: flex; }
+.entdocexcl-view, .docflagtimeline-view, .evtprechist-view, .srcenttypemix-view, .entaliaschain-view, .connwtpctl-view { display: none; flex-direction: column; gap: 16px; }
+.entdocexcl-view.active, .docflagtimeline-view.active, .evtprechist-view.active, .srcenttypemix-view.active, .entaliaschain-view.active, .connwtpctl-view.active { display: flex; }
 .rel-edge { display: flex; align-items: center; gap: 8px; padding: 4px 0; border-bottom: 1px solid var(--border); }
 .sbs-col { flex: 1; padding: 12px; background: var(--bg-card); border-radius: var(--radius); border: 1px solid var(--border); overflow: hidden; }
 .sbs-header { font-family: var(--font-mono); font-size: 12px; font-weight: 600; color: var(--text-primary); margin-bottom: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -3051,6 +3053,30 @@ body::before {
       <div class="sidebar-item" data-view="conntempoverlap" id="conntempoverlapNav">
         <div class="sidebar-dot" style="background:var(--entity-org)"></div>
         Connection Temporal Overlap
+      </div>
+      <div class="sidebar-item" data-view="entdocexcl" id="entdocexclNav">
+        <div class="sidebar-dot" style="background:var(--entity-person)"></div>
+        Entity Document Exclusivity
+      </div>
+      <div class="sidebar-item" data-view="docflagtimeline" id="docflagtimelineNav">
+        <div class="sidebar-dot" style="background:var(--accent)"></div>
+        Document Flagged Timeline
+      </div>
+      <div class="sidebar-item" data-view="evtprechist" id="evtprechistNav">
+        <div class="sidebar-dot" style="background:var(--danger)"></div>
+        Event Precision Histogram
+      </div>
+      <div class="sidebar-item" data-view="srcenttypemix" id="srcenttypemixNav">
+        <div class="sidebar-dot" style="background:var(--entity-location)"></div>
+        Source Entity Type Mix
+      </div>
+      <div class="sidebar-item" data-view="entaliaschain" id="entaliaschainNav">
+        <div class="sidebar-dot" style="background:var(--entity-person)"></div>
+        Entity Alias Chain
+      </div>
+      <div class="sidebar-item" data-view="connwtpctl" id="connwtpctlNav">
+        <div class="sidebar-dot" style="background:var(--entity-org)"></div>
+        Connection Weight Percentile
       </div>
     </div>
 
@@ -4906,6 +4932,36 @@ body::before {
       <div id="conntempoverlapContent">Loading temporal overlap...</div>
     </div>
 
+    <div class="entdocexcl-view" id="entdocexclView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Entity Document Exclusivity</div>
+      <div id="entdocexclContent">Loading entity exclusivity...</div>
+    </div>
+
+    <div class="docflagtimeline-view" id="docflagtimelineView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Document Flagged Timeline</div>
+      <div id="docflagtimelineContent">Loading flagged timeline...</div>
+    </div>
+
+    <div class="evtprechist-view" id="evtprechistView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Event Precision Histogram</div>
+      <div id="evtprechistContent">Loading precision histogram...</div>
+    </div>
+
+    <div class="srcenttypemix-view" id="srcenttypemixView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Source Entity Type Mix</div>
+      <div id="srcenttypemixContent">Loading entity type mix...</div>
+    </div>
+
+    <div class="entaliaschain-view" id="entaliaschainView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Entity Alias Chain</div>
+      <div id="entaliaschainContent">Loading alias chains...</div>
+    </div>
+
+    <div class="connwtpctl-view" id="connwtpctlView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Connection Weight Percentile</div>
+      <div id="connwtpctlContent">Loading weight percentiles...</div>
+    </div>
+
   </main>
 
   <!-- RIGHT PANEL -->
@@ -5728,6 +5784,12 @@ function hideAllViews() {
   document.getElementById('srcingestcadView').classList.remove('active');
   document.getElementById('entconndensityView').classList.remove('active');
   document.getElementById('conntempoverlapView').classList.remove('active');
+  document.getElementById('entdocexclView').classList.remove('active');
+  document.getElementById('docflagtimelineView').classList.remove('active');
+  document.getElementById('evtprechistView').classList.remove('active');
+  document.getElementById('srcenttypemixView').classList.remove('active');
+  document.getElementById('entaliaschainView').classList.remove('active');
+  document.getElementById('connwtpctlView').classList.remove('active');
 }
 
 function showDocumentView() {
@@ -6003,6 +6065,12 @@ document.querySelectorAll('.sidebar-item[data-view]').forEach(item => {
     else if (view === 'srcingestcad') showSrcIngestCadView();
     else if (view === 'entconndensity') showEntConnDensityView();
     else if (view === 'conntempoverlap') showConnTempOverlapView();
+    else if (view === 'entdocexcl') showEntDocExclView();
+    else if (view === 'docflagtimeline') showDocFlagTimelineView();
+    else if (view === 'evtprechist') showEvtPrecHistView();
+    else if (view === 'srcenttypemix') showSrcEntTypeMixView();
+    else if (view === 'entaliaschain') showEntAliasChainView();
+    else if (view === 'connwtpctl') showConnWtPctlView();
   });
 });
 
@@ -7276,6 +7344,12 @@ function goBackFromReader() {
   else if (readerPreviousView === 'srcingestcad') showSrcIngestCadView();
   else if (readerPreviousView === 'entconndensity') showEntConnDensityView();
   else if (readerPreviousView === 'conntempoverlap') showConnTempOverlapView();
+  else if (readerPreviousView === 'entdocexcl') showEntDocExclView();
+  else if (readerPreviousView === 'docflagtimeline') showDocFlagTimelineView();
+  else if (readerPreviousView === 'evtprechist') showEvtPrecHistView();
+  else if (readerPreviousView === 'srcenttypemix') showSrcEntTypeMixView();
+  else if (readerPreviousView === 'entaliaschain') showEntAliasChainView();
+  else if (readerPreviousView === 'connwtpctl') showConnWtPctlView();
   else showDocumentView();
 }
 
@@ -17131,6 +17205,150 @@ async function loadConnTempOverlap() {
     html += '</tbody></table>';
     el.innerHTML = html;
   } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load temporal overlap</div>'; }
+}
+
+function showEntDocExclView() {
+  currentView = 'entdocexcl';
+  hideAllViews();
+  document.getElementById('entdocexclView').classList.add('active');
+  loadEntDocExcl();
+}
+async function loadEntDocExcl() {
+  const el = document.getElementById('entdocexclContent');
+  try {
+    const res = await fetch('/api/entity-document-exclusivity');
+    const data = await res.json();
+    let html = `<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:16px;">`;
+    html += `<div style="background:var(--bg-secondary);padding:12px;border-radius:6px;"><div style="font-size:11px;color:var(--text-muted);">Total Entities</div><div style="font-size:20px;font-weight:700;color:var(--text-primary);">${data.total_entities}</div></div>`;
+    html += `<div style="background:var(--bg-secondary);padding:12px;border-radius:6px;"><div style="font-size:11px;color:var(--text-muted);">Single-Doc Exclusive</div><div style="font-size:20px;font-weight:700;color:var(--accent);">${data.exclusive_count}</div></div></div>`;
+    if (data.entities.length) {
+      html += '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="border-bottom:2px solid var(--border);"><th style="text-align:left;padding:8px;">Entity</th><th style="text-align:left;padding:8px;">Type</th></tr></thead><tbody>';
+      data.entities.forEach(r => {
+        html += `<tr style="border-bottom:1px solid var(--border);"><td style="padding:8px;font-weight:600;">${r.name}</td><td style="padding:8px;"><span class="entity-tag ${r.type}">${r.type}</span></td></tr>`;
+      });
+      html += '</tbody></table>';
+    }
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load entity exclusivity</div>'; }
+}
+
+function showDocFlagTimelineView() {
+  currentView = 'docflagtimeline';
+  hideAllViews();
+  document.getElementById('docflagtimelineView').classList.add('active');
+  loadDocFlagTimeline();
+}
+async function loadDocFlagTimeline() {
+  const el = document.getElementById('docflagtimelineContent');
+  try {
+    const res = await fetch('/api/document-flagged-timeline');
+    const data = await res.json();
+    let html = `<div style="background:var(--bg-secondary);padding:12px;border-radius:6px;margin-bottom:16px;"><div style="font-size:11px;color:var(--text-muted);">Total Flagged</div><div style="font-size:20px;font-weight:700;color:var(--danger);">${data.total_flagged}</div></div>`;
+    if (data.months.length) {
+      const max = Math.max(...data.months.map(r => r.flagged_count));
+      html += '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="border-bottom:2px solid var(--border);"><th style="text-align:left;padding:8px;">Month</th><th style="text-align:right;padding:8px;">Flagged</th><th style="text-align:left;padding:8px;width:50%;">Bar</th></tr></thead><tbody>';
+      data.months.forEach(r => {
+        const pct = max > 0 ? (r.flagged_count / max * 100) : 0;
+        html += `<tr style="border-bottom:1px solid var(--border);"><td style="padding:8px;font-weight:600;">${r.month}</td><td style="text-align:right;padding:8px;">${r.flagged_count}</td><td style="padding:8px;"><div style="background:var(--danger);height:14px;border-radius:3px;width:${pct}%;"></div></td></tr>`;
+      });
+      html += '</tbody></table>';
+    } else { html += '<div style="color:var(--text-muted);">No flagged documents with dates.</div>'; }
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load flagged timeline</div>'; }
+}
+
+function showEvtPrecHistView() {
+  currentView = 'evtprechist';
+  hideAllViews();
+  document.getElementById('evtprechistView').classList.add('active');
+  loadEvtPrecHist();
+}
+async function loadEvtPrecHist() {
+  const el = document.getElementById('evtprechistContent');
+  try {
+    const res = await fetch('/api/event-precision-histogram');
+    const data = await res.json();
+    let html = `<div style="background:var(--bg-secondary);padding:12px;border-radius:6px;margin-bottom:16px;"><div style="font-size:11px;color:var(--text-muted);">Total Events</div><div style="font-size:20px;font-weight:700;color:var(--text-primary);">${data.total_events}</div></div>`;
+    if (data.buckets.length) {
+      html += '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="border-bottom:2px solid var(--border);"><th style="text-align:left;padding:8px;">Precision</th><th style="text-align:right;padding:8px;">Count</th><th style="text-align:right;padding:8px;">%</th><th style="text-align:left;padding:8px;width:40%;">Bar</th></tr></thead><tbody>';
+      data.buckets.forEach(r => {
+        html += `<tr style="border-bottom:1px solid var(--border);"><td style="padding:8px;font-weight:600;">${r.precision}</td><td style="text-align:right;padding:8px;">${r.count}</td><td style="text-align:right;padding:8px;">${r.pct}%</td><td style="padding:8px;"><div style="background:var(--accent);height:14px;border-radius:3px;width:${r.pct}%;"></div></td></tr>`;
+      });
+      html += '</tbody></table>';
+    }
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load precision histogram</div>'; }
+}
+
+function showSrcEntTypeMixView() {
+  currentView = 'srcenttypemix';
+  hideAllViews();
+  document.getElementById('srcenttypemixView').classList.add('active');
+  loadSrcEntTypeMix();
+}
+async function loadSrcEntTypeMix() {
+  const el = document.getElementById('srcenttypemixContent');
+  try {
+    const res = await fetch('/api/source-entity-type-mix');
+    const data = await res.json();
+    if (!data.sources.length) { el.innerHTML = '<div style="color:var(--text-muted);">No source data.</div>'; return; }
+    let html = '';
+    data.sources.forEach(s => {
+      const max = Math.max(...s.types.map(t => t.count));
+      html += `<div style="margin-bottom:16px;"><div style="font-weight:700;font-size:14px;margin-bottom:8px;color:var(--text-primary);">${s.source}</div>`;
+      s.types.forEach(t => {
+        const pct = max > 0 ? (t.count / max * 100) : 0;
+        html += `<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;"><span class="entity-tag ${t.type}" style="min-width:80px;">${t.type}</span><span style="min-width:40px;text-align:right;font-size:13px;">${t.count}</span><div style="flex:1;background:var(--bg-tertiary);height:14px;border-radius:3px;"><div style="background:var(--accent);height:14px;border-radius:3px;width:${pct}%;"></div></div></div>`;
+      });
+      html += '</div>';
+    });
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load entity type mix</div>'; }
+}
+
+function showEntAliasChainView() {
+  currentView = 'entaliaschain';
+  hideAllViews();
+  document.getElementById('entaliaschainView').classList.add('active');
+  loadEntAliasChain();
+}
+async function loadEntAliasChain() {
+  const el = document.getElementById('entaliaschainContent');
+  try {
+    const res = await fetch('/api/entity-alias-chain');
+    const data = await res.json();
+    if (!data.entities.length) { el.innerHTML = '<div style="color:var(--text-muted);">No alias data.</div>'; return; }
+    let html = '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="border-bottom:2px solid var(--border);"><th style="text-align:left;padding:8px;">Entity</th><th style="text-align:left;padding:8px;">Type</th><th style="text-align:right;padding:8px;">Aliases</th><th style="text-align:left;padding:8px;">Alias Names</th></tr></thead><tbody>';
+    data.entities.forEach(r => {
+      const tags = r.aliases.map(a => `<span style="background:var(--bg-tertiary);padding:2px 6px;border-radius:3px;font-size:11px;margin:2px;">${a}</span>`).join(' ');
+      html += `<tr style="border-bottom:1px solid var(--border);"><td style="padding:8px;font-weight:600;">${r.name}</td><td style="padding:8px;"><span class="entity-tag ${r.type}">${r.type}</span></td><td style="text-align:right;padding:8px;font-weight:700;">${r.alias_count}</td><td style="padding:8px;">${tags}</td></tr>`;
+    });
+    html += '</tbody></table>';
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load alias chains</div>'; }
+}
+
+function showConnWtPctlView() {
+  currentView = 'connwtpctl';
+  hideAllViews();
+  document.getElementById('connwtpctlView').classList.add('active');
+  loadConnWtPctl();
+}
+async function loadConnWtPctl() {
+  const el = document.getElementById('connwtpctlContent');
+  try {
+    const res = await fetch('/api/connection-weight-percentile');
+    const data = await res.json();
+    let html = `<div style="background:var(--bg-secondary);padding:12px;border-radius:6px;margin-bottom:16px;"><div style="font-size:11px;color:var(--text-muted);">Total Connections</div><div style="font-size:20px;font-weight:700;color:var(--text-primary);">${data.total}</div></div>`;
+    if (data.percentiles.length) {
+      html += '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="border-bottom:2px solid var(--border);"><th style="text-align:left;padding:8px;">Percentile</th><th style="text-align:right;padding:8px;">Count</th><th style="text-align:right;padding:8px;">Min Wt</th><th style="text-align:right;padding:8px;">Max Wt</th><th style="text-align:right;padding:8px;">Avg Wt</th></tr></thead><tbody>';
+      data.percentiles.forEach(r => {
+        html += `<tr style="border-bottom:1px solid var(--border);"><td style="padding:8px;font-weight:600;">${r.label}</td><td style="text-align:right;padding:8px;">${r.count}</td><td style="text-align:right;padding:8px;">${r.min_weight}</td><td style="text-align:right;padding:8px;">${r.max_weight}</td><td style="text-align:right;padding:8px;font-weight:700;">${r.avg_weight}</td></tr>`;
+      });
+      html += '</tbody></table>';
+    } else { html += '<div style="color:var(--text-muted);">No connection data.</div>'; }
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load weight percentiles</div>'; }
 }
 
 // ─── INIT ───

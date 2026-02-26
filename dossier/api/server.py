@@ -11745,6 +11745,145 @@ def connection_temporal_overlap():
     return {"pairs": [dict(r) for r in rows]}
 
 
+# ── Round 42 ─────────────────────────────────────────────────────────
+
+
+@app.get("/api/entity-document-exclusivity")
+def entity_document_exclusivity():
+    """Entities that appear in only one document."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT e.id, e.name, e.type, COUNT(de.document_id) AS doc_count "
+            "FROM entities e "
+            "JOIN document_entities de ON de.entity_id = e.id "
+            "GROUP BY e.id HAVING doc_count = 1 "
+            "ORDER BY e.name LIMIT 200"
+        ).fetchall()
+        total = conn.execute("SELECT COUNT(*) AS c FROM entities").fetchone()["c"]
+    return {
+        "total_entities": total,
+        "exclusive_count": len(rows),
+        "entities": [dict(r) for r in rows],
+    }
+
+
+@app.get("/api/document-flagged-timeline")
+def document_flagged_timeline():
+    """Flagged documents grouped by date."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT SUBSTR(date, 1, 7) AS month, COUNT(*) AS flagged_count "
+            "FROM documents "
+            "WHERE flagged = 1 AND date IS NOT NULL AND LENGTH(date) >= 7 "
+            "GROUP BY month ORDER BY month"
+        ).fetchall()
+        total_flagged = conn.execute(
+            "SELECT COUNT(*) AS c FROM documents WHERE flagged = 1"
+        ).fetchone()["c"]
+    return {"total_flagged": total_flagged, "months": [dict(r) for r in rows]}
+
+
+@app.get("/api/event-precision-histogram")
+def event_precision_histogram():
+    """Distribution of event date precision values."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT COALESCE(precision, 'unknown') AS prec, COUNT(*) AS cnt "
+            "FROM events GROUP BY prec ORDER BY cnt DESC"
+        ).fetchall()
+        total = sum(r["cnt"] for r in rows) if rows else 0
+    results = []
+    for r in rows:
+        results.append(
+            {
+                "precision": r["prec"],
+                "count": r["cnt"],
+                "pct": round(r["cnt"] / total * 100, 1) if total else 0,
+            }
+        )
+    return {"total_events": total, "buckets": results}
+
+
+@app.get("/api/source-entity-type-mix")
+def source_entity_type_mix():
+    """Entity type breakdown per source."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT d.source, e.type, COUNT(DISTINCT e.id) AS entity_count "
+            "FROM document_entities de "
+            "JOIN documents d ON d.id = de.document_id "
+            "JOIN entities e ON e.id = de.entity_id "
+            "WHERE d.source IS NOT NULL AND d.source != '' "
+            "GROUP BY d.source, e.type ORDER BY d.source, entity_count DESC"
+        ).fetchall()
+    sources = {}
+    for r in rows:
+        s = r["source"]
+        if s not in sources:
+            sources[s] = []
+        sources[s].append({"type": r["type"], "count": r["entity_count"]})
+    return {"sources": [{"source": k, "types": v} for k, v in sources.items()]}
+
+
+@app.get("/api/entity-alias-chain")
+def entity_alias_chain():
+    """Entities with most aliases and their alias names."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT e.id, e.name, e.type, COUNT(ea.id) AS alias_count "
+            "FROM entities e "
+            "JOIN entity_aliases ea ON ea.entity_id = e.id "
+            "GROUP BY e.id ORDER BY alias_count DESC LIMIT 50"
+        ).fetchall()
+        result = []
+        for r in rows:
+            aliases = conn.execute(
+                "SELECT alias_name FROM entity_aliases WHERE entity_id = ?",
+                (r["id"],),
+            ).fetchall()
+            result.append(
+                {
+                    "id": r["id"],
+                    "name": r["name"],
+                    "type": r["type"],
+                    "alias_count": r["alias_count"],
+                    "aliases": [a["alias_name"] for a in aliases],
+                }
+            )
+    return {"entities": result}
+
+
+@app.get("/api/connection-weight-percentile")
+def connection_weight_percentile():
+    """Connection weights bucketed by percentile ranges."""
+    with get_db() as conn:
+        rows = conn.execute("SELECT weight FROM entity_connections ORDER BY weight").fetchall()
+    if not rows:
+        return {"total": 0, "percentiles": []}
+    weights = [r["weight"] for r in rows]
+    total = len(weights)
+    buckets = [
+        {"label": "0-25%", "start": 0, "end": total // 4},
+        {"label": "25-50%", "start": total // 4, "end": total // 2},
+        {"label": "50-75%", "start": total // 2, "end": 3 * total // 4},
+        {"label": "75-100%", "start": 3 * total // 4, "end": total},
+    ]
+    result = []
+    for b in buckets:
+        segment = weights[b["start"] : b["end"]]
+        if segment:
+            result.append(
+                {
+                    "label": b["label"],
+                    "count": len(segment),
+                    "min_weight": min(segment),
+                    "max_weight": max(segment),
+                    "avg_weight": round(sum(segment) / len(segment), 2),
+                }
+            )
+    return {"total": total, "percentiles": result}
+
+
 # ═══════════════════════════════════════════
 # STATIC FILES (serve the frontend)
 # ═══════════════════════════════════════════
