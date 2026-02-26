@@ -2031,6 +2031,8 @@ body::before {
 .finentlinks-view.active, .docsrccluster-view.active, .tlgaps-view.active, .degreedist-view.active, .multimention-view.active, .flagsummary-view.active { display: flex; }
 .resaudit-view, .docshared-view, .srcrange-view, .searchhist-view, .catentmatrix-view, .eventrank-view { display: none; flex-direction: column; gap: 16px; }
 .resaudit-view.active, .docshared-view.active, .srcrange-view.active, .searchhist-view.active, .catentmatrix-view.active, .eventrank-view.active { display: flex; }
+.aliaslist-view, .catstats-view, .redactsrc-view, .paircodocs-view, .eventtypes-view, .finsummary-view { display: none; flex-direction: column; gap: 16px; }
+.aliaslist-view.active, .catstats-view.active, .redactsrc-view.active, .paircodocs-view.active, .eventtypes-view.active, .finsummary-view.active { display: flex; }
 .rel-edge { display: flex; align-items: center; gap: 8px; padding: 4px 0; border-bottom: 1px solid var(--border); }
 .sbs-col { flex: 1; padding: 12px; background: var(--bg-card); border-radius: var(--radius); border: 1px solid var(--border); overflow: hidden; }
 .sbs-header { font-family: var(--font-mono); font-size: 12px; font-weight: 600; color: var(--text-primary); margin-bottom: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -2531,6 +2533,30 @@ body::before {
       <div class="sidebar-item" data-view="eventrank" id="eventrankNav">
         <div class="sidebar-dot" style="background:var(--entity-org)"></div>
         Event Entity Ranking
+      </div>
+      <div class="sidebar-item" data-view="aliaslist" id="aliaslistNav">
+        <div class="sidebar-dot" style="background:var(--entity-date)"></div>
+        Entity Aliases List
+      </div>
+      <div class="sidebar-item" data-view="catstats" id="catstatsNav">
+        <div class="sidebar-dot" style="background:var(--entity-place)"></div>
+        Category Stats
+      </div>
+      <div class="sidebar-item" data-view="redactsrc" id="redactsrcNav">
+        <div class="sidebar-dot" style="background:var(--entity-person)"></div>
+        Redaction by Source
+      </div>
+      <div class="sidebar-item" data-view="paircodocs" id="paircodocNav">
+        <div class="sidebar-dot" style="background:var(--entity-org)"></div>
+        Entity Pair Co-Docs
+      </div>
+      <div class="sidebar-item" data-view="eventtypes" id="eventtypesNav">
+        <div class="sidebar-dot" style="background:var(--entity-date)"></div>
+        Event Types
+      </div>
+      <div class="sidebar-item" data-view="finsummary" id="finsummaryNav">
+        <div class="sidebar-dot" style="background:var(--entity-place)"></div>
+        Financial Summary
       </div>
     </div>
 
@@ -3786,6 +3812,36 @@ body::before {
       <div id="eventrankContent">Loading event entity ranking...</div>
     </div>
 
+    <div class="aliaslist-view" id="aliaslistView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Entity Aliases List</div>
+      <div id="aliaslistContent">Loading entity aliases...</div>
+    </div>
+
+    <div class="catstats-view" id="catstatsView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Category Stats</div>
+      <div id="catstatsContent">Loading category stats...</div>
+    </div>
+
+    <div class="redactsrc-view" id="redactsrcView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Redaction by Source</div>
+      <div id="redactsrcContent">Loading redaction by source...</div>
+    </div>
+
+    <div class="paircodocs-view" id="paircodocView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Entity Pair Co-Documents</div>
+      <div id="paircodocContent">Loading entity pair co-docs...</div>
+    </div>
+
+    <div class="eventtypes-view" id="eventtypesView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Event Types</div>
+      <div id="eventtypesContent">Loading event types...</div>
+    </div>
+
+    <div class="finsummary-view" id="finsummaryView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Financial Indicator Summary</div>
+      <div id="finsummaryContent">Loading financial summary...</div>
+    </div>
+
   </main>
 
   <!-- RIGHT PANEL -->
@@ -4488,6 +4544,12 @@ function hideAllViews() {
   document.getElementById('searchhistView').classList.remove('active');
   document.getElementById('catentmatrixView').classList.remove('active');
   document.getElementById('eventrankView').classList.remove('active');
+  document.getElementById('aliaslistView').classList.remove('active');
+  document.getElementById('catstatsView').classList.remove('active');
+  document.getElementById('redactsrcView').classList.remove('active');
+  document.getElementById('paircodocView').classList.remove('active');
+  document.getElementById('eventtypesView').classList.remove('active');
+  document.getElementById('finsummaryView').classList.remove('active');
 }
 
 function showDocumentView() {
@@ -4643,6 +4705,12 @@ document.querySelectorAll('.sidebar-item[data-view]').forEach(item => {
     else if (view === 'searchhist') showSearchHistView();
     else if (view === 'catentmatrix') showCatEntMatrixView();
     else if (view === 'eventrank') showEventRankView();
+    else if (view === 'aliaslist') showAliasListView();
+    else if (view === 'catstats') showCatStatsView();
+    else if (view === 'redactsrc') showRedactSrcView();
+    else if (view === 'paircodocs') showPairCoDocsView();
+    else if (view === 'eventtypes') showEventTypesView();
+    else if (view === 'finsummary') showFinSummaryView();
   });
 });
 
@@ -5796,6 +5864,12 @@ function goBackFromReader() {
   else if (readerPreviousView === 'searchhist') showSearchHistView();
   else if (readerPreviousView === 'catentmatrix') showCatEntMatrixView();
   else if (readerPreviousView === 'eventrank') showEventRankView();
+  else if (readerPreviousView === 'aliaslist') showAliasListView();
+  else if (readerPreviousView === 'catstats') showCatStatsView();
+  else if (readerPreviousView === 'redactsrc') showRedactSrcView();
+  else if (readerPreviousView === 'paircodocs') showPairCoDocsView();
+  else if (readerPreviousView === 'eventtypes') showEventTypesView();
+  else if (readerPreviousView === 'finsummary') showFinSummaryView();
   else showDocumentView();
 }
 
@@ -12383,6 +12457,218 @@ async function loadEventRank() {
     }
     el.innerHTML = html;
   } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load event entity ranking</div>'; }
+}
+
+
+// ── Entity Aliases List ──
+
+function showAliasListView() {
+  currentView = 'aliaslist';
+  hideAllViews();
+  document.getElementById('aliaslistView').classList.add('active');
+  loadAliasList();
+}
+
+async function loadAliasList() {
+  const el = document.getElementById('aliaslistContent');
+  el.innerHTML = 'Loading entity aliases...';
+  try {
+    const data = await fetchJSON('/api/entity-aliases-list');
+    let html = `<div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:12px;">`;
+    html += `<div class="stat-card"><div class="stat-value">${data.total}</div><div class="stat-label">Total Aliases</div></div>`;
+    html += `</div>`;
+
+    if (data.by_type.length) {
+      html += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">';
+      data.by_type.forEach(t => html += `<span class="entity-tag ${t.type}" style="font-size:10px;">${t.type}: ${t.count}</span> `);
+      html += '</div>';
+    }
+
+    if (data.aliases.length) {
+      html += '<table class="data-table"><thead><tr><th>Alias</th><th>→</th><th>Canonical Name</th><th>Type</th></tr></thead><tbody>';
+      data.aliases.forEach(a => {
+        html += `<tr><td>${a.alias}</td><td style="color:var(--text-muted);">→</td>`;
+        html += `<td>${a.canonical_name}</td>`;
+        html += `<td><span class="entity-tag ${a.type}" style="font-size:9px;">${a.type}</span></td></tr>`;
+      });
+      html += '</tbody></table>';
+    } else {
+      html += '<div style="color:var(--text-muted);">No aliases found.</div>';
+    }
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load entity aliases</div>'; }
+}
+
+// ── Category Stats ──
+
+function showCatStatsView() {
+  currentView = 'catstats';
+  hideAllViews();
+  document.getElementById('catstatsView').classList.add('active');
+  loadCatStats();
+}
+
+async function loadCatStats() {
+  const el = document.getElementById('catstatsContent');
+  el.innerHTML = 'Loading category stats...';
+  try {
+    const data = await fetchJSON('/api/category-stats');
+    let html = `<div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:12px;">`;
+    html += `<div class="stat-card"><div class="stat-value">${data.total_categories}</div><div class="stat-label">Categories</div></div>`;
+    html += `<div class="stat-card"><div class="stat-value">${data.total_docs}</div><div class="stat-label">Total Docs</div></div>`;
+    html += `</div>`;
+
+    if (data.categories.length) {
+      html += '<table class="data-table"><thead><tr><th>Category</th><th>Docs</th><th>%</th><th>Pages</th><th>Entities</th><th>Mentions</th><th>Sources</th></tr></thead><tbody>';
+      const maxDocs = data.categories[0].doc_count;
+      data.categories.forEach(c => {
+        const pct = maxDocs ? (c.doc_count / maxDocs * 100) : 0;
+        html += `<tr><td style="font-weight:600;">${c.category}</td><td>${c.doc_count}</td><td>${c.pct}%</td>`;
+        html += `<td>${(c.total_pages||0).toLocaleString()}</td><td>${(c.unique_entities||0).toLocaleString()}</td>`;
+        html += `<td>${(c.total_mentions||0).toLocaleString()}</td><td>${c.source_count||0}</td></tr>`;
+      });
+      html += '</tbody></table>';
+    }
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load category stats</div>'; }
+}
+
+// ── Redaction by Source ──
+
+function showRedactSrcView() {
+  currentView = 'redactsrc';
+  hideAllViews();
+  document.getElementById('redactsrcView').classList.add('active');
+  loadRedactSrc();
+}
+
+async function loadRedactSrc() {
+  const el = document.getElementById('redactsrcContent');
+  el.innerHTML = 'Loading redaction by source...';
+  try {
+    const data = await fetchJSON('/api/redaction-by-source');
+    let html = `<div class="stat-card" style="margin-bottom:12px;"><div class="stat-value">${data.total}</div><div class="stat-label">Sources</div></div>`;
+
+    if (data.sources.length) {
+      html += '<table class="data-table"><thead><tr><th>Source</th><th>Redactions</th><th>Docs w/ Redactions</th><th>Total Docs</th><th>Rate</th></tr></thead><tbody>';
+      data.sources.forEach(s => {
+        html += `<tr><td>${s.source}</td><td>${s.redaction_count}</td>`;
+        html += `<td>${s.docs_with_redactions}</td><td>${s.total_docs}</td>`;
+        html += `<td>${s.redaction_rate}%</td></tr>`;
+      });
+      html += '</tbody></table>';
+    } else {
+      html += '<div style="color:var(--text-muted);">No redaction data.</div>';
+    }
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load redaction by source</div>'; }
+}
+
+// ── Entity Pair Co-Documents ──
+
+function showPairCoDocsView() {
+  currentView = 'paircodocs';
+  hideAllViews();
+  document.getElementById('paircodocView').classList.add('active');
+  loadPairCoDocs();
+}
+
+async function loadPairCoDocs() {
+  const el = document.getElementById('paircodocContent');
+  el.innerHTML = 'Loading entity pair co-docs...';
+  try {
+    const data = await fetchJSON('/api/entity-pair-codocs');
+    let html = `<div class="stat-card" style="margin-bottom:12px;"><div class="stat-value">${data.total}</div><div class="stat-label">Top Pairs</div></div>`;
+
+    if (data.pairs.length) {
+      html += '<table class="data-table"><thead><tr><th>Entity A</th><th>Type</th><th>Entity B</th><th>Type</th><th>Shared Docs</th></tr></thead><tbody>';
+      data.pairs.forEach(p => {
+        html += `<tr><td>${p.entity_a}</td><td><span class="entity-tag ${p.type_a}" style="font-size:9px;">${p.type_a}</span></td>`;
+        html += `<td>${p.entity_b}</td><td><span class="entity-tag ${p.type_b}" style="font-size:9px;">${p.type_b}</span></td>`;
+        html += `<td style="font-weight:600;color:var(--accent);">${p.shared_docs}</td></tr>`;
+      });
+      html += '</tbody></table>';
+    } else {
+      html += '<div style="color:var(--text-muted);">No entity pairs found.</div>';
+    }
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load entity pair co-docs</div>'; }
+}
+
+// ── Event Types ──
+
+function showEventTypesView() {
+  currentView = 'eventtypes';
+  hideAllViews();
+  document.getElementById('eventtypesView').classList.add('active');
+  loadEventTypes();
+}
+
+async function loadEventTypes() {
+  const el = document.getElementById('eventtypesContent');
+  el.innerHTML = 'Loading event types...';
+  try {
+    const data = await fetchJSON('/api/event-types');
+    let html = `<div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:12px;">`;
+    html += `<div class="stat-card"><div class="stat-value">${data.total_events.toLocaleString()}</div><div class="stat-label">Total Events</div></div>`;
+    html += `<div class="stat-card"><div class="stat-value">${data.resolved.toLocaleString()}</div><div class="stat-label">Resolved</div></div>`;
+    html += `<div class="stat-card"><div class="stat-value">${data.unresolved.toLocaleString()}</div><div class="stat-label">Unresolved</div></div>`;
+    html += `</div>`;
+
+    if (data.by_precision.length) {
+      html += '<div style="font-size:12px;font-weight:600;margin-bottom:6px;color:var(--text-secondary);">By Precision</div>';
+      html += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">';
+      data.by_precision.forEach(p => html += `<span style="font-size:11px;background:var(--bg-card);padding:3px 8px;border-radius:3px;">${p.precision||'unknown'}: ${p.cnt}</span>`);
+      html += '</div>';
+    }
+
+    if (data.by_confidence.length) {
+      html += '<div style="font-size:12px;font-weight:600;margin-bottom:6px;color:var(--text-secondary);">By Confidence</div>';
+      html += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">';
+      data.by_confidence.forEach(c => html += `<span style="font-size:11px;background:var(--bg-card);padding:3px 8px;border-radius:3px;">${c.bucket}: ${c.cnt}</span>`);
+      html += '</div>';
+    }
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load event types</div>'; }
+}
+
+// ── Financial Summary ──
+
+function showFinSummaryView() {
+  currentView = 'finsummary';
+  hideAllViews();
+  document.getElementById('finsummaryView').classList.add('active');
+  loadFinSummary();
+}
+
+async function loadFinSummary() {
+  const el = document.getElementById('finsummaryContent');
+  el.innerHTML = 'Loading financial summary...';
+  try {
+    const data = await fetchJSON('/api/financial-summary');
+    let html = `<div class="stat-card" style="margin-bottom:12px;"><div class="stat-value">${data.total.toLocaleString()}</div><div class="stat-label">Financial Indicators</div></div>`;
+
+    if (data.by_type.length) {
+      html += '<div style="font-size:12px;font-weight:600;margin-bottom:6px;color:var(--text-secondary);">By Type</div>';
+      html += '<table class="data-table"><thead><tr><th>Type</th><th>Count</th><th>Avg Risk</th><th>Max Risk</th></tr></thead><tbody>';
+      data.by_type.forEach(t => {
+        html += `<tr><td>${t.indicator_type}</td><td>${t.cnt}</td><td>${t.avg_risk}</td><td>${t.max_risk}</td></tr>`;
+      });
+      html += '</tbody></table>';
+    }
+
+    if (data.top_risk.length) {
+      html += '<div style="font-size:12px;font-weight:600;margin:12px 0 6px;color:var(--text-secondary);">Highest Risk Indicators</div>';
+      html += '<table class="data-table"><thead><tr><th>Type</th><th>Value</th><th>Risk</th><th>Document</th></tr></thead><tbody>';
+      data.top_risk.forEach(r => {
+        html += `<tr><td>${r.indicator_type}</td><td style="font-size:11px;">${(r.value||'').substring(0,40)}</td>`;
+        html += `<td style="font-weight:600;color:${r.risk_score>=0.7?'#e05555':'var(--text-primary)'};">${r.risk_score}</td>`;
+        html += `<td><a href="#" onclick="openReader(${r.doc_id});return false;">${(r.title||r.filename).substring(0,35)}</a></td></tr>`;
+      });
+      html += '</tbody></table>';
+    }
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load financial summary</div>'; }
 }
 
 

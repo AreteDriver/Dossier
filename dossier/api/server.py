@@ -8861,6 +8861,184 @@ def event_entity_ranking():
     }
 
 
+# ── Entity Aliases List ──────────────────────────
+
+
+@app.get("/api/entity-aliases-list")
+def entity_aliases_list():
+    """All entity aliases with canonical names."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT ea.id, ea.entity_id, ea.alias_name as alias, e.name as canonical_name, e.type "
+            "FROM entity_aliases ea "
+            "JOIN entities e ON e.id = ea.entity_id "
+            "ORDER BY e.name, ea.alias_name"
+        ).fetchall()
+
+    aliases = [dict(r) for r in rows]
+
+    by_type = {}
+    for a in aliases:
+        t = a["type"]
+        by_type[t] = by_type.get(t, 0) + 1
+
+    return {
+        "aliases": aliases[:300],
+        "total": len(aliases),
+        "by_type": [
+            {"type": k, "count": v}
+            for k, v in sorted(by_type.items(), key=lambda x: x[1], reverse=True)
+        ],
+    }
+
+
+# ── Document Category Stats ────────────────────
+
+
+@app.get("/api/category-stats")
+def category_stats():
+    """Detailed statistics per document category."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT d.category, COUNT(*) as doc_count, "
+            "SUM(d.pages) as total_pages, "
+            "COUNT(DISTINCT de.entity_id) as unique_entities, "
+            "SUM(de.count) as total_mentions, "
+            "COUNT(DISTINCT d.source) as source_count "
+            "FROM documents d "
+            "LEFT JOIN document_entities de ON de.document_id = d.id "
+            "WHERE d.category IS NOT NULL AND d.category != '' "
+            "GROUP BY d.category "
+            "ORDER BY doc_count DESC"
+        ).fetchall()
+
+    categories = [dict(r) for r in rows]
+    total_docs = sum(c["doc_count"] for c in categories)
+
+    for c in categories:
+        c["pct"] = round(c["doc_count"] / total_docs * 100, 1) if total_docs else 0
+
+    return {"categories": categories, "total_categories": len(categories), "total_docs": total_docs}
+
+
+# ── Redaction by Source ────────────────────────
+
+
+@app.get("/api/redaction-by-source")
+def redaction_by_source():
+    """Redaction counts grouped by document source."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT d.source, COUNT(r.id) as redaction_count, "
+            "COUNT(DISTINCT r.document_id) as docs_with_redactions, "
+            "COUNT(DISTINCT d.id) as total_docs "
+            "FROM documents d "
+            "LEFT JOIN redactions r ON r.document_id = d.id "
+            "WHERE d.source IS NOT NULL AND d.source != '' "
+            "GROUP BY d.source "
+            "ORDER BY redaction_count DESC"
+        ).fetchall()
+
+    sources = [dict(r) for r in rows]
+    for s in sources:
+        s["redaction_rate"] = (
+            round(s["docs_with_redactions"] / s["total_docs"] * 100, 1) if s["total_docs"] else 0
+        )
+
+    return {"sources": sources, "total": len(sources)}
+
+
+# ── Entity Pair Co-Documents ───────────────────
+
+
+@app.get("/api/entity-pair-codocs")
+def entity_pair_codocs():
+    """Top entity pairs and how many documents they co-appear in."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT e1.name as entity_a, e1.type as type_a, "
+            "e2.name as entity_b, e2.type as type_b, "
+            "COUNT(DISTINCT de1.document_id) as shared_docs "
+            "FROM document_entities de1 "
+            "JOIN document_entities de2 ON de1.document_id = de2.document_id "
+            "  AND de1.entity_id < de2.entity_id "
+            "JOIN entities e1 ON e1.id = de1.entity_id "
+            "JOIN entities e2 ON e2.id = de2.entity_id "
+            "GROUP BY de1.entity_id, de2.entity_id "
+            "ORDER BY shared_docs DESC "
+            "LIMIT 100"
+        ).fetchall()
+
+    return {"pairs": [dict(r) for r in rows], "total": len(rows)}
+
+
+# ── Timeline Event Types ──────────────────────
+
+
+@app.get("/api/event-types")
+def event_types():
+    """Event date precision and confidence breakdown."""
+    with get_db() as conn:
+        by_precision = conn.execute(
+            "SELECT precision, COUNT(*) as cnt FROM events GROUP BY precision ORDER BY cnt DESC"
+        ).fetchall()
+
+        by_confidence = conn.execute(
+            "SELECT CASE "
+            "  WHEN confidence >= 0.9 THEN 'high (>=0.9)' "
+            "  WHEN confidence >= 0.7 THEN 'medium (0.7-0.9)' "
+            "  WHEN confidence >= 0.5 THEN 'low (0.5-0.7)' "
+            "  ELSE 'very low (<0.5)' "
+            "END as bucket, COUNT(*) as cnt "
+            "FROM events GROUP BY bucket ORDER BY cnt DESC"
+        ).fetchall()
+
+        total = conn.execute("SELECT COUNT(*) as c FROM events").fetchone()["c"]
+        resolved = conn.execute(
+            "SELECT COUNT(*) as c FROM events WHERE is_resolved = 1"
+        ).fetchone()["c"]
+
+    return {
+        "total_events": total,
+        "resolved": resolved,
+        "unresolved": total - resolved,
+        "by_precision": [dict(r) for r in by_precision],
+        "by_confidence": [dict(r) for r in by_confidence],
+    }
+
+
+# ── Financial Indicator Summary ───────────────
+
+
+@app.get("/api/financial-summary")
+def financial_summary():
+    """Financial indicator types and risk distribution."""
+    with get_db() as conn:
+        by_type = conn.execute(
+            "SELECT indicator_type, COUNT(*) as cnt, "
+            "ROUND(AVG(risk_score), 2) as avg_risk, "
+            "ROUND(MAX(risk_score), 2) as max_risk "
+            "FROM financial_indicators "
+            "GROUP BY indicator_type ORDER BY cnt DESC"
+        ).fetchall()
+
+        total = conn.execute("SELECT COUNT(*) as c FROM financial_indicators").fetchone()["c"]
+
+        top_risk = conn.execute(
+            "SELECT fi.id, fi.indicator_type, fi.value, fi.risk_score, "
+            "d.title, d.filename, d.id as doc_id "
+            "FROM financial_indicators fi "
+            "JOIN documents d ON d.id = fi.document_id "
+            "ORDER BY fi.risk_score DESC LIMIT 50"
+        ).fetchall()
+
+    return {
+        "total": total,
+        "by_type": [dict(r) for r in by_type],
+        "top_risk": [dict(r) for r in top_risk],
+    }
+
+
 # ═══════════════════════════════════════════
 # STATIC FILES (serve the frontend)
 # ═══════════════════════════════════════════
