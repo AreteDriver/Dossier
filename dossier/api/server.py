@@ -9845,6 +9845,115 @@ def duplicate_documents():
     }
 
 
+# ── Round 28 ──────────────────────────────────
+
+
+@app.get("/api/entity-connections-timeline")
+def entity_connections_timeline():
+    """How entity connection count grows over ingestion time."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT DATE(d.ingested_at) AS day, "
+            "COUNT(DISTINCT de.entity_id) AS new_entities, "
+            "COUNT(DISTINCT d.id) AS doc_count "
+            "FROM document_entities de "
+            "JOIN documents d ON d.id = de.document_id "
+            "WHERE d.ingested_at IS NOT NULL "
+            "GROUP BY day ORDER BY day"
+        ).fetchall()
+    return {"timeline": [dict(r) for r in rows]}
+
+
+@app.get("/api/source-cross-reference")
+def source_cross_reference():
+    """Entities shared between multiple sources."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT e.id, e.name, e.type, COUNT(DISTINCT d.source) AS source_count, "
+            "GROUP_CONCAT(DISTINCT d.source) AS sources "
+            "FROM entities e "
+            "JOIN document_entities de ON de.entity_id = e.id "
+            "JOIN documents d ON d.id = de.document_id "
+            "GROUP BY e.id HAVING COUNT(DISTINCT d.source) > 1 "
+            "ORDER BY source_count DESC LIMIT 100"
+        ).fetchall()
+    return {"entities": [dict(r) for r in rows], "total": len(rows)}
+
+
+@app.get("/api/event-precision-stats")
+def event_precision_stats():
+    """Breakdown of event date precision levels."""
+    with get_db() as conn:
+        by_precision = conn.execute(
+            "SELECT precision, COUNT(*) AS count FROM events GROUP BY precision ORDER BY count DESC"
+        ).fetchall()
+        by_resolved = conn.execute(
+            "SELECT is_resolved, COUNT(*) AS count FROM events GROUP BY is_resolved"
+        ).fetchall()
+        total = conn.execute("SELECT COUNT(*) AS cnt FROM events").fetchone()["cnt"]
+    return {
+        "by_precision": [dict(r) for r in by_precision],
+        "by_resolved": [dict(r) for r in by_resolved],
+        "total": total,
+    }
+
+
+@app.get("/api/category-ingest-timeline")
+def category_ingest_timeline():
+    """Document ingestion by category over time."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT DATE(ingested_at) AS day, category, COUNT(*) AS count "
+            "FROM documents WHERE ingested_at IS NOT NULL "
+            "GROUP BY day, category ORDER BY day"
+        ).fetchall()
+    timeline = {}
+    for r in rows:
+        day = r["day"]
+        if day not in timeline:
+            timeline[day] = {}
+        timeline[day][r["category"]] = r["count"]
+    return {"timeline": [{"day": d, **cats} for d, cats in timeline.items()]}
+
+
+@app.get("/api/entity-hub-score")
+def entity_hub_score():
+    """Entities ranked by total connection count (hub nodes)."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT entity_id, name, type, SUM(cnt) AS connections FROM ("
+            "  SELECT ec.entity_a_id AS entity_id, e.name, e.type, COUNT(*) AS cnt "
+            "  FROM entity_connections ec "
+            "  JOIN entities e ON e.id = ec.entity_a_id "
+            "  GROUP BY ec.entity_a_id "
+            "  UNION ALL "
+            "  SELECT ec.entity_b_id AS entity_id, e.name, e.type, COUNT(*) AS cnt "
+            "  FROM entity_connections ec "
+            "  JOIN entities e ON e.id = ec.entity_b_id "
+            "  GROUP BY ec.entity_b_id"
+            ") GROUP BY entity_id ORDER BY connections DESC LIMIT 100"
+        ).fetchall()
+    return {"entities": [dict(r) for r in rows]}
+
+
+@app.get("/api/redaction-density-ranking")
+def redaction_density_ranking():
+    """Redaction count per document, ranked by density."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT d.id, d.title, d.filename, d.pages, "
+            "COUNT(r.id) AS redaction_count, "
+            "CASE WHEN d.pages > 0 "
+            "  THEN ROUND(CAST(COUNT(r.id) AS REAL) / d.pages, 2) "
+            "  ELSE 0 END AS density "
+            "FROM documents d "
+            "JOIN redactions r ON r.document_id = d.id "
+            "GROUP BY d.id ORDER BY density DESC LIMIT 100"
+        ).fetchall()
+        total = conn.execute("SELECT COUNT(*) AS cnt FROM redactions").fetchone()["cnt"]
+    return {"documents": [dict(r) for r in rows], "total_redactions": total}
+
+
 # ═══════════════════════════════════════════
 # STATIC FILES (serve the frontend)
 # ═══════════════════════════════════════════

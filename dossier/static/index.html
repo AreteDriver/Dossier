@@ -2043,6 +2043,8 @@ body::before {
 .entdupes-view.active, .ingestvel-view.active, .eventconf-view.active, .srcpages-view.active, .typeratio-view.active, .conndensity-view.active { display: flex; }
 .docread-view, .srccomp-view, .orphanevt-view, .entfirst-view, .pagedensity-view, .docdupes-view { display: none; flex-direction: column; gap: 16px; }
 .docread-view.active, .srccomp-view.active, .orphanevt-view.active, .entfirst-view.active, .pagedensity-view.active, .docdupes-view.active { display: flex; }
+.entconntime-view, .srcxref-view, .evtprec-view, .cattime-view, .enthub-view, .redactdensity-view { display: none; flex-direction: column; gap: 16px; }
+.entconntime-view.active, .srcxref-view.active, .evtprec-view.active, .cattime-view.active, .enthub-view.active, .redactdensity-view.active { display: flex; }
 .rel-edge { display: flex; align-items: center; gap: 8px; padding: 4px 0; border-bottom: 1px solid var(--border); }
 .sbs-col { flex: 1; padding: 12px; background: var(--bg-card); border-radius: var(--radius); border: 1px solid var(--border); overflow: hidden; }
 .sbs-header { font-family: var(--font-mono); font-size: 12px; font-weight: 600; color: var(--text-primary); margin-bottom: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -2687,6 +2689,30 @@ body::before {
       <div class="sidebar-item" data-view="docdupes" id="docdupesNav">
         <div class="sidebar-dot" style="background:var(--entity-org)"></div>
         Duplicate Documents
+      </div>
+      <div class="sidebar-item" data-view="entconntime" id="entconntimeNav">
+        <div class="sidebar-dot" style="background:var(--entity-person)"></div>
+        Connections Timeline
+      </div>
+      <div class="sidebar-item" data-view="srcxref" id="srcxrefNav">
+        <div class="sidebar-dot" style="background:var(--entity-org)"></div>
+        Source Cross-Reference
+      </div>
+      <div class="sidebar-item" data-view="evtprec" id="evtprecNav">
+        <div class="sidebar-dot" style="background:var(--entity-date)"></div>
+        Event Precision Stats
+      </div>
+      <div class="sidebar-item" data-view="cattime" id="cattimeNav">
+        <div class="sidebar-dot" style="background:var(--entity-place)"></div>
+        Category Timeline
+      </div>
+      <div class="sidebar-item" data-view="enthub" id="enthubNav">
+        <div class="sidebar-dot" style="background:var(--entity-person)"></div>
+        Entity Hub Score
+      </div>
+      <div class="sidebar-item" data-view="redactdensity" id="redactdensityNav">
+        <div class="sidebar-dot" style="background:var(--entity-org)"></div>
+        Redaction Density
       </div>
     </div>
 
@@ -4122,6 +4148,36 @@ body::before {
       <div id="docdupesContent">Loading duplicate documents...</div>
     </div>
 
+    <div class="entconntime-view" id="entconntimeView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Entity Connections Timeline</div>
+      <div id="entconntimeContent">Loading connections timeline...</div>
+    </div>
+
+    <div class="srcxref-view" id="srcxrefView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Source Cross-Reference</div>
+      <div id="srcxrefContent">Loading source cross-reference...</div>
+    </div>
+
+    <div class="evtprec-view" id="evtprecView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Event Precision Stats</div>
+      <div id="evtprecContent">Loading event precision stats...</div>
+    </div>
+
+    <div class="cattime-view" id="cattimeView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Category Timeline</div>
+      <div id="cattimeContent">Loading category timeline...</div>
+    </div>
+
+    <div class="enthub-view" id="enthubView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Entity Hub Score</div>
+      <div id="enthubContent">Loading entity hub scores...</div>
+    </div>
+
+    <div class="redactdensity-view" id="redactdensityView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Redaction Density</div>
+      <div id="redactdensityContent">Loading redaction density...</div>
+    </div>
+
   </main>
 
   <!-- RIGHT PANEL -->
@@ -4860,6 +4916,12 @@ function hideAllViews() {
   document.getElementById('entfirstView').classList.remove('active');
   document.getElementById('pagedensityView').classList.remove('active');
   document.getElementById('docdupesView').classList.remove('active');
+  document.getElementById('entconntimeView').classList.remove('active');
+  document.getElementById('srcxrefView').classList.remove('active');
+  document.getElementById('evtprecView').classList.remove('active');
+  document.getElementById('cattimeView').classList.remove('active');
+  document.getElementById('enthubView').classList.remove('active');
+  document.getElementById('redactdensityView').classList.remove('active');
 }
 
 function showDocumentView() {
@@ -5051,6 +5113,12 @@ document.querySelectorAll('.sidebar-item[data-view]').forEach(item => {
     else if (view === 'entfirst') showEntFirstView();
     else if (view === 'pagedensity') showPageDensityView();
     else if (view === 'docdupes') showDocDupesView();
+    else if (view === 'entconntime') showEntConnTimeView();
+    else if (view === 'srcxref') showSrcXrefView();
+    else if (view === 'evtprec') showEvtPrecView();
+    else if (view === 'cattime') showCatTimeView();
+    else if (view === 'enthub') showEntHubView();
+    else if (view === 'redactdensity') showRedactDensityView();
   });
 });
 
@@ -6240,6 +6308,12 @@ function goBackFromReader() {
   else if (readerPreviousView === 'entfirst') showEntFirstView();
   else if (readerPreviousView === 'pagedensity') showPageDensityView();
   else if (readerPreviousView === 'docdupes') showDocDupesView();
+  else if (readerPreviousView === 'entconntime') showEntConnTimeView();
+  else if (readerPreviousView === 'srcxref') showSrcXrefView();
+  else if (readerPreviousView === 'evtprec') showEvtPrecView();
+  else if (readerPreviousView === 'cattime') showCatTimeView();
+  else if (readerPreviousView === 'enthub') showEntHubView();
+  else if (readerPreviousView === 'redactdensity') showRedactDensityView();
   else showDocumentView();
 }
 
@@ -14027,6 +14101,176 @@ async function loadDocDupes() {
     }
     el.innerHTML = html;
   } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load duplicate documents</div>'; }
+}
+
+// ── Round 28 ──────────────────────────────────
+
+function showEntConnTimeView() {
+  currentView = 'entconntime';
+  hideAllViews();
+  document.getElementById('entconntimeView').classList.add('active');
+  loadEntConnTime();
+}
+async function loadEntConnTime() {
+  const el = document.getElementById('entconntimeContent');
+  try {
+    const res = await fetch('/api/entity-connections-timeline');
+    const data = await res.json();
+    if (!data.timeline.length) { el.innerHTML = '<div style="color:var(--text-muted);">No timeline data.</div>'; return; }
+    let html = '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="border-bottom:2px solid var(--border);"><th style="text-align:left;padding:8px;">Date</th><th style="text-align:right;padding:8px;">New Entities</th><th style="text-align:right;padding:8px;">Docs</th><th style="padding:8px;">Bar</th></tr></thead><tbody>';
+    const maxConn = Math.max(...data.timeline.map(t => t.new_entities));
+    data.timeline.forEach(t => {
+      const pct = maxConn > 0 ? (t.new_entities / maxConn * 100) : 0;
+      html += `<tr style="border-bottom:1px solid var(--border);">`;
+      html += `<td style="padding:8px;font-family:var(--font-mono);">${t.day}</td>`;
+      html += `<td style="text-align:right;padding:8px;font-weight:600;">${t.new_entities.toLocaleString()}</td>`;
+      html += `<td style="text-align:right;padding:8px;">${t.doc_count}</td>`;
+      html += `<td style="padding:8px;"><div style="background:var(--accent);height:14px;width:${pct}%;border-radius:3px;"></div></td>`;
+      html += `</tr>`;
+    });
+    html += '</tbody></table>';
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load connections timeline</div>'; }
+}
+
+function showSrcXrefView() {
+  currentView = 'srcxref';
+  hideAllViews();
+  document.getElementById('srcxrefView').classList.add('active');
+  loadSrcXref();
+}
+async function loadSrcXref() {
+  const el = document.getElementById('srcxrefContent');
+  try {
+    const res = await fetch('/api/source-cross-reference');
+    const data = await res.json();
+    let html = `<div style="background:var(--bg-secondary);padding:12px;border-radius:6px;margin-bottom:16px;"><span style="font-size:11px;color:var(--text-muted);">Entities in Multiple Sources</span> <span style="font-size:20px;font-weight:700;color:var(--text-primary);margin-left:8px;">${data.total}</span></div>`;
+    if (data.entities.length) {
+      html += '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="border-bottom:2px solid var(--border);"><th style="text-align:left;padding:8px;">Entity</th><th style="text-align:left;padding:8px;">Type</th><th style="text-align:right;padding:8px;">Sources</th><th style="text-align:left;padding:8px;">Source List</th></tr></thead><tbody>';
+      data.entities.forEach(e => {
+        html += `<tr style="border-bottom:1px solid var(--border);">`;
+        html += `<td style="padding:8px;font-weight:600;">${e.name}</td>`;
+        html += `<td style="padding:8px;"><span class="entity-tag ${e.type}" style="font-size:10px;">${e.type}</span></td>`;
+        html += `<td style="text-align:right;padding:8px;font-weight:600;">${e.source_count}</td>`;
+        html += `<td style="padding:8px;font-size:11px;color:var(--text-muted);">${e.sources}</td>`;
+        html += `</tr>`;
+      });
+      html += '</tbody></table>';
+    }
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load source cross-reference</div>'; }
+}
+
+function showEvtPrecView() {
+  currentView = 'evtprec';
+  hideAllViews();
+  document.getElementById('evtprecView').classList.add('active');
+  loadEvtPrec();
+}
+async function loadEvtPrec() {
+  const el = document.getElementById('evtprecContent');
+  try {
+    const res = await fetch('/api/event-precision-stats');
+    const data = await res.json();
+    let html = `<div style="background:var(--bg-secondary);padding:12px;border-radius:6px;margin-bottom:16px;"><span style="font-size:11px;color:var(--text-muted);">Total Events</span> <span style="font-size:20px;font-weight:700;color:var(--text-primary);margin-left:8px;">${data.total.toLocaleString()}</span></div>`;
+    html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">';
+    html += '<div><div style="font-size:12px;font-weight:600;margin-bottom:8px;color:var(--text-primary);">By Precision</div>';
+    data.by_precision.forEach(p => {
+      const pct = data.total > 0 ? (p.count / data.total * 100).toFixed(1) : 0;
+      html += `<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border);"><span>${p.precision || 'unknown'}</span><span style="font-weight:600;">${p.count.toLocaleString()} (${pct}%)</span></div>`;
+    });
+    html += '</div><div><div style="font-size:12px;font-weight:600;margin-bottom:8px;color:var(--text-primary);">By Resolution</div>';
+    data.by_resolved.forEach(r => {
+      const label = r.is_resolved ? 'Resolved' : 'Unresolved';
+      html += `<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border);"><span>${label}</span><span style="font-weight:600;">${r.count.toLocaleString()}</span></div>`;
+    });
+    html += '</div></div>';
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load event precision stats</div>'; }
+}
+
+function showCatTimeView() {
+  currentView = 'cattime';
+  hideAllViews();
+  document.getElementById('cattimeView').classList.add('active');
+  loadCatTime();
+}
+async function loadCatTime() {
+  const el = document.getElementById('cattimeContent');
+  try {
+    const res = await fetch('/api/category-ingest-timeline');
+    const data = await res.json();
+    if (!data.timeline.length) { el.innerHTML = '<div style="color:var(--text-muted);">No timeline data.</div>'; return; }
+    const allCats = new Set();
+    data.timeline.forEach(t => Object.keys(t).filter(k => k !== 'day').forEach(k => allCats.add(k)));
+    const cats = [...allCats];
+    let html = '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="border-bottom:2px solid var(--border);"><th style="text-align:left;padding:8px;">Date</th>';
+    cats.forEach(c => { html += `<th style="text-align:right;padding:8px;">${c}</th>`; });
+    html += '</tr></thead><tbody>';
+    data.timeline.forEach(t => {
+      html += `<tr style="border-bottom:1px solid var(--border);"><td style="padding:8px;font-family:var(--font-mono);">${t.day}</td>`;
+      cats.forEach(c => { html += `<td style="text-align:right;padding:8px;">${t[c] || 0}</td>`; });
+      html += '</tr>';
+    });
+    html += '</tbody></table>';
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load category timeline</div>'; }
+}
+
+function showEntHubView() {
+  currentView = 'enthub';
+  hideAllViews();
+  document.getElementById('enthubView').classList.add('active');
+  loadEntHub();
+}
+async function loadEntHub() {
+  const el = document.getElementById('enthubContent');
+  try {
+    const res = await fetch('/api/entity-hub-score');
+    const data = await res.json();
+    if (!data.entities.length) { el.innerHTML = '<div style="color:var(--text-muted);">No hub entities found.</div>'; return; }
+    const maxConn = data.entities[0].connections;
+    let html = '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="border-bottom:2px solid var(--border);"><th style="text-align:left;padding:8px;">Entity</th><th style="text-align:left;padding:8px;">Type</th><th style="text-align:right;padding:8px;">Connections</th><th style="padding:8px;">Bar</th></tr></thead><tbody>';
+    data.entities.forEach(e => {
+      const pct = maxConn > 0 ? (e.connections / maxConn * 100) : 0;
+      html += `<tr style="border-bottom:1px solid var(--border);">`;
+      html += `<td style="padding:8px;font-weight:600;">${e.name}</td>`;
+      html += `<td style="padding:8px;"><span class="entity-tag ${e.type}" style="font-size:10px;">${e.type}</span></td>`;
+      html += `<td style="text-align:right;padding:8px;font-family:var(--font-mono);">${e.connections.toLocaleString()}</td>`;
+      html += `<td style="padding:8px;width:30%;"><div style="background:var(--accent);height:14px;width:${pct}%;border-radius:3px;"></div></td>`;
+      html += `</tr>`;
+    });
+    html += '</tbody></table>';
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load entity hub scores</div>'; }
+}
+
+function showRedactDensityView() {
+  currentView = 'redactdensity';
+  hideAllViews();
+  document.getElementById('redactdensityView').classList.add('active');
+  loadRedactDensity();
+}
+async function loadRedactDensity() {
+  const el = document.getElementById('redactdensityContent');
+  try {
+    const res = await fetch('/api/redaction-density-ranking');
+    const data = await res.json();
+    let html = `<div style="background:var(--bg-secondary);padding:12px;border-radius:6px;margin-bottom:16px;"><span style="font-size:11px;color:var(--text-muted);">Total Redactions</span> <span style="font-size:20px;font-weight:700;color:var(--text-primary);margin-left:8px;">${data.total_redactions.toLocaleString()}</span></div>`;
+    if (data.documents.length) {
+      html += '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="border-bottom:2px solid var(--border);"><th style="text-align:left;padding:8px;">Document</th><th style="text-align:right;padding:8px;">Pages</th><th style="text-align:right;padding:8px;">Redactions</th><th style="text-align:right;padding:8px;">Density</th></tr></thead><tbody>';
+      data.documents.forEach(d => {
+        html += `<tr style="border-bottom:1px solid var(--border);cursor:pointer;" onclick="openReader(${d.id})">`;
+        html += `<td style="padding:8px;">${d.title || d.filename}</td>`;
+        html += `<td style="text-align:right;padding:8px;">${d.pages}</td>`;
+        html += `<td style="text-align:right;padding:8px;">${d.redaction_count}</td>`;
+        html += `<td style="text-align:right;padding:8px;font-weight:600;font-family:var(--font-mono);">${d.density}</td>`;
+        html += `</tr>`;
+      });
+      html += '</tbody></table>';
+    }
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load redaction density</div>'; }
 }
 
 
