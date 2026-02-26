@@ -10109,6 +10109,123 @@ def connection_reciprocity():
     }
 
 
+# ── Round 30 ──────────────────────────────────
+
+
+@app.get("/api/entity-longevity")
+def entity_longevity():
+    """Entities spanning the widest date range in events."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT e.id, e.name, e.type, "
+            "MIN(ev.event_date) AS earliest, MAX(ev.event_date) AS latest, "
+            "COUNT(DISTINCT ev.id) AS event_count "
+            "FROM entities e "
+            "JOIN document_entities de ON de.entity_id = e.id "
+            "JOIN events ev ON ev.document_id = de.document_id "
+            "WHERE ev.event_date IS NOT NULL AND ev.event_date != '' "
+            "GROUP BY e.id HAVING COUNT(DISTINCT ev.id) > 1 "
+            "ORDER BY (JULIANDAY(MAX(ev.event_date)) - JULIANDAY(MIN(ev.event_date))) DESC "
+            "LIMIT 100"
+        ).fetchall()
+    results = []
+    for r in rows:
+        try:
+            from datetime import datetime
+
+            d1 = datetime.strptime(r["earliest"][:10], "%Y-%m-%d")
+            d2 = datetime.strptime(r["latest"][:10], "%Y-%m-%d")
+            span = (d2 - d1).days
+        except (ValueError, TypeError):
+            span = 0
+        results.append({**dict(r), "span_days": span})
+    return {"entities": results}
+
+
+@app.get("/api/document-flagged-ratio")
+def document_flagged_ratio():
+    """Flagged vs unflagged documents by source."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT source, "
+            "SUM(CASE WHEN flagged = 1 THEN 1 ELSE 0 END) AS flagged, "
+            "SUM(CASE WHEN flagged = 0 OR flagged IS NULL THEN 1 ELSE 0 END) AS unflagged, "
+            "COUNT(*) AS total "
+            "FROM documents GROUP BY source ORDER BY total DESC"
+        ).fetchall()
+        totals = conn.execute(
+            "SELECT SUM(CASE WHEN flagged = 1 THEN 1 ELSE 0 END) AS flagged, "
+            "COUNT(*) AS total FROM documents"
+        ).fetchone()
+    return {
+        "sources": [dict(r) for r in rows],
+        "total_flagged": totals["flagged"] or 0,
+        "total_docs": totals["total"],
+    }
+
+
+@app.get("/api/event-cluster-density")
+def event_cluster_density():
+    """Months with the most events."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT SUBSTR(event_date, 1, 7) AS month, COUNT(*) AS count "
+            "FROM events "
+            "WHERE event_date IS NOT NULL AND LENGTH(event_date) >= 7 "
+            "AND SUBSTR(event_date, 1, 4) BETWEEN '1900' AND '2100' "
+            "GROUP BY month ORDER BY count DESC LIMIT 50"
+        ).fetchall()
+    return {"months": [dict(r) for r in rows]}
+
+
+@app.get("/api/source-ingestion-summary")
+def source_ingestion_summary():
+    """Ingestion stats per source."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT source, COUNT(*) AS doc_count, "
+            "MIN(ingested_at) AS first_ingested, "
+            "MAX(ingested_at) AS last_ingested, "
+            "SUM(pages) AS total_pages "
+            "FROM documents GROUP BY source ORDER BY doc_count DESC"
+        ).fetchall()
+    return {"sources": [dict(r) for r in rows]}
+
+
+@app.get("/api/entity-singletons")
+def entity_singletons():
+    """Entities appearing in only one document."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT e.id, e.name, e.type, COUNT(DISTINCT de.document_id) AS doc_count "
+            "FROM entities e "
+            "JOIN document_entities de ON de.entity_id = e.id "
+            "GROUP BY e.id HAVING doc_count = 1 "
+            "ORDER BY e.name LIMIT 200"
+        ).fetchall()
+        total = conn.execute(
+            "SELECT COUNT(*) AS cnt FROM ("
+            "  SELECT entity_id FROM document_entities "
+            "  GROUP BY entity_id HAVING COUNT(DISTINCT document_id) = 1"
+            ")"
+        ).fetchone()["cnt"]
+    return {"entities": [dict(r) for r in rows], "total": total}
+
+
+@app.get("/api/page-text-coverage")
+def page_text_coverage():
+    """Documents with/without extracted text by source."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT source, "
+            "SUM(CASE WHEN raw_text IS NOT NULL AND LENGTH(raw_text) > 0 THEN 1 ELSE 0 END) AS with_text, "
+            "SUM(CASE WHEN raw_text IS NULL OR LENGTH(raw_text) = 0 THEN 1 ELSE 0 END) AS without_text, "
+            "COUNT(*) AS total "
+            "FROM documents GROUP BY source ORDER BY total DESC"
+        ).fetchall()
+    return {"sources": [dict(r) for r in rows]}
+
+
 # ═══════════════════════════════════════════
 # STATIC FILES (serve the frontend)
 # ═══════════════════════════════════════════

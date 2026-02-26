@@ -2047,6 +2047,8 @@ body::before {
 .entconntime-view.active, .srcxref-view.active, .evtprec-view.active, .cattime-view.active, .enthub-view.active, .redactdensity-view.active { display: flex; }
 .entspread-view, .docsize-view, .evtgaps-view, .srcentoverlap-view, .unresolvedent-view, .connrecip-view { display: none; flex-direction: column; gap: 16px; }
 .entspread-view.active, .docsize-view.active, .evtgaps-view.active, .srcentoverlap-view.active, .unresolvedent-view.active, .connrecip-view.active { display: flex; }
+.entlong-view, .flagratio-view, .evtcluster-view, .srcingest-view, .entsingleton-view, .pagetextcov-view { display: none; flex-direction: column; gap: 16px; }
+.entlong-view.active, .flagratio-view.active, .evtcluster-view.active, .srcingest-view.active, .entsingleton-view.active, .pagetextcov-view.active { display: flex; }
 .rel-edge { display: flex; align-items: center; gap: 8px; padding: 4px 0; border-bottom: 1px solid var(--border); }
 .sbs-col { flex: 1; padding: 12px; background: var(--bg-card); border-radius: var(--radius); border: 1px solid var(--border); overflow: hidden; }
 .sbs-header { font-family: var(--font-mono); font-size: 12px; font-weight: 600; color: var(--text-primary); margin-bottom: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -2739,6 +2741,30 @@ body::before {
       <div class="sidebar-item" data-view="connrecip" id="connrecipNav">
         <div class="sidebar-dot" style="background:var(--entity-org)"></div>
         Connection Reciprocity
+      </div>
+      <div class="sidebar-item" data-view="entlong" id="entlongNav">
+        <div class="sidebar-dot" style="background:var(--entity-person)"></div>
+        Entity Longevity
+      </div>
+      <div class="sidebar-item" data-view="flagratio" id="flagratioNav">
+        <div class="sidebar-dot" style="background:var(--entity-date)"></div>
+        Flagged Ratio
+      </div>
+      <div class="sidebar-item" data-view="evtcluster" id="evtclusterNav">
+        <div class="sidebar-dot" style="background:var(--entity-org)"></div>
+        Event Cluster Density
+      </div>
+      <div class="sidebar-item" data-view="srcingest" id="srcingestNav">
+        <div class="sidebar-dot" style="background:var(--entity-place)"></div>
+        Source Ingestion Summary
+      </div>
+      <div class="sidebar-item" data-view="entsingleton" id="entsingletonNav">
+        <div class="sidebar-dot" style="background:var(--entity-person)"></div>
+        Entity Singletons
+      </div>
+      <div class="sidebar-item" data-view="pagetextcov" id="pagetextcovNav">
+        <div class="sidebar-dot" style="background:var(--entity-org)"></div>
+        Page Text Coverage
       </div>
     </div>
 
@@ -4234,6 +4260,36 @@ body::before {
       <div id="connrecipContent">Loading connection reciprocity...</div>
     </div>
 
+    <div class="entlong-view" id="entlongView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Entity Longevity</div>
+      <div id="entlongContent">Loading entity longevity...</div>
+    </div>
+
+    <div class="flagratio-view" id="flagratioView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Document Flagged Ratio</div>
+      <div id="flagratioContent">Loading flagged ratio...</div>
+    </div>
+
+    <div class="evtcluster-view" id="evtclusterView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Event Cluster Density</div>
+      <div id="evtclusterContent">Loading event clusters...</div>
+    </div>
+
+    <div class="srcingest-view" id="srcingestView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Source Ingestion Summary</div>
+      <div id="srcingestContent">Loading source ingestion...</div>
+    </div>
+
+    <div class="entsingleton-view" id="entsingletonView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Entity Singletons</div>
+      <div id="entsingletonContent">Loading entity singletons...</div>
+    </div>
+
+    <div class="pagetextcov-view" id="pagetextcovView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Page Text Coverage</div>
+      <div id="pagetextcovContent">Loading page text coverage...</div>
+    </div>
+
   </main>
 
   <!-- RIGHT PANEL -->
@@ -4984,6 +5040,12 @@ function hideAllViews() {
   document.getElementById('srcentoverlapView').classList.remove('active');
   document.getElementById('unresolvedentView').classList.remove('active');
   document.getElementById('connrecipView').classList.remove('active');
+  document.getElementById('entlongView').classList.remove('active');
+  document.getElementById('flagratioView').classList.remove('active');
+  document.getElementById('evtclusterView').classList.remove('active');
+  document.getElementById('srcingestView').classList.remove('active');
+  document.getElementById('entsingletonView').classList.remove('active');
+  document.getElementById('pagetextcovView').classList.remove('active');
 }
 
 function showDocumentView() {
@@ -5187,6 +5249,12 @@ document.querySelectorAll('.sidebar-item[data-view]').forEach(item => {
     else if (view === 'srcentoverlap') showSrcEntOverlapView();
     else if (view === 'unresolvedent') showUnresolvedEntView();
     else if (view === 'connrecip') showConnRecipView();
+    else if (view === 'entlong') showEntLongView();
+    else if (view === 'flagratio') showFlagRatioView();
+    else if (view === 'evtcluster') showEvtClusterView();
+    else if (view === 'srcingest') showSrcIngestView();
+    else if (view === 'entsingleton') showEntSingletonView();
+    else if (view === 'pagetextcov') showPageTextCovView();
   });
 });
 
@@ -6388,6 +6456,12 @@ function goBackFromReader() {
   else if (readerPreviousView === 'srcentoverlap') showSrcEntOverlapView();
   else if (readerPreviousView === 'unresolvedent') showUnresolvedEntView();
   else if (readerPreviousView === 'connrecip') showConnRecipView();
+  else if (readerPreviousView === 'entlong') showEntLongView();
+  else if (readerPreviousView === 'flagratio') showFlagRatioView();
+  else if (readerPreviousView === 'evtcluster') showEvtClusterView();
+  else if (readerPreviousView === 'srcingest') showSrcIngestView();
+  else if (readerPreviousView === 'entsingleton') showEntSingletonView();
+  else if (readerPreviousView === 'pagetextcov') showPageTextCovView();
   else showDocumentView();
 }
 
@@ -14509,6 +14583,162 @@ async function loadConnRecip() {
     }
     el.innerHTML = html;
   } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load connection reciprocity</div>'; }
+}
+
+// ── Round 30 ──────────────────────────────────
+
+function showEntLongView() {
+  currentView = 'entlong';
+  hideAllViews();
+  document.getElementById('entlongView').classList.add('active');
+  loadEntLong();
+}
+async function loadEntLong() {
+  const el = document.getElementById('entlongContent');
+  try {
+    const res = await fetch('/api/entity-longevity');
+    const data = await res.json();
+    if (!data.entities.length) { el.innerHTML = '<div style="color:var(--text-muted);">No entity longevity data.</div>'; return; }
+    let html = '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="border-bottom:2px solid var(--border);"><th style="text-align:left;padding:8px;">Entity</th><th style="text-align:left;padding:8px;">Type</th><th style="text-align:left;padding:8px;">Earliest</th><th style="text-align:left;padding:8px;">Latest</th><th style="text-align:right;padding:8px;">Span (days)</th><th style="text-align:right;padding:8px;">Events</th></tr></thead><tbody>';
+    data.entities.forEach(e => {
+      html += `<tr style="border-bottom:1px solid var(--border);">`;
+      html += `<td style="padding:8px;font-weight:600;">${e.name}</td>`;
+      html += `<td style="padding:8px;"><span class="entity-tag ${e.type}" style="font-size:10px;">${e.type}</span></td>`;
+      html += `<td style="padding:8px;font-family:var(--font-mono);font-size:11px;">${(e.earliest||'').substring(0,10)}</td>`;
+      html += `<td style="padding:8px;font-family:var(--font-mono);font-size:11px;">${(e.latest||'').substring(0,10)}</td>`;
+      html += `<td style="text-align:right;padding:8px;font-weight:600;">${e.span_days.toLocaleString()}</td>`;
+      html += `<td style="text-align:right;padding:8px;">${e.event_count}</td>`;
+      html += `</tr>`;
+    });
+    html += '</tbody></table>';
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load entity longevity</div>'; }
+}
+
+function showFlagRatioView() {
+  currentView = 'flagratio';
+  hideAllViews();
+  document.getElementById('flagratioView').classList.add('active');
+  loadFlagRatio();
+}
+async function loadFlagRatio() {
+  const el = document.getElementById('flagratioContent');
+  try {
+    const res = await fetch('/api/document-flagged-ratio');
+    const data = await res.json();
+    const pct = data.total_docs > 0 ? (data.total_flagged / data.total_docs * 100).toFixed(1) : 0;
+    let html = `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px;">`;
+    html += `<div style="background:var(--bg-secondary);padding:12px;border-radius:6px;"><div style="font-size:11px;color:var(--text-muted);">Total Docs</div><div style="font-size:24px;font-weight:700;color:var(--text-primary);">${data.total_docs}</div></div>`;
+    html += `<div style="background:var(--bg-secondary);padding:12px;border-radius:6px;"><div style="font-size:11px;color:var(--text-muted);">Flagged</div><div style="font-size:24px;font-weight:700;color:#e05555;">${data.total_flagged}</div></div>`;
+    html += `<div style="background:var(--bg-secondary);padding:12px;border-radius:6px;"><div style="font-size:11px;color:var(--text-muted);">Flag Rate</div><div style="font-size:24px;font-weight:700;color:var(--text-primary);">${pct}%</div></div>`;
+    html += `</div>`;
+    html += '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="border-bottom:2px solid var(--border);"><th style="text-align:left;padding:8px;">Source</th><th style="text-align:right;padding:8px;">Flagged</th><th style="text-align:right;padding:8px;">Unflagged</th><th style="text-align:right;padding:8px;">Total</th></tr></thead><tbody>';
+    data.sources.forEach(s => {
+      html += `<tr style="border-bottom:1px solid var(--border);"><td style="padding:8px;">${s.source}</td><td style="text-align:right;padding:8px;color:#e05555;font-weight:600;">${s.flagged}</td><td style="text-align:right;padding:8px;">${s.unflagged}</td><td style="text-align:right;padding:8px;">${s.total}</td></tr>`;
+    });
+    html += '</tbody></table>';
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load flagged ratio</div>'; }
+}
+
+function showEvtClusterView() {
+  currentView = 'evtcluster';
+  hideAllViews();
+  document.getElementById('evtclusterView').classList.add('active');
+  loadEvtCluster();
+}
+async function loadEvtCluster() {
+  const el = document.getElementById('evtclusterContent');
+  try {
+    const res = await fetch('/api/event-cluster-density');
+    const data = await res.json();
+    if (!data.months.length) { el.innerHTML = '<div style="color:var(--text-muted);">No event data.</div>'; return; }
+    const maxCount = data.months[0].count;
+    let html = '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="border-bottom:2px solid var(--border);"><th style="text-align:left;padding:8px;">Month</th><th style="text-align:right;padding:8px;">Events</th><th style="padding:8px;">Bar</th></tr></thead><tbody>';
+    data.months.forEach(m => {
+      const pct = maxCount > 0 ? (m.count / maxCount * 100) : 0;
+      html += `<tr style="border-bottom:1px solid var(--border);"><td style="padding:8px;font-family:var(--font-mono);">${m.month}</td><td style="text-align:right;padding:8px;font-weight:600;">${m.count.toLocaleString()}</td><td style="padding:8px;width:40%;"><div style="background:var(--accent);height:14px;width:${pct}%;border-radius:3px;"></div></td></tr>`;
+    });
+    html += '</tbody></table>';
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load event clusters</div>'; }
+}
+
+function showSrcIngestView() {
+  currentView = 'srcingest';
+  hideAllViews();
+  document.getElementById('srcingestView').classList.add('active');
+  loadSrcIngest();
+}
+async function loadSrcIngest() {
+  const el = document.getElementById('srcingestContent');
+  try {
+    const res = await fetch('/api/source-ingestion-summary');
+    const data = await res.json();
+    let html = '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="border-bottom:2px solid var(--border);"><th style="text-align:left;padding:8px;">Source</th><th style="text-align:right;padding:8px;">Docs</th><th style="text-align:right;padding:8px;">Pages</th><th style="text-align:left;padding:8px;">First Ingested</th><th style="text-align:left;padding:8px;">Last Ingested</th></tr></thead><tbody>';
+    data.sources.forEach(s => {
+      html += `<tr style="border-bottom:1px solid var(--border);">`;
+      html += `<td style="padding:8px;">${s.source}</td>`;
+      html += `<td style="text-align:right;padding:8px;">${s.doc_count}</td>`;
+      html += `<td style="text-align:right;padding:8px;">${(s.total_pages||0).toLocaleString()}</td>`;
+      html += `<td style="padding:8px;font-family:var(--font-mono);font-size:11px;">${(s.first_ingested||'').substring(0,16)}</td>`;
+      html += `<td style="padding:8px;font-family:var(--font-mono);font-size:11px;">${(s.last_ingested||'').substring(0,16)}</td>`;
+      html += `</tr>`;
+    });
+    html += '</tbody></table>';
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load source ingestion</div>'; }
+}
+
+function showEntSingletonView() {
+  currentView = 'entsingleton';
+  hideAllViews();
+  document.getElementById('entsingletonView').classList.add('active');
+  loadEntSingleton();
+}
+async function loadEntSingleton() {
+  const el = document.getElementById('entsingletonContent');
+  try {
+    const res = await fetch('/api/entity-singletons');
+    const data = await res.json();
+    let html = `<div style="background:var(--bg-secondary);padding:12px;border-radius:6px;margin-bottom:16px;"><span style="font-size:11px;color:var(--text-muted);">Total Singleton Entities</span> <span style="font-size:20px;font-weight:700;color:var(--text-primary);margin-left:8px;">${data.total.toLocaleString()}</span></div>`;
+    if (data.entities.length) {
+      html += '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="border-bottom:2px solid var(--border);"><th style="text-align:left;padding:8px;">Entity</th><th style="text-align:left;padding:8px;">Type</th></tr></thead><tbody>';
+      data.entities.forEach(e => {
+        html += `<tr style="border-bottom:1px solid var(--border);"><td style="padding:8px;">${e.name}</td><td style="padding:8px;"><span class="entity-tag ${e.type}" style="font-size:10px;">${e.type}</span></td></tr>`;
+      });
+      html += '</tbody></table>';
+    }
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load entity singletons</div>'; }
+}
+
+function showPageTextCovView() {
+  currentView = 'pagetextcov';
+  hideAllViews();
+  document.getElementById('pagetextcovView').classList.add('active');
+  loadPageTextCov();
+}
+async function loadPageTextCov() {
+  const el = document.getElementById('pagetextcovContent');
+  try {
+    const res = await fetch('/api/page-text-coverage');
+    const data = await res.json();
+    let html = '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="border-bottom:2px solid var(--border);"><th style="text-align:left;padding:8px;">Source</th><th style="text-align:right;padding:8px;">With Text</th><th style="text-align:right;padding:8px;">Without Text</th><th style="text-align:right;padding:8px;">Total</th><th style="text-align:right;padding:8px;">Coverage</th></tr></thead><tbody>';
+    data.sources.forEach(s => {
+      const cov = s.total > 0 ? (s.with_text / s.total * 100).toFixed(1) : 0;
+      const color = cov >= 90 ? '#4ade80' : cov >= 50 ? '#facc15' : '#e05555';
+      html += `<tr style="border-bottom:1px solid var(--border);">`;
+      html += `<td style="padding:8px;">${s.source}</td>`;
+      html += `<td style="text-align:right;padding:8px;">${s.with_text}</td>`;
+      html += `<td style="text-align:right;padding:8px;">${s.without_text}</td>`;
+      html += `<td style="text-align:right;padding:8px;">${s.total}</td>`;
+      html += `<td style="text-align:right;padding:8px;font-weight:600;color:${color};">${cov}%</td>`;
+      html += `</tr>`;
+    });
+    html += '</tbody></table>';
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load page text coverage</div>'; }
 }
 
 
