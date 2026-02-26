@@ -11360,6 +11360,150 @@ def redaction_document_coverage():
     }
 
 
+@app.get("/api/entity-type-per-source")
+def entity_type_per_source():
+    """Entity type breakdown per source."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT d.source, e.type, COUNT(DISTINCT e.id) AS count "
+            "FROM document_entities de "
+            "JOIN documents d ON d.id = de.document_id "
+            "JOIN entities e ON e.id = de.entity_id "
+            "GROUP BY d.source, e.type ORDER BY d.source, count DESC"
+        ).fetchall()
+    sources = {}
+    types = set()
+    for r in rows:
+        src = r["source"] or "unknown"
+        if src not in sources:
+            sources[src] = {}
+        sources[src][r["type"]] = r["count"]
+        types.add(r["type"])
+    return {
+        "sources": sorted(sources.keys()),
+        "types": sorted(types),
+        "matrix": sources,
+    }
+
+
+@app.get("/api/document-ingestion-gap")
+def document_ingestion_gap():
+    """Time gaps between document ingestions."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT DATE(ingested_at) AS day, COUNT(*) AS count "
+            "FROM documents WHERE ingested_at IS NOT NULL "
+            "GROUP BY day ORDER BY day"
+        ).fetchall()
+    gaps = []
+    for i in range(1, len(rows)):
+        prev = rows[i - 1]["day"]
+        curr = rows[i]["day"]
+        gaps.append(
+            {
+                "from": prev,
+                "to": curr,
+                "docs_before": rows[i - 1]["count"],
+                "docs_after": rows[i]["count"],
+            }
+        )
+    return {"ingestion_days": [dict(r) for r in rows], "gaps": gaps}
+
+
+@app.get("/api/event-weekday-distribution")
+def event_weekday_distribution():
+    """Events grouped by day of week from event dates."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT CASE CAST(STRFTIME('%w', event_date) AS INTEGER) "
+            "  WHEN 0 THEN 'Sunday' WHEN 1 THEN 'Monday' WHEN 2 THEN 'Tuesday' "
+            "  WHEN 3 THEN 'Wednesday' WHEN 4 THEN 'Thursday' "
+            "  WHEN 5 THEN 'Friday' WHEN 6 THEN 'Saturday' END AS weekday, "
+            "CAST(STRFTIME('%w', event_date) AS INTEGER) AS day_num, "
+            "COUNT(*) AS count "
+            "FROM events WHERE event_date IS NOT NULL AND LENGTH(event_date) >= 10 "
+            "GROUP BY day_num ORDER BY day_num"
+        ).fetchall()
+    return {"days": [dict(r) for r in rows]}
+
+
+@app.get("/api/source-category-coverage")
+def source_category_coverage():
+    """Which categories each source covers."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT source, category, COUNT(*) AS count "
+            "FROM documents GROUP BY source, category ORDER BY source, count DESC"
+        ).fetchall()
+    sources = {}
+    categories = set()
+    for r in rows:
+        src = r["source"] or "unknown"
+        if src not in sources:
+            sources[src] = {}
+        sources[src][r["category"] or "uncategorized"] = r["count"]
+        categories.add(r["category"] or "uncategorized")
+    return {
+        "sources": sorted(sources.keys()),
+        "categories": sorted(categories),
+        "matrix": sources,
+    }
+
+
+@app.get("/api/entity-multi-alias-ratio")
+def entity_multi_alias_ratio():
+    """Entities with multiple aliases vs single alias."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT alias_bucket, COUNT(*) AS entity_count FROM ("
+            "  SELECT entity_id, "
+            "  CASE "
+            "    WHEN COUNT(*) = 1 THEN '1 alias' "
+            "    WHEN COUNT(*) = 2 THEN '2 aliases' "
+            "    WHEN COUNT(*) = 3 THEN '3 aliases' "
+            "    WHEN COUNT(*) <= 5 THEN '4-5 aliases' "
+            "    ELSE '6+ aliases' "
+            "  END AS alias_bucket "
+            "  FROM entity_aliases GROUP BY entity_id"
+            ") GROUP BY alias_bucket ORDER BY MIN(CASE alias_bucket "
+            "  WHEN '1 alias' THEN 1 WHEN '2 aliases' THEN 2 "
+            "  WHEN '3 aliases' THEN 3 WHEN '4-5 aliases' THEN 4 ELSE 5 END)"
+        ).fetchall()
+        total = sum(r["entity_count"] for r in rows)
+    return {
+        "total_with_aliases": total,
+        "buckets": [
+            {
+                "bucket": r["alias_bucket"],
+                "count": r["entity_count"],
+                "pct": round(100.0 * r["entity_count"] / total, 1) if total else 0,
+            }
+            for r in rows
+        ],
+    }
+
+
+@app.get("/api/connection-asymmetry")
+def connection_asymmetry():
+    """Entities with highly asymmetric connection weights."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT e.name, e.type, sub.min_w, sub.max_w, sub.avg_w, sub.conn_count, "
+            "sub.max_w - sub.min_w AS spread "
+            "FROM ("
+            "  SELECT entity_id, MIN(w) AS min_w, MAX(w) AS max_w, "
+            "  ROUND(AVG(w), 2) AS avg_w, COUNT(*) AS conn_count FROM ("
+            "    SELECT entity_a_id AS entity_id, weight AS w FROM entity_connections "
+            "    UNION ALL "
+            "    SELECT entity_b_id AS entity_id, weight AS w FROM entity_connections"
+            "  ) GROUP BY entity_id HAVING COUNT(*) >= 3"
+            ") sub "
+            "JOIN entities e ON e.id = sub.entity_id "
+            "ORDER BY spread DESC LIMIT 100"
+        ).fetchall()
+    return {"entities": [dict(r) for r in rows]}
+
+
 # ═══════════════════════════════════════════
 # STATIC FILES (serve the frontend)
 # ═══════════════════════════════════════════

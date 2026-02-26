@@ -2065,6 +2065,8 @@ body::before {
 .entdegcent-view.active, .doctitleanalysis-view.active, .evtdatespan-view.active, .srcpagevol-view.active, .entaliastype-view.active, .connbridge-view.active { display: flex; }
 .entsharedsrc-view, .docfilepattern-view, .evtmonthmap-view, .srcentconc-view, .entconnstrrank-view, .redactdoccov-view { display: none; flex-direction: column; gap: 16px; }
 .entsharedsrc-view.active, .docfilepattern-view.active, .evtmonthmap-view.active, .srcentconc-view.active, .entconnstrrank-view.active, .redactdoccov-view.active { display: flex; }
+.enttypesrc-view, .docingestgap-view, .evtweekday-view, .srccatcov-view, .entmultialias-view, .connasym-view { display: none; flex-direction: column; gap: 16px; }
+.enttypesrc-view.active, .docingestgap-view.active, .evtweekday-view.active, .srccatcov-view.active, .entmultialias-view.active, .connasym-view.active { display: flex; }
 .rel-edge { display: flex; align-items: center; gap: 8px; padding: 4px 0; border-bottom: 1px solid var(--border); }
 .sbs-col { flex: 1; padding: 12px; background: var(--bg-card); border-radius: var(--radius); border: 1px solid var(--border); overflow: hidden; }
 .sbs-header { font-family: var(--font-mono); font-size: 12px; font-weight: 600; color: var(--text-primary); margin-bottom: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -2973,6 +2975,30 @@ body::before {
       <div class="sidebar-item" data-view="redactdoccov" id="redactdoccovNav">
         <div class="sidebar-dot" style="background:var(--entity-org)"></div>
         Redaction Document Coverage
+      </div>
+      <div class="sidebar-item" data-view="enttypesrc" id="enttypesrcNav">
+        <div class="sidebar-dot" style="background:var(--entity-person)"></div>
+        Entity Type Per Source
+      </div>
+      <div class="sidebar-item" data-view="docingestgap" id="docingestgapNav">
+        <div class="sidebar-dot" style="background:var(--entity-org)"></div>
+        Document Ingestion Gap
+      </div>
+      <div class="sidebar-item" data-view="evtweekday" id="evtweekdayNav">
+        <div class="sidebar-dot" style="background:var(--entity-location)"></div>
+        Event Weekday Distribution
+      </div>
+      <div class="sidebar-item" data-view="srccatcov" id="srccatcovNav">
+        <div class="sidebar-dot" style="background:var(--accent)"></div>
+        Source Category Coverage
+      </div>
+      <div class="sidebar-item" data-view="entmultialias" id="entmultialiasNav">
+        <div class="sidebar-dot" style="background:var(--entity-person)"></div>
+        Entity Multi-Alias Ratio
+      </div>
+      <div class="sidebar-item" data-view="connasym" id="connasymNav">
+        <div class="sidebar-dot" style="background:var(--entity-org)"></div>
+        Connection Asymmetry
       </div>
     </div>
 
@@ -4738,6 +4764,36 @@ body::before {
       <div id="redactdoccovContent">Loading redaction document coverage...</div>
     </div>
 
+    <div class="enttypesrc-view" id="enttypesrcView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Entity Type Per Source</div>
+      <div id="enttypesrcContent">Loading entity type per source...</div>
+    </div>
+
+    <div class="docingestgap-view" id="docingestgapView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Document Ingestion Gap</div>
+      <div id="docingestgapContent">Loading document ingestion gap...</div>
+    </div>
+
+    <div class="evtweekday-view" id="evtweekdayView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Event Weekday Distribution</div>
+      <div id="evtweekdayContent">Loading event weekday distribution...</div>
+    </div>
+
+    <div class="srccatcov-view" id="srccatcovView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Source Category Coverage</div>
+      <div id="srccatcovContent">Loading source category coverage...</div>
+    </div>
+
+    <div class="entmultialias-view" id="entmultialiasView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Entity Multi-Alias Ratio</div>
+      <div id="entmultialiasContent">Loading entity multi-alias ratio...</div>
+    </div>
+
+    <div class="connasym-view" id="connasymView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Connection Asymmetry</div>
+      <div id="connasymContent">Loading connection asymmetry...</div>
+    </div>
+
   </main>
 
   <!-- RIGHT PANEL -->
@@ -5542,6 +5598,12 @@ function hideAllViews() {
   document.getElementById('srcentconcView').classList.remove('active');
   document.getElementById('entconnstrrankView').classList.remove('active');
   document.getElementById('redactdoccovView').classList.remove('active');
+  document.getElementById('enttypesrcView').classList.remove('active');
+  document.getElementById('docingestgapView').classList.remove('active');
+  document.getElementById('evtweekdayView').classList.remove('active');
+  document.getElementById('srccatcovView').classList.remove('active');
+  document.getElementById('entmultialiasView').classList.remove('active');
+  document.getElementById('connasymView').classList.remove('active');
 }
 
 function showDocumentView() {
@@ -5799,6 +5861,12 @@ document.querySelectorAll('.sidebar-item[data-view]').forEach(item => {
     else if (view === 'srcentconc') showSrcEntConcView();
     else if (view === 'entconnstrrank') showEntConnStrRankView();
     else if (view === 'redactdoccov') showRedactDocCovView();
+    else if (view === 'enttypesrc') showEntTypeSrcView();
+    else if (view === 'docingestgap') showDocIngestGapView();
+    else if (view === 'evtweekday') showEvtWeekdayView();
+    else if (view === 'srccatcov') showSrcCatCovView();
+    else if (view === 'entmultialias') showEntMultiAliasView();
+    else if (view === 'connasym') showConnAsymView();
   });
 });
 
@@ -7054,6 +7122,12 @@ function goBackFromReader() {
   else if (readerPreviousView === 'srcentconc') showSrcEntConcView();
   else if (readerPreviousView === 'entconnstrrank') showEntConnStrRankView();
   else if (readerPreviousView === 'redactdoccov') showRedactDocCovView();
+  else if (readerPreviousView === 'enttypesrc') showEntTypeSrcView();
+  else if (readerPreviousView === 'docingestgap') showDocIngestGapView();
+  else if (readerPreviousView === 'evtweekday') showEvtWeekdayView();
+  else if (readerPreviousView === 'srccatcov') showSrcCatCovView();
+  else if (readerPreviousView === 'entmultialias') showEntMultiAliasView();
+  else if (readerPreviousView === 'connasym') showConnAsymView();
   else showDocumentView();
 }
 
@@ -16486,6 +16560,143 @@ async function loadRedactDocCov() {
     }
     el.innerHTML = html;
   } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load redaction document coverage</div>'; }
+}
+
+function showEntTypeSrcView() {
+  currentView = 'enttypesrc';
+  hideAllViews();
+  document.getElementById('enttypesrcView').classList.add('active');
+  loadEntTypeSrc();
+}
+async function loadEntTypeSrc() {
+  const el = document.getElementById('enttypesrcContent');
+  try {
+    const res = await fetch('/api/entity-type-per-source');
+    const data = await res.json();
+    let html = '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="border-bottom:2px solid var(--border);"><th style="text-align:left;padding:8px;">Source</th>';
+    data.types.forEach(t => { html += `<th style="text-align:right;padding:8px;">${t}</th>`; });
+    html += '</tr></thead><tbody>';
+    data.sources.forEach(src => {
+      html += `<tr style="border-bottom:1px solid var(--border);"><td style="padding:8px;">${src}</td>`;
+      data.types.forEach(t => {
+        const val = (data.matrix[src] && data.matrix[src][t]) || 0;
+        html += `<td style="text-align:right;padding:8px;font-weight:${val ? '600' : '400'};color:${val ? 'var(--text-primary)' : 'var(--text-muted)'};">${val}</td>`;
+      });
+      html += '</tr>';
+    });
+    html += '</tbody></table>';
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load entity type per source</div>'; }
+}
+
+function showDocIngestGapView() {
+  currentView = 'docingestgap';
+  hideAllViews();
+  document.getElementById('docingestgapView').classList.add('active');
+  loadDocIngestGap();
+}
+async function loadDocIngestGap() {
+  const el = document.getElementById('docingestgapContent');
+  try {
+    const res = await fetch('/api/document-ingestion-gap');
+    const data = await res.json();
+    let html = '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="border-bottom:2px solid var(--border);"><th style="text-align:left;padding:8px;">Date</th><th style="text-align:right;padding:8px;">Documents</th></tr></thead><tbody>';
+    data.ingestion_days.forEach(r => {
+      html += `<tr style="border-bottom:1px solid var(--border);"><td style="padding:8px;">${r.day}</td><td style="text-align:right;padding:8px;font-weight:600;">${r.count}</td></tr>`;
+    });
+    html += '</tbody></table>';
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load document ingestion gap</div>'; }
+}
+
+function showEvtWeekdayView() {
+  currentView = 'evtweekday';
+  hideAllViews();
+  document.getElementById('evtweekdayView').classList.add('active');
+  loadEvtWeekday();
+}
+async function loadEvtWeekday() {
+  const el = document.getElementById('evtweekdayContent');
+  try {
+    const res = await fetch('/api/event-weekday-distribution');
+    const data = await res.json();
+    const maxCount = Math.max(...data.days.map(d => d.count), 1);
+    let html = '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="border-bottom:2px solid var(--border);"><th style="text-align:left;padding:8px;">Day</th><th style="text-align:right;padding:8px;">Events</th><th style="text-align:left;padding:8px;width:50%;">Bar</th></tr></thead><tbody>';
+    data.days.forEach(d => {
+      const w = Math.round(100 * d.count / maxCount);
+      html += `<tr style="border-bottom:1px solid var(--border);"><td style="padding:8px;font-weight:600;">${d.weekday}</td><td style="text-align:right;padding:8px;">${d.count.toLocaleString()}</td><td style="padding:8px;"><div style="background:var(--accent);height:14px;border-radius:3px;width:${w}%;"></div></td></tr>`;
+    });
+    html += '</tbody></table>';
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load event weekday distribution</div>'; }
+}
+
+function showSrcCatCovView() {
+  currentView = 'srccatcov';
+  hideAllViews();
+  document.getElementById('srccatcovView').classList.add('active');
+  loadSrcCatCov();
+}
+async function loadSrcCatCov() {
+  const el = document.getElementById('srccatcovContent');
+  try {
+    const res = await fetch('/api/source-category-coverage');
+    const data = await res.json();
+    let html = '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="border-bottom:2px solid var(--border);"><th style="text-align:left;padding:8px;">Source</th>';
+    data.categories.forEach(c => { html += `<th style="text-align:right;padding:8px;">${c}</th>`; });
+    html += '</tr></thead><tbody>';
+    data.sources.forEach(src => {
+      html += `<tr style="border-bottom:1px solid var(--border);"><td style="padding:8px;">${src}</td>`;
+      data.categories.forEach(c => {
+        const val = (data.matrix[src] && data.matrix[src][c]) || 0;
+        html += `<td style="text-align:right;padding:8px;font-weight:${val ? '600' : '400'};color:${val ? 'var(--text-primary)' : 'var(--text-muted)'};">${val}</td>`;
+      });
+      html += '</tr>';
+    });
+    html += '</tbody></table>';
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load source category coverage</div>'; }
+}
+
+function showEntMultiAliasView() {
+  currentView = 'entmultialias';
+  hideAllViews();
+  document.getElementById('entmultialiasView').classList.add('active');
+  loadEntMultiAlias();
+}
+async function loadEntMultiAlias() {
+  const el = document.getElementById('entmultialiasContent');
+  try {
+    const res = await fetch('/api/entity-multi-alias-ratio');
+    const data = await res.json();
+    let html = `<div style="background:var(--bg-secondary);padding:12px;border-radius:6px;margin-bottom:16px;"><div style="font-size:11px;color:var(--text-muted);">Entities With Aliases</div><div style="font-size:20px;font-weight:700;color:var(--text-primary);">${data.total_with_aliases}</div></div>`;
+    html += '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="border-bottom:2px solid var(--border);"><th style="text-align:left;padding:8px;">Bucket</th><th style="text-align:right;padding:8px;">Count</th><th style="text-align:right;padding:8px;">%</th><th style="text-align:left;padding:8px;width:40%;">Bar</th></tr></thead><tbody>';
+    data.buckets.forEach(r => {
+      html += `<tr style="border-bottom:1px solid var(--border);"><td style="padding:8px;">${r.bucket}</td><td style="text-align:right;padding:8px;font-weight:600;">${r.count}</td><td style="text-align:right;padding:8px;">${r.pct}%</td><td style="padding:8px;"><div style="background:var(--accent);height:14px;border-radius:3px;width:${r.pct}%;"></div></td></tr>`;
+    });
+    html += '</tbody></table>';
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load entity multi-alias ratio</div>'; }
+}
+
+function showConnAsymView() {
+  currentView = 'connasym';
+  hideAllViews();
+  document.getElementById('connasymView').classList.add('active');
+  loadConnAsym();
+}
+async function loadConnAsym() {
+  const el = document.getElementById('connasymContent');
+  try {
+    const res = await fetch('/api/connection-asymmetry');
+    const data = await res.json();
+    let html = '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="border-bottom:2px solid var(--border);"><th style="text-align:left;padding:8px;">Entity</th><th style="text-align:left;padding:8px;">Type</th><th style="text-align:right;padding:8px;">Min</th><th style="text-align:right;padding:8px;">Max</th><th style="text-align:right;padding:8px;">Avg</th><th style="text-align:right;padding:8px;">Spread</th><th style="text-align:right;padding:8px;">Connections</th></tr></thead><tbody>';
+    data.entities.forEach(r => {
+      html += `<tr style="border-bottom:1px solid var(--border);"><td style="padding:8px;">${r.name}</td><td style="padding:8px;"><span class="entity-tag ${r.type}" style="font-size:10px;">${r.type}</span></td><td style="text-align:right;padding:8px;">${r.min_w}</td><td style="text-align:right;padding:8px;">${r.max_w}</td><td style="text-align:right;padding:8px;">${r.avg_w}</td><td style="text-align:right;padding:8px;font-weight:600;">${r.spread}</td><td style="text-align:right;padding:8px;">${r.conn_count}</td></tr>`;
+    });
+    html += '</tbody></table>';
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load connection asymmetry</div>'; }
 }
 
 // ─── INIT ───
