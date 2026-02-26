@@ -2059,6 +2059,8 @@ body::before {
 .enttypedist-view.active, .doctextlen-view.active, .evtconfdist-view.active, .srcdatespan-view.active, .entmentfreq-view.active, .conntypebreak-view.active { display: flex; }
 .entisoscore-view, .doccatbal-view, .evttempdensity-view, .srcentexcl-view, .entnamepattern-view, .conncluster-view { display: none; flex-direction: column; gap: 16px; }
 .entisoscore-view.active, .doccatbal-view.active, .evttempdensity-view.active, .srcentexcl-view.active, .entnamepattern-view.active, .conncluster-view.active { display: flex; }
+.docsrctimeline-view, .entcrosstype-view, .evtctxlen-view, .srcflagratio-view, .entrescov-view, .connwthist-view { display: none; flex-direction: column; gap: 16px; }
+.docsrctimeline-view.active, .entcrosstype-view.active, .evtctxlen-view.active, .srcflagratio-view.active, .entrescov-view.active, .connwthist-view.active { display: flex; }
 .rel-edge { display: flex; align-items: center; gap: 8px; padding: 4px 0; border-bottom: 1px solid var(--border); }
 .sbs-col { flex: 1; padding: 12px; background: var(--bg-card); border-radius: var(--radius); border: 1px solid var(--border); overflow: hidden; }
 .sbs-header { font-family: var(--font-mono); font-size: 12px; font-weight: 600; color: var(--text-primary); margin-bottom: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -2895,6 +2897,30 @@ body::before {
       <div class="sidebar-item" data-view="conncluster" id="connclusterNav">
         <div class="sidebar-dot" style="background:var(--accent)"></div>
         Connection Cluster Summary
+      </div>
+      <div class="sidebar-item" data-view="docsrctimeline" id="docsrctimelineNav">
+        <div class="sidebar-dot" style="background:var(--entity-person)"></div>
+        Document Source Timeline
+      </div>
+      <div class="sidebar-item" data-view="entcrosstype" id="entcrosstypeNav">
+        <div class="sidebar-dot" style="background:var(--entity-org)"></div>
+        Entity Cross-Type Connections
+      </div>
+      <div class="sidebar-item" data-view="evtctxlen" id="evtctxlenNav">
+        <div class="sidebar-dot" style="background:var(--entity-location)"></div>
+        Event Context Length
+      </div>
+      <div class="sidebar-item" data-view="srcflagratio" id="srcflagratioNav">
+        <div class="sidebar-dot" style="background:var(--accent)"></div>
+        Source Flagged Ratio
+      </div>
+      <div class="sidebar-item" data-view="entrescov" id="entrescovNav">
+        <div class="sidebar-dot" style="background:var(--entity-person)"></div>
+        Entity Resolution Coverage
+      </div>
+      <div class="sidebar-item" data-view="connwthist" id="connwthistNav">
+        <div class="sidebar-dot" style="background:var(--entity-org)"></div>
+        Connection Weight Histogram
       </div>
     </div>
 
@@ -4570,6 +4596,36 @@ body::before {
       <div id="connclusterContent">Loading connection cluster summary...</div>
     </div>
 
+    <div class="docsrctimeline-view" id="docsrctimelineView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Document Source Timeline</div>
+      <div id="docsrctimelineContent">Loading document source timeline...</div>
+    </div>
+
+    <div class="entcrosstype-view" id="entcrosstypeView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Entity Cross-Type Connections</div>
+      <div id="entcrosstypeContent">Loading entity cross-type connections...</div>
+    </div>
+
+    <div class="evtctxlen-view" id="evtctxlenView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Event Context Length</div>
+      <div id="evtctxlenContent">Loading event context length...</div>
+    </div>
+
+    <div class="srcflagratio-view" id="srcflagratioView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Source Flagged Ratio</div>
+      <div id="srcflagratioContent">Loading source flagged ratio...</div>
+    </div>
+
+    <div class="entrescov-view" id="entrescovView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Entity Resolution Coverage</div>
+      <div id="entrescovContent">Loading entity resolution coverage...</div>
+    </div>
+
+    <div class="connwthist-view" id="connwthistView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Connection Weight Histogram</div>
+      <div id="connwthistContent">Loading connection weight histogram...</div>
+    </div>
+
   </main>
 
   <!-- RIGHT PANEL -->
@@ -5356,6 +5412,12 @@ function hideAllViews() {
   document.getElementById('srcentexclView').classList.remove('active');
   document.getElementById('entnamepatternView').classList.remove('active');
   document.getElementById('connclusterView').classList.remove('active');
+  document.getElementById('docsrctimelineView').classList.remove('active');
+  document.getElementById('entcrosstypeView').classList.remove('active');
+  document.getElementById('evtctxlenView').classList.remove('active');
+  document.getElementById('srcflagratioView').classList.remove('active');
+  document.getElementById('entrescovView').classList.remove('active');
+  document.getElementById('connwthistView').classList.remove('active');
 }
 
 function showDocumentView() {
@@ -5595,6 +5657,12 @@ document.querySelectorAll('.sidebar-item[data-view]').forEach(item => {
     else if (view === 'srcentexcl') showSrcEntExclView();
     else if (view === 'entnamepattern') showEntNamePatternView();
     else if (view === 'conncluster') showConnClusterView();
+    else if (view === 'docsrctimeline') showDocSrcTimelineView();
+    else if (view === 'entcrosstype') showEntCrossTypeView();
+    else if (view === 'evtctxlen') showEvtCtxLenView();
+    else if (view === 'srcflagratio') showSrcFlagRatioView();
+    else if (view === 'entrescov') showEntResCovView();
+    else if (view === 'connwthist') showConnWtHistView();
   });
 });
 
@@ -6832,6 +6900,12 @@ function goBackFromReader() {
   else if (readerPreviousView === 'srcentexcl') showSrcEntExclView();
   else if (readerPreviousView === 'entnamepattern') showEntNamePatternView();
   else if (readerPreviousView === 'conncluster') showConnClusterView();
+  else if (readerPreviousView === 'docsrctimeline') showDocSrcTimelineView();
+  else if (readerPreviousView === 'entcrosstype') showEntCrossTypeView();
+  else if (readerPreviousView === 'evtctxlen') showEvtCtxLenView();
+  else if (readerPreviousView === 'srcflagratio') showSrcFlagRatioView();
+  else if (readerPreviousView === 'entrescov') showEntResCovView();
+  else if (readerPreviousView === 'connwthist') showConnWtHistView();
   else showDocumentView();
 }
 
@@ -15848,6 +15922,159 @@ async function loadConnCluster() {
     html += '</tbody></table>';
     el.innerHTML = html;
   } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load connection cluster summary</div>'; }
+}
+
+function showDocSrcTimelineView() {
+  currentView = 'docsrctimeline';
+  hideAllViews();
+  document.getElementById('docsrctimelineView').classList.add('active');
+  loadDocSrcTimeline();
+}
+async function loadDocSrcTimeline() {
+  const el = document.getElementById('docsrctimelineContent');
+  try {
+    const res = await fetch('/api/document-source-timeline');
+    const data = await res.json();
+    let html = '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="border-bottom:2px solid var(--border);"><th style="text-align:left;padding:8px;">Date</th>';
+    data.sources.forEach(s => { html += `<th style="text-align:right;padding:8px;">${s}</th>`; });
+    html += '</tr></thead><tbody>';
+    data.days.forEach(day => {
+      html += `<tr style="border-bottom:1px solid var(--border);"><td style="padding:8px;">${day}</td>`;
+      data.sources.forEach(s => {
+        const val = (data.data[day] && data.data[day][s]) || 0;
+        html += `<td style="text-align:right;padding:8px;font-weight:${val ? '600' : '400'};color:${val ? 'var(--text-primary)' : 'var(--text-muted)'};">${val}</td>`;
+      });
+      html += '</tr>';
+    });
+    html += '</tbody></table>';
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load document source timeline</div>'; }
+}
+
+function showEntCrossTypeView() {
+  currentView = 'entcrosstype';
+  hideAllViews();
+  document.getElementById('entcrosstypeView').classList.add('active');
+  loadEntCrossType();
+}
+async function loadEntCrossType() {
+  const el = document.getElementById('entcrosstypeContent');
+  try {
+    const res = await fetch('/api/entity-cross-type-connections');
+    const data = await res.json();
+    let html = `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px;">`;
+    html += `<div style="background:var(--bg-secondary);padding:12px;border-radius:6px;"><div style="font-size:11px;color:var(--text-muted);">Total Connections</div><div style="font-size:20px;font-weight:700;color:var(--text-primary);">${data.total.toLocaleString()}</div></div>`;
+    html += `<div style="background:var(--bg-secondary);padding:12px;border-radius:6px;"><div style="font-size:11px;color:var(--text-muted);">Cross-Type</div><div style="font-size:20px;font-weight:700;color:var(--text-primary);">${data.cross_type.toLocaleString()} (${data.cross_pct}%)</div></div>`;
+    html += `<div style="background:var(--bg-secondary);padding:12px;border-radius:6px;"><div style="font-size:11px;color:var(--text-muted);">Same-Type</div><div style="font-size:20px;font-weight:700;color:var(--text-primary);">${data.same_type.toLocaleString()} (${data.same_pct}%)</div></div>`;
+    html += `</div>`;
+    html += `<div style="display:flex;gap:4px;height:30px;border-radius:6px;overflow:hidden;">`;
+    html += `<div style="width:${data.cross_pct}%;background:var(--accent);"></div>`;
+    html += `<div style="width:${data.same_pct}%;background:var(--entity-org);"></div>`;
+    html += `</div>`;
+    html += `<div style="display:flex;gap:16px;margin-top:8px;font-size:12px;color:var(--text-muted);"><span style="display:flex;align-items:center;gap:4px;"><div style="width:10px;height:10px;background:var(--accent);border-radius:2px;"></div>Cross-Type</span><span style="display:flex;align-items:center;gap:4px;"><div style="width:10px;height:10px;background:var(--entity-org);border-radius:2px;"></div>Same-Type</span></div>`;
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load entity cross-type connections</div>'; }
+}
+
+function showEvtCtxLenView() {
+  currentView = 'evtctxlen';
+  hideAllViews();
+  document.getElementById('evtctxlenView').classList.add('active');
+  loadEvtCtxLen();
+}
+async function loadEvtCtxLen() {
+  const el = document.getElementById('evtctxlenContent');
+  try {
+    const res = await fetch('/api/event-context-length');
+    const data = await res.json();
+    const s = data.stats;
+    let html = `<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:16px;">`;
+    html += `<div style="background:var(--bg-secondary);padding:12px;border-radius:6px;"><div style="font-size:11px;color:var(--text-muted);">Total Events</div><div style="font-size:20px;font-weight:700;color:var(--text-primary);">${s.total.toLocaleString()}</div></div>`;
+    html += `<div style="background:var(--bg-secondary);padding:12px;border-radius:6px;"><div style="font-size:11px;color:var(--text-muted);">Avg Context</div><div style="font-size:20px;font-weight:700;color:var(--text-primary);">${s.avg_len.toLocaleString()}</div></div>`;
+    html += `<div style="background:var(--bg-secondary);padding:12px;border-radius:6px;"><div style="font-size:11px;color:var(--text-muted);">Max Context</div><div style="font-size:20px;font-weight:700;color:var(--text-primary);">${s.max_len.toLocaleString()}</div></div>`;
+    html += `<div style="background:var(--bg-secondary);padding:12px;border-radius:6px;"><div style="font-size:11px;color:var(--text-muted);">Min Context</div><div style="font-size:20px;font-weight:700;color:var(--text-primary);">${s.min_len.toLocaleString()}</div></div>`;
+    html += `<div style="background:var(--bg-secondary);padding:12px;border-radius:6px;"><div style="font-size:11px;color:var(--text-muted);">No Context</div><div style="font-size:20px;font-weight:700;color:var(--text-primary);">${s.no_context.toLocaleString()}</div></div>`;
+    html += `</div>`;
+    if (data.longest.length) {
+      html += '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="border-bottom:2px solid var(--border);"><th style="text-align:left;padding:8px;">Document</th><th style="text-align:left;padding:8px;">Event Date</th><th style="text-align:right;padding:8px;">Context Length</th></tr></thead><tbody>';
+      data.longest.forEach(r => {
+        html += `<tr style="border-bottom:1px solid var(--border);"><td style="padding:8px;">${r.filename}</td><td style="padding:8px;">${r.event_date || '—'}</td><td style="text-align:right;padding:8px;font-weight:600;">${r.ctx_len.toLocaleString()}</td></tr>`;
+      });
+      html += '</tbody></table>';
+    }
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load event context length</div>'; }
+}
+
+function showSrcFlagRatioView() {
+  currentView = 'srcflagratio';
+  hideAllViews();
+  document.getElementById('srcflagratioView').classList.add('active');
+  loadSrcFlagRatio();
+}
+async function loadSrcFlagRatio() {
+  const el = document.getElementById('srcflagratioContent');
+  try {
+    const res = await fetch('/api/source-flagged-ratio');
+    const data = await res.json();
+    let html = '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="border-bottom:2px solid var(--border);"><th style="text-align:left;padding:8px;">Source</th><th style="text-align:right;padding:8px;">Total</th><th style="text-align:right;padding:8px;">Flagged</th><th style="text-align:right;padding:8px;">%</th></tr></thead><tbody>';
+    data.sources.forEach(r => {
+      const color = r.pct > 0 ? '#fbbf24' : 'var(--text-muted)';
+      html += `<tr style="border-bottom:1px solid var(--border);"><td style="padding:8px;">${r.source}</td><td style="text-align:right;padding:8px;">${r.total}</td><td style="text-align:right;padding:8px;font-weight:600;">${r.flagged}</td><td style="text-align:right;padding:8px;color:${color};">${r.pct}%</td></tr>`;
+    });
+    html += '</tbody></table>';
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load source flagged ratio</div>'; }
+}
+
+function showEntResCovView() {
+  currentView = 'entrescov';
+  hideAllViews();
+  document.getElementById('entrescovView').classList.add('active');
+  loadEntResCov();
+}
+async function loadEntResCov() {
+  const el = document.getElementById('entrescovContent');
+  try {
+    const res = await fetch('/api/entity-resolution-coverage');
+    const data = await res.json();
+    let html = `<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;">`;
+    html += `<div style="background:var(--bg-secondary);padding:12px;border-radius:6px;"><div style="font-size:11px;color:var(--text-muted);">Total Entities</div><div style="font-size:20px;font-weight:700;color:var(--text-primary);">${data.total_entities.toLocaleString()}</div></div>`;
+    html += `<div style="background:var(--bg-secondary);padding:12px;border-radius:6px;"><div style="font-size:11px;color:var(--text-muted);">Resolved</div><div style="font-size:20px;font-weight:700;color:var(--text-primary);">${data.resolved_count.toLocaleString()}</div></div>`;
+    html += `<div style="background:var(--bg-secondary);padding:12px;border-radius:6px;"><div style="font-size:11px;color:var(--text-muted);">Canonical</div><div style="font-size:20px;font-weight:700;color:var(--text-primary);">${data.canonical_count}</div></div>`;
+    html += `<div style="background:var(--bg-secondary);padding:12px;border-radius:6px;"><div style="font-size:11px;color:var(--text-muted);">Coverage</div><div style="font-size:20px;font-weight:700;color:var(--text-primary);">${data.coverage_pct}%</div></div>`;
+    html += `</div>`;
+    if (data.top_canonical.length) {
+      html += '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="border-bottom:2px solid var(--border);"><th style="text-align:left;padding:8px;">Canonical Entity</th><th style="text-align:left;padding:8px;">Type</th><th style="text-align:right;padding:8px;">Resolved Into</th></tr></thead><tbody>';
+      data.top_canonical.forEach(r => {
+        html += `<tr style="border-bottom:1px solid var(--border);"><td style="padding:8px;">${r.canonical_name}</td><td style="padding:8px;"><span class="entity-tag ${r.canonical_type}" style="font-size:10px;">${r.canonical_type}</span></td><td style="text-align:right;padding:8px;font-weight:600;">${r.resolved_count}</td></tr>`;
+      });
+      html += '</tbody></table>';
+    }
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load entity resolution coverage</div>'; }
+}
+
+function showConnWtHistView() {
+  currentView = 'connwthist';
+  hideAllViews();
+  document.getElementById('connwthistView').classList.add('active');
+  loadConnWtHist();
+}
+async function loadConnWtHist() {
+  const el = document.getElementById('connwthistContent');
+  try {
+    const res = await fetch('/api/connection-weight-histogram');
+    const data = await res.json();
+    const maxCount = Math.max(...data.bins.map(b => b.count), 1);
+    let html = '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="border-bottom:2px solid var(--border);"><th style="text-align:right;padding:8px;">Weight</th><th style="text-align:right;padding:8px;">Count</th><th style="text-align:left;padding:8px;width:60%;">Bar</th></tr></thead><tbody>';
+    data.bins.forEach(b => {
+      const w = Math.round(100 * b.count / maxCount);
+      html += `<tr style="border-bottom:1px solid var(--border);"><td style="text-align:right;padding:8px;font-weight:600;">${b.weight}</td><td style="text-align:right;padding:8px;">${b.count.toLocaleString()}</td><td style="padding:8px;"><div style="background:var(--accent);height:14px;border-radius:3px;width:${w}%;"></div></td></tr>`;
+    });
+    html += '</tbody></table>';
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load connection weight histogram</div>'; }
 }
 
 // ─── INIT ───

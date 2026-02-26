@@ -10959,6 +10959,148 @@ def connection_cluster_summary():
     }
 
 
+@app.get("/api/document-source-timeline")
+def document_source_timeline():
+    """Documents ingested per source over time."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT DATE(ingested_at) AS day, source, COUNT(*) AS count "
+            "FROM documents WHERE ingested_at IS NOT NULL "
+            "GROUP BY day, source ORDER BY day"
+        ).fetchall()
+    timeline = {}
+    sources = set()
+    for r in rows:
+        day = r["day"]
+        if day not in timeline:
+            timeline[day] = {}
+        timeline[day][r["source"]] = r["count"]
+        sources.add(r["source"])
+    return {
+        "days": sorted(timeline.keys()),
+        "sources": sorted(sources),
+        "data": timeline,
+    }
+
+
+@app.get("/api/entity-cross-type-connections")
+def entity_cross_type_connections():
+    """Connections between entities of different types vs same type."""
+    with get_db() as conn:
+        cross = conn.execute(
+            "SELECT COUNT(*) AS cnt FROM entity_connections ec "
+            "JOIN entities ea ON ea.id = ec.entity_a_id "
+            "JOIN entities eb ON eb.id = ec.entity_b_id "
+            "WHERE ea.type != eb.type"
+        ).fetchone()["cnt"]
+        same = conn.execute(
+            "SELECT COUNT(*) AS cnt FROM entity_connections ec "
+            "JOIN entities ea ON ea.id = ec.entity_a_id "
+            "JOIN entities eb ON eb.id = ec.entity_b_id "
+            "WHERE ea.type = eb.type"
+        ).fetchone()["cnt"]
+        total = cross + same
+    return {
+        "cross_type": cross,
+        "same_type": same,
+        "total": total,
+        "cross_pct": round(100.0 * cross / total, 1) if total else 0,
+        "same_pct": round(100.0 * same / total, 1) if total else 0,
+    }
+
+
+@app.get("/api/event-context-length")
+def event_context_length():
+    """Distribution of event context text lengths."""
+    with get_db() as conn:
+        stats = conn.execute(
+            "SELECT COUNT(*) AS total, "
+            "AVG(LENGTH(context)) AS avg_len, "
+            "MAX(LENGTH(context)) AS max_len, "
+            "MIN(LENGTH(context)) AS min_len, "
+            "SUM(CASE WHEN context IS NULL OR LENGTH(context) = 0 THEN 1 ELSE 0 END) AS no_context "
+            "FROM events"
+        ).fetchone()
+        top = conn.execute(
+            "SELECT ev.id, ev.event_date, LENGTH(ev.context) AS ctx_len, "
+            "d.filename "
+            "FROM events ev "
+            "JOIN documents d ON d.id = ev.document_id "
+            "WHERE ev.context IS NOT NULL AND LENGTH(ev.context) > 0 "
+            "ORDER BY ctx_len DESC LIMIT 50"
+        ).fetchall()
+    return {
+        "stats": {
+            "total": stats["total"],
+            "avg_len": round(stats["avg_len"] or 0),
+            "max_len": stats["max_len"] or 0,
+            "min_len": stats["min_len"] or 0,
+            "no_context": stats["no_context"],
+        },
+        "longest": [dict(r) for r in top],
+    }
+
+
+@app.get("/api/source-flagged-ratio")
+def source_flagged_ratio():
+    """Flagged document ratio per source."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT source, COUNT(*) AS total, "
+            "SUM(CASE WHEN flagged = 1 THEN 1 ELSE 0 END) AS flagged_count "
+            "FROM documents GROUP BY source ORDER BY total DESC"
+        ).fetchall()
+    return {
+        "sources": [
+            {
+                "source": r["source"] or "unknown",
+                "total": r["total"],
+                "flagged": r["flagged_count"],
+                "pct": round(100.0 * r["flagged_count"] / r["total"], 1) if r["total"] else 0,
+            }
+            for r in rows
+        ]
+    }
+
+
+@app.get("/api/entity-resolution-coverage")
+def entity_resolution_coverage():
+    """How many entities have been resolved."""
+    with get_db() as conn:
+        total = conn.execute("SELECT COUNT(*) AS cnt FROM entities").fetchone()["cnt"]
+        resolved = conn.execute(
+            "SELECT COUNT(DISTINCT source_entity_id) AS cnt FROM entity_resolutions"
+        ).fetchone()["cnt"]
+        canonical = conn.execute(
+            "SELECT COUNT(DISTINCT canonical_entity_id) AS cnt FROM entity_resolutions"
+        ).fetchone()["cnt"]
+        top = conn.execute(
+            "SELECT e2.name AS canonical_name, e2.type AS canonical_type, "
+            "COUNT(*) AS resolved_count "
+            "FROM entity_resolutions er "
+            "JOIN entities e2 ON e2.id = er.canonical_entity_id "
+            "GROUP BY er.canonical_entity_id ORDER BY resolved_count DESC LIMIT 50"
+        ).fetchall()
+    return {
+        "total_entities": total,
+        "resolved_count": resolved,
+        "canonical_count": canonical,
+        "coverage_pct": round(100.0 * resolved / total, 1) if total else 0,
+        "top_canonical": [dict(r) for r in top],
+    }
+
+
+@app.get("/api/connection-weight-histogram")
+def connection_weight_histogram():
+    """Fine-grained histogram of connection weights."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT weight, COUNT(*) AS count "
+            "FROM entity_connections GROUP BY weight ORDER BY weight"
+        ).fetchall()
+    return {"bins": [dict(r) for r in rows]}
+
+
 # ═══════════════════════════════════════════
 # STATIC FILES (serve the frontend)
 # ═══════════════════════════════════════════
