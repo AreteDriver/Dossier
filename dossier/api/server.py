@@ -9675,6 +9675,176 @@ def connection_density():
     return {"pairs": [dict(r) for r in rows], "total": len(rows)}
 
 
+# ── Round 27 ──────────────────────────────────
+
+
+@app.get("/api/document-readability")
+def document_readability():
+    """Text statistics per document — word count, avg word length."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT d.id, d.title, d.filename, LENGTH(d.raw_text) AS char_count "
+            "FROM documents d WHERE d.raw_text IS NOT NULL AND LENGTH(d.raw_text) > 0 "
+            "ORDER BY char_count DESC LIMIT 100"
+        ).fetchall()
+    results = []
+    for r in rows:
+        text = r["char_count"]
+        results.append(
+            {
+                "id": r["id"],
+                "title": r["title"] or r["filename"],
+                "char_count": text,
+            }
+        )
+    # Also get aggregate stats
+    with get_db() as conn:
+        stats = conn.execute(
+            "SELECT COUNT(*) as total, "
+            "AVG(LENGTH(raw_text)) as avg_chars, "
+            "MAX(LENGTH(raw_text)) as max_chars, "
+            "MIN(LENGTH(raw_text)) as min_chars "
+            "FROM documents WHERE raw_text IS NOT NULL AND LENGTH(raw_text) > 0"
+        ).fetchone()
+    return {
+        "documents": results,
+        "stats": {
+            "total_with_text": stats["total"],
+            "avg_chars": round(stats["avg_chars"] or 0, 1),
+            "max_chars": stats["max_chars"] or 0,
+            "min_chars": stats["min_chars"] or 0,
+        },
+    }
+
+
+@app.get("/api/source-completeness")
+def source_completeness():
+    """Per-source coverage: docs, entities, events, pages."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT d.source, "
+            "COUNT(DISTINCT d.id) AS doc_count, "
+            "COUNT(DISTINCT e.id) AS entity_count, "
+            "COUNT(DISTINCT ev.id) AS event_count, "
+            "COALESCE(SUM(d.pages), 0) AS total_pages "
+            "FROM documents d "
+            "LEFT JOIN document_entities de ON de.document_id = d.id "
+            "LEFT JOIN entities e ON e.id = de.entity_id "
+            "LEFT JOIN events ev ON ev.document_id = d.id "
+            "GROUP BY d.source ORDER BY doc_count DESC"
+        ).fetchall()
+    sources = []
+    for r in rows:
+        has_entities = r["entity_count"] > 0
+        has_events = r["event_count"] > 0
+        has_pages = r["total_pages"] > 0
+        score = sum([has_entities, has_events, has_pages])
+        sources.append(
+            {
+                "source": r["source"],
+                "doc_count": r["doc_count"],
+                "entity_count": r["entity_count"],
+                "event_count": r["event_count"],
+                "total_pages": r["total_pages"],
+                "has_entities": has_entities,
+                "has_events": has_events,
+                "has_pages": has_pages,
+                "completeness_score": score,
+            }
+        )
+    return {"sources": sources}
+
+
+@app.get("/api/orphan-events")
+def orphan_events():
+    """Events not linked to any entity via their document."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT ev.id, ev.event_date, ev.date_raw, ev.precision, "
+            "ev.confidence, ev.context, d.id AS doc_id, d.title, d.filename "
+            "FROM events ev "
+            "JOIN documents d ON d.id = ev.document_id "
+            "WHERE ev.document_id NOT IN ("
+            "  SELECT DISTINCT document_id FROM document_entities"
+            ") "
+            "ORDER BY ev.event_date LIMIT 200"
+        ).fetchall()
+        total = conn.execute(
+            "SELECT COUNT(*) AS cnt FROM events "
+            "WHERE document_id NOT IN (SELECT DISTINCT document_id FROM document_entities)"
+        ).fetchone()["cnt"]
+    return {
+        "events": [dict(r) for r in rows],
+        "total": total,
+    }
+
+
+@app.get("/api/entity-first-seen")
+def entity_first_seen():
+    """When each entity was first seen (earliest document created_at)."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT e.id, e.name, e.type, MIN(d.ingested_at) AS first_seen, "
+            "COUNT(DISTINCT d.id) AS doc_count "
+            "FROM entities e "
+            "JOIN document_entities de ON de.entity_id = e.id "
+            "JOIN documents d ON d.id = de.document_id "
+            "GROUP BY e.id ORDER BY first_seen DESC LIMIT 200"
+        ).fetchall()
+    return {"entities": [dict(r) for r in rows]}
+
+
+@app.get("/api/page-density")
+def page_density():
+    """Entity density per page across documents."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT d.id, d.title, d.filename, d.pages, "
+            "COUNT(DISTINCT de.entity_id) AS entity_count, "
+            "CASE WHEN d.pages > 0 "
+            "  THEN ROUND(CAST(COUNT(DISTINCT de.entity_id) AS REAL) / d.pages, 2) "
+            "  ELSE 0 END AS density "
+            "FROM documents d "
+            "LEFT JOIN document_entities de ON de.document_id = d.id "
+            "WHERE d.pages > 0 "
+            "GROUP BY d.id ORDER BY density DESC LIMIT 100"
+        ).fetchall()
+        avg = conn.execute(
+            "SELECT AVG(sub.density) AS avg_density FROM ("
+            "  SELECT CASE WHEN d.pages > 0 "
+            "    THEN CAST(COUNT(DISTINCT de.entity_id) AS REAL) / d.pages "
+            "    ELSE 0 END AS density "
+            "  FROM documents d "
+            "  LEFT JOIN document_entities de ON de.document_id = d.id "
+            "  WHERE d.pages > 0 "
+            "  GROUP BY d.id"
+            ") sub"
+        ).fetchone()
+    return {
+        "documents": [dict(r) for r in rows],
+        "avg_density": round(avg["avg_density"] or 0, 2),
+    }
+
+
+@app.get("/api/duplicate-documents")
+def duplicate_documents():
+    """Documents sharing the same content hash."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT d.file_hash, COUNT(*) AS count, "
+            "GROUP_CONCAT(d.id, ',') AS doc_ids, "
+            "GROUP_CONCAT(COALESCE(d.title, d.filename), ' | ') AS titles "
+            "FROM documents d "
+            "WHERE d.file_hash IS NOT NULL "
+            "GROUP BY d.file_hash HAVING COUNT(*) > 1 "
+            "ORDER BY count DESC LIMIT 50"
+        ).fetchall()
+    return {
+        "duplicates": [dict(r) for r in rows],
+        "total_groups": len(rows),
+    }
+
+
 # ═══════════════════════════════════════════
 # STATIC FILES (serve the frontend)
 # ═══════════════════════════════════════════

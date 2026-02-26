@@ -2041,6 +2041,8 @@ body::before {
 .hashaudit-view.active, .canoncov-view.active, .ftsstats-view.active, .eventresrate-view.active, .topconns-view.active, .docnotes-view.active { display: flex; }
 .entdupes-view, .ingestvel-view, .eventconf-view, .srcpages-view, .typeratio-view, .conndensity-view { display: none; flex-direction: column; gap: 16px; }
 .entdupes-view.active, .ingestvel-view.active, .eventconf-view.active, .srcpages-view.active, .typeratio-view.active, .conndensity-view.active { display: flex; }
+.docread-view, .srccomp-view, .orphanevt-view, .entfirst-view, .pagedensity-view, .docdupes-view { display: none; flex-direction: column; gap: 16px; }
+.docread-view.active, .srccomp-view.active, .orphanevt-view.active, .entfirst-view.active, .pagedensity-view.active, .docdupes-view.active { display: flex; }
 .rel-edge { display: flex; align-items: center; gap: 8px; padding: 4px 0; border-bottom: 1px solid var(--border); }
 .sbs-col { flex: 1; padding: 12px; background: var(--bg-card); border-radius: var(--radius); border: 1px solid var(--border); overflow: hidden; }
 .sbs-header { font-family: var(--font-mono); font-size: 12px; font-weight: 600; color: var(--text-primary); margin-bottom: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -2661,6 +2663,30 @@ body::before {
       <div class="sidebar-item" data-view="conndensity" id="conndensityNav">
         <div class="sidebar-dot" style="background:var(--entity-place)"></div>
         Connection Density
+      </div>
+      <div class="sidebar-item" data-view="docread" id="docreadNav">
+        <div class="sidebar-dot" style="background:var(--entity-person)"></div>
+        Document Readability
+      </div>
+      <div class="sidebar-item" data-view="srccomp" id="srccompNav">
+        <div class="sidebar-dot" style="background:var(--entity-org)"></div>
+        Source Completeness
+      </div>
+      <div class="sidebar-item" data-view="orphanevt" id="orphanevtNav">
+        <div class="sidebar-dot" style="background:var(--entity-date)"></div>
+        Orphan Events
+      </div>
+      <div class="sidebar-item" data-view="entfirst" id="entfirstNav">
+        <div class="sidebar-dot" style="background:var(--entity-person)"></div>
+        Entity First Seen
+      </div>
+      <div class="sidebar-item" data-view="pagedensity" id="pagedensityNav">
+        <div class="sidebar-dot" style="background:var(--entity-place)"></div>
+        Page Density
+      </div>
+      <div class="sidebar-item" data-view="docdupes" id="docdupesNav">
+        <div class="sidebar-dot" style="background:var(--entity-org)"></div>
+        Duplicate Documents
       </div>
     </div>
 
@@ -4066,6 +4092,36 @@ body::before {
       <div id="conndensityContent">Loading connection density...</div>
     </div>
 
+    <div class="docread-view" id="docreadView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Document Readability</div>
+      <div id="docreadContent">Loading document readability...</div>
+    </div>
+
+    <div class="srccomp-view" id="srccompView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Source Completeness</div>
+      <div id="srccompContent">Loading source completeness...</div>
+    </div>
+
+    <div class="orphanevt-view" id="orphanevtView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Orphan Events</div>
+      <div id="orphanevtContent">Loading orphan events...</div>
+    </div>
+
+    <div class="entfirst-view" id="entfirstView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Entity First Seen</div>
+      <div id="entfirstContent">Loading entity first seen...</div>
+    </div>
+
+    <div class="pagedensity-view" id="pagedensityView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Page Density</div>
+      <div id="pagedensityContent">Loading page density...</div>
+    </div>
+
+    <div class="docdupes-view" id="docdupesView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Duplicate Documents</div>
+      <div id="docdupesContent">Loading duplicate documents...</div>
+    </div>
+
   </main>
 
   <!-- RIGHT PANEL -->
@@ -4798,6 +4854,12 @@ function hideAllViews() {
   document.getElementById('srcpagesView').classList.remove('active');
   document.getElementById('typeratioView').classList.remove('active');
   document.getElementById('conndensityView').classList.remove('active');
+  document.getElementById('docreadView').classList.remove('active');
+  document.getElementById('srccompView').classList.remove('active');
+  document.getElementById('orphanevtView').classList.remove('active');
+  document.getElementById('entfirstView').classList.remove('active');
+  document.getElementById('pagedensityView').classList.remove('active');
+  document.getElementById('docdupesView').classList.remove('active');
 }
 
 function showDocumentView() {
@@ -4983,6 +5045,12 @@ document.querySelectorAll('.sidebar-item[data-view]').forEach(item => {
     else if (view === 'srcpages') showSrcPagesView();
     else if (view === 'typeratio') showTypeRatioView();
     else if (view === 'conndensity') showConnDensityView();
+    else if (view === 'docread') showDocReadView();
+    else if (view === 'srccomp') showSrcCompView();
+    else if (view === 'orphanevt') showOrphanEvtView();
+    else if (view === 'entfirst') showEntFirstView();
+    else if (view === 'pagedensity') showPageDensityView();
+    else if (view === 'docdupes') showDocDupesView();
   });
 });
 
@@ -6166,6 +6234,12 @@ function goBackFromReader() {
   else if (readerPreviousView === 'srcpages') showSrcPagesView();
   else if (readerPreviousView === 'typeratio') showTypeRatioView();
   else if (readerPreviousView === 'conndensity') showConnDensityView();
+  else if (readerPreviousView === 'docread') showDocReadView();
+  else if (readerPreviousView === 'srccomp') showSrcCompView();
+  else if (readerPreviousView === 'orphanevt') showOrphanEvtView();
+  else if (readerPreviousView === 'entfirst') showEntFirstView();
+  else if (readerPreviousView === 'pagedensity') showPageDensityView();
+  else if (readerPreviousView === 'docdupes') showDocDupesView();
   else showDocumentView();
 }
 
@@ -13785,6 +13859,174 @@ async function loadConnDensity() {
     }
     el.innerHTML = html;
   } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load connection density</div>'; }
+}
+
+// ── Round 27 ──────────────────────────────────
+
+function showDocReadView() {
+  currentView = 'docread';
+  hideAllViews();
+  document.getElementById('docreadView').classList.add('active');
+  loadDocRead();
+}
+async function loadDocRead() {
+  const el = document.getElementById('docreadContent');
+  try {
+    const res = await fetch('/api/document-readability');
+    const data = await res.json();
+    let html = `<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;">`;
+    html += `<div style="background:var(--bg-secondary);padding:12px;border-radius:6px;"><div style="font-size:11px;color:var(--text-muted);">With Text</div><div style="font-size:24px;font-weight:700;color:var(--text-primary);">${data.stats.total_with_text}</div></div>`;
+    html += `<div style="background:var(--bg-secondary);padding:12px;border-radius:6px;"><div style="font-size:11px;color:var(--text-muted);">Avg Chars</div><div style="font-size:24px;font-weight:700;color:var(--text-primary);">${Math.round(data.stats.avg_chars).toLocaleString()}</div></div>`;
+    html += `<div style="background:var(--bg-secondary);padding:12px;border-radius:6px;"><div style="font-size:11px;color:var(--text-muted);">Max Chars</div><div style="font-size:24px;font-weight:700;color:var(--text-primary);">${data.stats.max_chars.toLocaleString()}</div></div>`;
+    html += `<div style="background:var(--bg-secondary);padding:12px;border-radius:6px;"><div style="font-size:11px;color:var(--text-muted);">Min Chars</div><div style="font-size:24px;font-weight:700;color:var(--text-primary);">${data.stats.min_chars.toLocaleString()}</div></div>`;
+    html += `</div>`;
+    if (data.documents.length) {
+      html += '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="border-bottom:2px solid var(--border);"><th style="text-align:left;padding:8px;">Document</th><th style="text-align:right;padding:8px;">Characters</th></tr></thead><tbody>';
+      data.documents.forEach(d => {
+        html += `<tr style="border-bottom:1px solid var(--border);cursor:pointer;" onclick="openReader(${d.id})"><td style="padding:8px;">${d.title}</td><td style="text-align:right;padding:8px;font-family:var(--font-mono);">${d.char_count.toLocaleString()}</td></tr>`;
+      });
+      html += '</tbody></table>';
+    }
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load document readability</div>'; }
+}
+
+function showSrcCompView() {
+  currentView = 'srccomp';
+  hideAllViews();
+  document.getElementById('srccompView').classList.add('active');
+  loadSrcComp();
+}
+async function loadSrcComp() {
+  const el = document.getElementById('srccompContent');
+  try {
+    const res = await fetch('/api/source-completeness');
+    const data = await res.json();
+    let html = '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="border-bottom:2px solid var(--border);"><th style="text-align:left;padding:8px;">Source</th><th style="text-align:right;padding:8px;">Docs</th><th style="text-align:right;padding:8px;">Entities</th><th style="text-align:right;padding:8px;">Events</th><th style="text-align:right;padding:8px;">Pages</th><th style="text-align:center;padding:8px;">Score</th></tr></thead><tbody>';
+    data.sources.forEach(s => {
+      const color = s.completeness_score === 3 ? '#4ade80' : s.completeness_score === 2 ? '#facc15' : '#e05555';
+      html += `<tr style="border-bottom:1px solid var(--border);">`;
+      html += `<td style="padding:8px;">${s.source}</td>`;
+      html += `<td style="text-align:right;padding:8px;">${s.doc_count}</td>`;
+      html += `<td style="text-align:right;padding:8px;">${s.entity_count.toLocaleString()}</td>`;
+      html += `<td style="text-align:right;padding:8px;">${s.event_count.toLocaleString()}</td>`;
+      html += `<td style="text-align:right;padding:8px;">${s.total_pages.toLocaleString()}</td>`;
+      html += `<td style="text-align:center;padding:8px;"><span style="color:${color};font-weight:700;">${s.completeness_score}/3</span></td>`;
+      html += `</tr>`;
+    });
+    html += '</tbody></table>';
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load source completeness</div>'; }
+}
+
+function showOrphanEvtView() {
+  currentView = 'orphanevt';
+  hideAllViews();
+  document.getElementById('orphanevtView').classList.add('active');
+  loadOrphanEvt();
+}
+async function loadOrphanEvt() {
+  const el = document.getElementById('orphanevtContent');
+  try {
+    const res = await fetch('/api/orphan-events');
+    const data = await res.json();
+    let html = `<div style="background:var(--bg-secondary);padding:12px;border-radius:6px;margin-bottom:16px;"><span style="font-size:11px;color:var(--text-muted);">Total Orphan Events</span> <span style="font-size:20px;font-weight:700;color:var(--text-primary);margin-left:8px;">${data.total}</span></div>`;
+    if (data.events.length) {
+      html += '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="border-bottom:2px solid var(--border);"><th style="text-align:left;padding:8px;">Date</th><th style="text-align:left;padding:8px;">Context</th><th style="text-align:left;padding:8px;">Document</th><th style="text-align:right;padding:8px;">Confidence</th></tr></thead><tbody>';
+      data.events.forEach(ev => {
+        html += `<tr style="border-bottom:1px solid var(--border);cursor:pointer;" onclick="openReader(${ev.doc_id})">`;
+        html += `<td style="padding:8px;white-space:nowrap;">${ev.event_date || ev.date_raw || '—'}</td>`;
+        html += `<td style="padding:8px;max-width:400px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${ev.context || '—'}</td>`;
+        html += `<td style="padding:8px;">${ev.title || ev.filename}</td>`;
+        html += `<td style="text-align:right;padding:8px;">${ev.confidence != null ? ev.confidence : '—'}</td>`;
+        html += `</tr>`;
+      });
+      html += '</tbody></table>';
+    }
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load orphan events</div>'; }
+}
+
+function showEntFirstView() {
+  currentView = 'entfirst';
+  hideAllViews();
+  document.getElementById('entfirstView').classList.add('active');
+  loadEntFirst();
+}
+async function loadEntFirst() {
+  const el = document.getElementById('entfirstContent');
+  try {
+    const res = await fetch('/api/entity-first-seen');
+    const data = await res.json();
+    let html = '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="border-bottom:2px solid var(--border);"><th style="text-align:left;padding:8px;">Entity</th><th style="text-align:left;padding:8px;">Type</th><th style="text-align:left;padding:8px;">First Seen</th><th style="text-align:right;padding:8px;">Docs</th></tr></thead><tbody>';
+    data.entities.forEach(e => {
+      html += `<tr style="border-bottom:1px solid var(--border);">`;
+      html += `<td style="padding:8px;font-weight:600;">${e.name}</td>`;
+      html += `<td style="padding:8px;"><span class="entity-tag ${e.type}" style="font-size:10px;">${e.type}</span></td>`;
+      html += `<td style="padding:8px;font-family:var(--font-mono);font-size:12px;">${e.first_seen || '—'}</td>`;
+      html += `<td style="text-align:right;padding:8px;">${e.doc_count}</td>`;
+      html += `</tr>`;
+    });
+    html += '</tbody></table>';
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load entity first seen</div>'; }
+}
+
+function showPageDensityView() {
+  currentView = 'pagedensity';
+  hideAllViews();
+  document.getElementById('pagedensityView').classList.add('active');
+  loadPageDensity();
+}
+async function loadPageDensity() {
+  const el = document.getElementById('pagedensityContent');
+  try {
+    const res = await fetch('/api/page-density');
+    const data = await res.json();
+    let html = `<div style="background:var(--bg-secondary);padding:12px;border-radius:6px;margin-bottom:16px;"><span style="font-size:11px;color:var(--text-muted);">Avg Entity Density (per page)</span> <span style="font-size:20px;font-weight:700;color:var(--text-primary);margin-left:8px;">${data.avg_density}</span></div>`;
+    if (data.documents.length) {
+      html += '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="border-bottom:2px solid var(--border);"><th style="text-align:left;padding:8px;">Document</th><th style="text-align:right;padding:8px;">Pages</th><th style="text-align:right;padding:8px;">Entities</th><th style="text-align:right;padding:8px;">Density</th></tr></thead><tbody>';
+      data.documents.forEach(d => {
+        html += `<tr style="border-bottom:1px solid var(--border);cursor:pointer;" onclick="openReader(${d.id})">`;
+        html += `<td style="padding:8px;">${d.title || d.filename}</td>`;
+        html += `<td style="text-align:right;padding:8px;">${d.pages}</td>`;
+        html += `<td style="text-align:right;padding:8px;">${d.entity_count}</td>`;
+        html += `<td style="text-align:right;padding:8px;font-weight:600;font-family:var(--font-mono);">${d.density}</td>`;
+        html += `</tr>`;
+      });
+      html += '</tbody></table>';
+    }
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load page density</div>'; }
+}
+
+function showDocDupesView() {
+  currentView = 'docdupes';
+  hideAllViews();
+  document.getElementById('docdupesView').classList.add('active');
+  loadDocDupes();
+}
+async function loadDocDupes() {
+  const el = document.getElementById('docdupesContent');
+  try {
+    const res = await fetch('/api/duplicate-documents');
+    const data = await res.json();
+    let html = `<div style="background:var(--bg-secondary);padding:12px;border-radius:6px;margin-bottom:16px;"><span style="font-size:11px;color:var(--text-muted);">Duplicate Groups</span> <span style="font-size:20px;font-weight:700;color:var(--text-primary);margin-left:8px;">${data.total_groups}</span></div>`;
+    if (data.duplicates.length) {
+      html += '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="border-bottom:2px solid var(--border);"><th style="text-align:left;padding:8px;">Hash</th><th style="text-align:right;padding:8px;">Count</th><th style="text-align:left;padding:8px;">Documents</th></tr></thead><tbody>';
+      data.duplicates.forEach(d => {
+        html += `<tr style="border-bottom:1px solid var(--border);">`;
+        html += `<td style="padding:8px;font-family:var(--font-mono);font-size:11px;">${(d.file_hash || '').substring(0, 16)}…</td>`;
+        html += `<td style="text-align:right;padding:8px;font-weight:600;">${d.count}</td>`;
+        html += `<td style="padding:8px;max-width:500px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${d.titles}</td>`;
+        html += `</tr>`;
+      });
+      html += '</tbody></table>';
+    } else {
+      html += '<div style="color:var(--text-muted);padding:16px;">No duplicate documents found.</div>';
+    }
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load duplicate documents</div>'; }
 }
 
 
