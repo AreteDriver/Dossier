@@ -10542,6 +10542,143 @@ def entity_alias_coverage():
     }
 
 
+@app.get("/api/entity-co-occurrence")
+def entity_co_occurrence():
+    """Entities that appear together in the same documents most often."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT ea.name AS name_a, ea.type AS type_a, "
+            "eb.name AS name_b, eb.type AS type_b, "
+            "COUNT(DISTINCT da.document_id) AS shared_docs "
+            "FROM document_entities da "
+            "JOIN document_entities db ON da.document_id = db.document_id AND da.entity_id < db.entity_id "
+            "JOIN entities ea ON ea.id = da.entity_id "
+            "JOIN entities eb ON eb.id = db.entity_id "
+            "GROUP BY da.entity_id, db.entity_id "
+            "ORDER BY shared_docs DESC LIMIT 100"
+        ).fetchall()
+    return {"pairs": [dict(r) for r in rows]}
+
+
+@app.get("/api/document-category-timeline")
+def document_category_timeline():
+    """Documents ingested per category over time."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT DATE(ingested_at) AS day, category, COUNT(*) AS count "
+            "FROM documents WHERE ingested_at IS NOT NULL "
+            "GROUP BY day, category ORDER BY day"
+        ).fetchall()
+    timeline = {}
+    categories = set()
+    for r in rows:
+        day = r["day"]
+        if day not in timeline:
+            timeline[day] = {}
+        timeline[day][r["category"]] = r["count"]
+        categories.add(r["category"])
+    return {
+        "days": sorted(timeline.keys()),
+        "categories": sorted(categories),
+        "data": timeline,
+    }
+
+
+@app.get("/api/event-resolution-breakdown")
+def event_resolution_breakdown():
+    """Resolved vs unresolved events by source."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT d.source, "
+            "SUM(CASE WHEN ev.is_resolved = 1 THEN 1 ELSE 0 END) AS resolved, "
+            "SUM(CASE WHEN ev.is_resolved = 0 OR ev.is_resolved IS NULL THEN 1 ELSE 0 END) AS unresolved, "
+            "COUNT(*) AS total "
+            "FROM events ev "
+            "JOIN documents d ON d.id = ev.document_id "
+            "GROUP BY d.source ORDER BY total DESC"
+        ).fetchall()
+    return {
+        "sources": [
+            {
+                "source": r["source"],
+                "resolved": r["resolved"],
+                "unresolved": r["unresolved"],
+                "total": r["total"],
+                "pct_resolved": round(100.0 * r["resolved"] / r["total"], 1) if r["total"] else 0,
+            }
+            for r in rows
+        ]
+    }
+
+
+@app.get("/api/entity-document-reach")
+def entity_document_reach():
+    """How many documents each entity appears in (top 100)."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT e.name, e.type, COUNT(DISTINCT de.document_id) AS doc_count "
+            "FROM entities e "
+            "JOIN document_entities de ON de.entity_id = e.id "
+            "GROUP BY e.id ORDER BY doc_count DESC LIMIT 100"
+        ).fetchall()
+        total_docs = conn.execute("SELECT COUNT(*) AS cnt FROM documents").fetchone()["cnt"]
+    return {
+        "total_docs": total_docs,
+        "entities": [
+            {
+                "name": r["name"],
+                "type": r["type"],
+                "doc_count": r["doc_count"],
+                "pct": round(100.0 * r["doc_count"] / total_docs, 1) if total_docs else 0,
+            }
+            for r in rows
+        ],
+    }
+
+
+@app.get("/api/source-overlap-matrix")
+def source_overlap_matrix():
+    """Which sources share the most entities."""
+    with get_db() as conn:
+        sources = conn.execute(
+            "SELECT DISTINCT source FROM documents WHERE source IS NOT NULL ORDER BY source"
+        ).fetchall()
+        src_list = [s["source"] for s in sources]
+        src_entities = {}
+        for src in src_list:
+            ents = conn.execute(
+                "SELECT DISTINCT de.entity_id FROM document_entities de "
+                "JOIN documents d ON d.id = de.document_id WHERE d.source = ?",
+                (src,),
+            ).fetchall()
+            src_entities[src] = {e["entity_id"] for e in ents}
+    matrix = {}
+    for s1 in src_list:
+        matrix[s1] = {}
+        for s2 in src_list:
+            matrix[s1][s2] = len(src_entities[s1] & src_entities[s2])
+    return {"sources": src_list, "matrix": matrix}
+
+
+@app.get("/api/redaction-timeline")
+def redaction_timeline():
+    """Redactions over time by document ingestion date."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT DATE(d.ingested_at) AS day, COUNT(r.id) AS redaction_count, "
+            "COUNT(DISTINCT d.id) AS doc_count "
+            "FROM redactions r "
+            "JOIN documents d ON d.id = r.document_id "
+            "WHERE d.ingested_at IS NOT NULL "
+            "GROUP BY day ORDER BY day"
+        ).fetchall()
+        total = conn.execute("SELECT COUNT(*) AS cnt FROM redactions").fetchone()["cnt"]
+    return {
+        "total_redactions": total,
+        "timeline": [dict(r) for r in rows],
+    }
+
+
 # ═══════════════════════════════════════════
 # STATIC FILES (serve the frontend)
 # ═══════════════════════════════════════════

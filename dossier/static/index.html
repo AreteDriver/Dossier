@@ -2053,6 +2053,8 @@ body::before {
 .entnamelen-view.active, .docnotessummary-view.active, .evtdatequal-view.active, .srccatmatrix-view.active, .enttypegrowth-view.active, .connweightstats-view.active { display: flex; }
 .entcatbreak-view, .docage-view, .evtsrcdensity-view, .entpairstr-view, .srcdocqual-view, .aliascov-view { display: none; flex-direction: column; gap: 16px; }
 .entcatbreak-view.active, .docage-view.active, .evtsrcdensity-view.active, .entpairstr-view.active, .srcdocqual-view.active, .aliascov-view.active { display: flex; }
+.entcooccur-view, .doccattimeline-view, .evtresbreak-view, .entdocreach-view, .srcoverlapmatrix-view, .redacttimeline-view { display: none; flex-direction: column; gap: 16px; }
+.entcooccur-view.active, .doccattimeline-view.active, .evtresbreak-view.active, .entdocreach-view.active, .srcoverlapmatrix-view.active, .redacttimeline-view.active { display: flex; }
 .rel-edge { display: flex; align-items: center; gap: 8px; padding: 4px 0; border-bottom: 1px solid var(--border); }
 .sbs-col { flex: 1; padding: 12px; background: var(--bg-card); border-radius: var(--radius); border: 1px solid var(--border); overflow: hidden; }
 .sbs-header { font-family: var(--font-mono); font-size: 12px; font-weight: 600; color: var(--text-primary); margin-bottom: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -2817,6 +2819,30 @@ body::before {
       <div class="sidebar-item" data-view="aliascov" id="aliascovNav">
         <div class="sidebar-dot" style="background:var(--entity-org)"></div>
         Entity Alias Coverage
+      </div>
+      <div class="sidebar-item" data-view="entcooccur" id="entcooccurNav">
+        <div class="sidebar-dot" style="background:var(--entity-location)"></div>
+        Entity Co-occurrence
+      </div>
+      <div class="sidebar-item" data-view="doccattimeline" id="doccattimelineNav">
+        <div class="sidebar-dot" style="background:var(--accent)"></div>
+        Document Category Timeline
+      </div>
+      <div class="sidebar-item" data-view="evtresbreak" id="evtresbreakNav">
+        <div class="sidebar-dot" style="background:var(--entity-person)"></div>
+        Event Resolution Breakdown
+      </div>
+      <div class="sidebar-item" data-view="entdocreach" id="entdocreachNav">
+        <div class="sidebar-dot" style="background:var(--entity-org)"></div>
+        Entity Document Reach
+      </div>
+      <div class="sidebar-item" data-view="srcoverlapmatrix" id="srcoverlapmatrixNav">
+        <div class="sidebar-dot" style="background:var(--entity-location)"></div>
+        Source Overlap Matrix
+      </div>
+      <div class="sidebar-item" data-view="redacttimeline" id="redacttimelineNav">
+        <div class="sidebar-dot" style="background:var(--accent)"></div>
+        Redaction Timeline
       </div>
     </div>
 
@@ -4402,6 +4428,36 @@ body::before {
       <div id="aliascovContent">Loading entity alias coverage...</div>
     </div>
 
+    <div class="entcooccur-view" id="entcooccurView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Entity Co-occurrence</div>
+      <div id="entcooccurContent">Loading entity co-occurrence...</div>
+    </div>
+
+    <div class="doccattimeline-view" id="doccattimelineView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Document Category Timeline</div>
+      <div id="doccattimelineContent">Loading document category timeline...</div>
+    </div>
+
+    <div class="evtresbreak-view" id="evtresbreakView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Event Resolution Breakdown</div>
+      <div id="evtresbreakContent">Loading event resolution breakdown...</div>
+    </div>
+
+    <div class="entdocreach-view" id="entdocreachView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Entity Document Reach</div>
+      <div id="entdocreachContent">Loading entity document reach...</div>
+    </div>
+
+    <div class="srcoverlapmatrix-view" id="srcoverlapmatrixView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Source Overlap Matrix</div>
+      <div id="srcoverlapmatrixContent">Loading source overlap matrix...</div>
+    </div>
+
+    <div class="redacttimeline-view" id="redacttimelineView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Redaction Timeline</div>
+      <div id="redacttimelineContent">Loading redaction timeline...</div>
+    </div>
+
   </main>
 
   <!-- RIGHT PANEL -->
@@ -5170,6 +5226,12 @@ function hideAllViews() {
   document.getElementById('entpairstrView').classList.remove('active');
   document.getElementById('srcdocqualView').classList.remove('active');
   document.getElementById('aliascovView').classList.remove('active');
+  document.getElementById('entcooccurView').classList.remove('active');
+  document.getElementById('doccattimelineView').classList.remove('active');
+  document.getElementById('evtresbreakView').classList.remove('active');
+  document.getElementById('entdocreachView').classList.remove('active');
+  document.getElementById('srcoverlapmatrixView').classList.remove('active');
+  document.getElementById('redacttimelineView').classList.remove('active');
 }
 
 function showDocumentView() {
@@ -5391,6 +5453,12 @@ document.querySelectorAll('.sidebar-item[data-view]').forEach(item => {
     else if (view === 'entpairstr') showEntPairStrView();
     else if (view === 'srcdocqual') showSrcDocQualView();
     else if (view === 'aliascov') showAliasCovView();
+    else if (view === 'entcooccur') showEntCooccurView();
+    else if (view === 'doccattimeline') showDocCatTimelineView();
+    else if (view === 'evtresbreak') showEvtResBreakView();
+    else if (view === 'entdocreach') showEntDocReachView();
+    else if (view === 'srcoverlapmatrix') showSrcOverlapMatrixView();
+    else if (view === 'redacttimeline') showRedactTimelineView();
   });
 });
 
@@ -6610,6 +6678,12 @@ function goBackFromReader() {
   else if (readerPreviousView === 'entpairstr') showEntPairStrView();
   else if (readerPreviousView === 'srcdocqual') showSrcDocQualView();
   else if (readerPreviousView === 'aliascov') showAliasCovView();
+  else if (readerPreviousView === 'entcooccur') showEntCooccurView();
+  else if (readerPreviousView === 'doccattimeline') showDocCatTimelineView();
+  else if (readerPreviousView === 'evtresbreak') showEvtResBreakView();
+  else if (readerPreviousView === 'entdocreach') showEntDocReachView();
+  else if (readerPreviousView === 'srcoverlapmatrix') showSrcOverlapMatrixView();
+  else if (readerPreviousView === 'redacttimeline') showRedactTimelineView();
   else showDocumentView();
 }
 
@@ -15209,6 +15283,146 @@ async function loadAliasCov() {
     }
     el.innerHTML = html;
   } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load entity alias coverage</div>'; }
+}
+
+function showEntCooccurView() {
+  currentView = 'entcooccur';
+  hideAllViews();
+  document.getElementById('entcooccurView').classList.add('active');
+  loadEntCooccur();
+}
+async function loadEntCooccur() {
+  const el = document.getElementById('entcooccurContent');
+  try {
+    const res = await fetch('/api/entity-co-occurrence');
+    const data = await res.json();
+    let html = '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="border-bottom:2px solid var(--border);"><th style="text-align:left;padding:8px;">Entity A</th><th style="text-align:left;padding:8px;">Entity B</th><th style="text-align:right;padding:8px;">Shared Docs</th></tr></thead><tbody>';
+    data.pairs.forEach(r => {
+      html += `<tr style="border-bottom:1px solid var(--border);"><td style="padding:8px;">${r.name_a} <span class="entity-tag ${r.type_a}" style="font-size:9px;">${r.type_a}</span></td><td style="padding:8px;">${r.name_b} <span class="entity-tag ${r.type_b}" style="font-size:9px;">${r.type_b}</span></td><td style="text-align:right;padding:8px;font-weight:600;">${r.shared_docs}</td></tr>`;
+    });
+    html += '</tbody></table>';
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load entity co-occurrence</div>'; }
+}
+
+function showDocCatTimelineView() {
+  currentView = 'doccattimeline';
+  hideAllViews();
+  document.getElementById('doccattimelineView').classList.add('active');
+  loadDocCatTimeline();
+}
+async function loadDocCatTimeline() {
+  const el = document.getElementById('doccattimelineContent');
+  try {
+    const res = await fetch('/api/document-category-timeline');
+    const data = await res.json();
+    let html = '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="border-bottom:2px solid var(--border);"><th style="text-align:left;padding:8px;">Date</th>';
+    data.categories.forEach(c => { html += `<th style="text-align:right;padding:8px;">${c}</th>`; });
+    html += '</tr></thead><tbody>';
+    data.days.forEach(day => {
+      html += `<tr style="border-bottom:1px solid var(--border);"><td style="padding:8px;">${day}</td>`;
+      data.categories.forEach(c => {
+        const val = (data.data[day] && data.data[day][c]) || 0;
+        html += `<td style="text-align:right;padding:8px;font-weight:${val ? '600' : '400'};color:${val ? 'var(--text-primary)' : 'var(--text-muted)'};">${val}</td>`;
+      });
+      html += '</tr>';
+    });
+    html += '</tbody></table>';
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load document category timeline</div>'; }
+}
+
+function showEvtResBreakView() {
+  currentView = 'evtresbreak';
+  hideAllViews();
+  document.getElementById('evtresbreakView').classList.add('active');
+  loadEvtResBreak();
+}
+async function loadEvtResBreak() {
+  const el = document.getElementById('evtresbreakContent');
+  try {
+    const res = await fetch('/api/event-resolution-breakdown');
+    const data = await res.json();
+    let html = '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="border-bottom:2px solid var(--border);"><th style="text-align:left;padding:8px;">Source</th><th style="text-align:right;padding:8px;">Resolved</th><th style="text-align:right;padding:8px;">Unresolved</th><th style="text-align:right;padding:8px;">Total</th><th style="text-align:right;padding:8px;">% Resolved</th></tr></thead><tbody>';
+    data.sources.forEach(r => {
+      const color = r.pct_resolved >= 50 ? '#4ade80' : '#fbbf24';
+      html += `<tr style="border-bottom:1px solid var(--border);"><td style="padding:8px;">${r.source || '—'}</td><td style="text-align:right;padding:8px;">${r.resolved}</td><td style="text-align:right;padding:8px;">${r.unresolved}</td><td style="text-align:right;padding:8px;">${r.total}</td><td style="text-align:right;padding:8px;font-weight:600;color:${color};">${r.pct_resolved}%</td></tr>`;
+    });
+    html += '</tbody></table>';
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load event resolution breakdown</div>'; }
+}
+
+function showEntDocReachView() {
+  currentView = 'entdocreach';
+  hideAllViews();
+  document.getElementById('entdocreachView').classList.add('active');
+  loadEntDocReach();
+}
+async function loadEntDocReach() {
+  const el = document.getElementById('entdocreachContent');
+  try {
+    const res = await fetch('/api/entity-document-reach');
+    const data = await res.json();
+    let html = `<div style="background:var(--bg-secondary);padding:12px;border-radius:6px;margin-bottom:16px;"><div style="font-size:11px;color:var(--text-muted);">Total Documents</div><div style="font-size:20px;font-weight:700;color:var(--text-primary);">${data.total_docs}</div></div>`;
+    html += '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="border-bottom:2px solid var(--border);"><th style="text-align:left;padding:8px;">Entity</th><th style="text-align:left;padding:8px;">Type</th><th style="text-align:right;padding:8px;">Documents</th><th style="text-align:right;padding:8px;">% Reach</th></tr></thead><tbody>';
+    data.entities.forEach(r => {
+      html += `<tr style="border-bottom:1px solid var(--border);"><td style="padding:8px;">${r.name}</td><td style="padding:8px;"><span class="entity-tag ${r.type}" style="font-size:10px;">${r.type}</span></td><td style="text-align:right;padding:8px;">${r.doc_count}</td><td style="text-align:right;padding:8px;font-weight:600;">${r.pct}%</td></tr>`;
+    });
+    html += '</tbody></table>';
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load entity document reach</div>'; }
+}
+
+function showSrcOverlapMatrixView() {
+  currentView = 'srcoverlapmatrix';
+  hideAllViews();
+  document.getElementById('srcoverlapmatrixView').classList.add('active');
+  loadSrcOverlapMatrix();
+}
+async function loadSrcOverlapMatrix() {
+  const el = document.getElementById('srcoverlapmatrixContent');
+  try {
+    const res = await fetch('/api/source-overlap-matrix');
+    const data = await res.json();
+    let html = '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:11px;"><thead><tr style="border-bottom:2px solid var(--border);"><th style="padding:6px;"></th>';
+    data.sources.forEach(s => { html += `<th style="padding:6px;text-align:right;writing-mode:vertical-lr;max-width:30px;">${s}</th>`; });
+    html += '</tr></thead><tbody>';
+    data.sources.forEach(s1 => {
+      html += `<tr style="border-bottom:1px solid var(--border);"><td style="padding:6px;font-weight:600;white-space:nowrap;">${s1}</td>`;
+      data.sources.forEach(s2 => {
+        const val = data.matrix[s1][s2];
+        const bg = s1 === s2 ? 'var(--bg-secondary)' : (val > 100 ? 'rgba(74,222,128,0.2)' : 'transparent');
+        html += `<td style="text-align:right;padding:6px;background:${bg};">${val}</td>`;
+      });
+      html += '</tr>';
+    });
+    html += '</tbody></table></div>';
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load source overlap matrix</div>'; }
+}
+
+function showRedactTimelineView() {
+  currentView = 'redacttimeline';
+  hideAllViews();
+  document.getElementById('redacttimelineView').classList.add('active');
+  loadRedactTimeline();
+}
+async function loadRedactTimeline() {
+  const el = document.getElementById('redacttimelineContent');
+  try {
+    const res = await fetch('/api/redaction-timeline');
+    const data = await res.json();
+    let html = `<div style="background:var(--bg-secondary);padding:12px;border-radius:6px;margin-bottom:16px;"><div style="font-size:11px;color:var(--text-muted);">Total Redactions</div><div style="font-size:20px;font-weight:700;color:var(--text-primary);">${data.total_redactions.toLocaleString()}</div></div>`;
+    if (data.timeline.length) {
+      html += '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="border-bottom:2px solid var(--border);"><th style="text-align:left;padding:8px;">Date</th><th style="text-align:right;padding:8px;">Redactions</th><th style="text-align:right;padding:8px;">Documents</th></tr></thead><tbody>';
+      data.timeline.forEach(r => {
+        html += `<tr style="border-bottom:1px solid var(--border);"><td style="padding:8px;">${r.day}</td><td style="text-align:right;padding:8px;font-weight:600;">${r.redaction_count}</td><td style="text-align:right;padding:8px;">${r.doc_count}</td></tr>`;
+      });
+      html += '</tbody></table>';
+    } else { html += '<div style="color:var(--text-muted);">No redaction timeline data available.</div>'; }
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load redaction timeline</div>'; }
 }
 
 // ─── INIT ───
