@@ -8140,6 +8140,300 @@ def keyword_context(keyword: str = "", limit: int = 20):
     return {"snippets": snippets, "keyword": keyword, "total": len(snippets)}
 
 
+# ── Entity Connections Map ───────────────────────────
+
+
+@app.get("/api/entity-connections-map")
+def entity_connections_map(entity_id: int = 0, limit: int = 50):
+    """All direct connections for a selected entity."""
+    if not entity_id:
+        return {"entity": None, "connections": []}
+
+    with get_db() as conn:
+        entity = conn.execute(
+            "SELECT id, name, type FROM entities WHERE id = ?", (entity_id,)
+        ).fetchone()
+        if not entity:
+            return {"entity": None, "connections": []}
+
+        rows = conn.execute(
+            "SELECT ec.weight, "
+            "CASE WHEN ec.entity_a_id = ? THEN ec.entity_b_id ELSE ec.entity_a_id END as other_id "
+            "FROM entity_connections ec "
+            "WHERE ec.entity_a_id = ? OR ec.entity_b_id = ? "
+            "ORDER BY ec.weight DESC LIMIT ?",
+            (entity_id, entity_id, entity_id, limit),
+        ).fetchall()
+
+        connections = []
+        for r in rows:
+            other = conn.execute(
+                "SELECT id, name, type FROM entities WHERE id = ?", (r["other_id"],)
+            ).fetchone()
+            if other:
+                connections.append(
+                    {
+                        "entity_id": other["id"],
+                        "name": other["name"],
+                        "type": other["type"],
+                        "weight": r["weight"],
+                    }
+                )
+
+    return {"entity": dict(entity), "connections": connections}
+
+
+# ── Document Word Count ──────────────────────────────
+
+
+@app.get("/api/document-word-count")
+def document_word_count():
+    """Word count stats across the corpus."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT id, filename, title, category, source, raw_text FROM documents ORDER BY id"
+        ).fetchall()
+
+    docs = []
+    total_words = 0
+    by_cat = {}
+    buckets = {"<100": 0, "100-500": 0, "500-2K": 0, "2K-10K": 0, "10K-50K": 0, ">50K": 0}
+
+    for r in rows:
+        text = r["raw_text"] or ""
+        wc = len(text.split())
+        total_words += wc
+        cat = r["category"] or "other"
+        if cat not in by_cat:
+            by_cat[cat] = {"count": 0, "total_words": 0}
+        by_cat[cat]["count"] += 1
+        by_cat[cat]["total_words"] += wc
+
+        if wc < 100:
+            buckets["<100"] += 1
+        elif wc < 500:
+            buckets["100-500"] += 1
+        elif wc < 2000:
+            buckets["500-2K"] += 1
+        elif wc < 10000:
+            buckets["2K-10K"] += 1
+        elif wc < 50000:
+            buckets["10K-50K"] += 1
+        else:
+            buckets[">50K"] += 1
+
+        docs.append(
+            {
+                "id": r["id"],
+                "title": r["title"] or r["filename"],
+                "category": cat,
+                "word_count": wc,
+            }
+        )
+
+    docs.sort(key=lambda x: x["word_count"], reverse=True)
+    total = len(docs)
+
+    return {
+        "documents": docs[:50],
+        "stats": {
+            "total_docs": total,
+            "total_words": total_words,
+            "avg_words": round(total_words / total) if total else 0,
+        },
+        "buckets": buckets,
+        "by_category": by_cat,
+    }
+
+
+# ── Mention Heatmap ──────────────────────────────────
+
+
+@app.get("/api/mention-heatmap")
+def mention_heatmap(limit_entities: int = 20, limit_docs: int = 30):
+    """Entity mentions per document heatmap (top entities x top docs)."""
+    with get_db() as conn:
+        # Top entities by doc count
+        top_ents = conn.execute(
+            "SELECT e.id, e.name, e.type, COUNT(DISTINCT de.document_id) as doc_count "
+            "FROM entities e JOIN document_entities de ON de.entity_id = e.id "
+            "WHERE e.type IN ('person', 'org') "
+            "GROUP BY e.id ORDER BY doc_count DESC LIMIT ?",
+            (limit_entities,),
+        ).fetchall()
+
+        # Top docs by entity count
+        top_docs = conn.execute(
+            "SELECT d.id, d.title, d.filename, COUNT(DISTINCT de.entity_id) as ent_count "
+            "FROM documents d JOIN document_entities de ON de.document_id = d.id "
+            "GROUP BY d.id ORDER BY ent_count DESC LIMIT ?",
+            (limit_docs,),
+        ).fetchall()
+
+        ent_ids = [e["id"] for e in top_ents]
+        doc_ids = [d["id"] for d in top_docs]
+
+        if not ent_ids or not doc_ids:
+            return {"entities": [], "documents": [], "matrix": []}
+
+        ep = ",".join("?" * len(ent_ids))
+        dp = ",".join("?" * len(doc_ids))
+        cells = conn.execute(
+            f"SELECT entity_id, document_id, count FROM document_entities "
+            f"WHERE entity_id IN ({ep}) AND document_id IN ({dp})",
+            ent_ids + doc_ids,
+        ).fetchall()
+
+    # Build matrix
+    cell_map = {}
+    for c in cells:
+        cell_map[(c["entity_id"], c["document_id"])] = c["count"]
+
+    matrix = []
+    for e in top_ents:
+        row = {"entity_id": e["id"], "name": e["name"], "type": e["type"], "cells": []}
+        for d in top_docs:
+            row["cells"].append(cell_map.get((e["id"], d["id"]), 0))
+        matrix.append(row)
+
+    return {
+        "entities": [{"id": e["id"], "name": e["name"], "type": e["type"]} for e in top_ents],
+        "documents": [
+            {"id": d["id"], "title": (d["title"] or d["filename"])[:30]} for d in top_docs
+        ],
+        "matrix": matrix,
+    }
+
+
+# ── Source Quality ───────────────────────────────────
+
+
+@app.get("/api/source-quality")
+def source_quality():
+    """Rate sources by avg metadata completeness of their docs."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT source, id, title, category, date, pages, raw_text, notes "
+            "FROM documents WHERE source IS NOT NULL AND source != '' "
+            "ORDER BY source"
+        ).fetchall()
+
+    sources = {}
+    for r in rows:
+        src = r["source"]
+        if src not in sources:
+            sources[src] = {"count": 0, "total_score": 0, "scores": []}
+
+        score = 0
+        for f in ["title", "category", "date", "notes"]:
+            if r[f] and str(r[f]).strip() and r[f] != "other":
+                score += 1
+        if r["pages"] and r["pages"] > 0:
+            score += 1
+        if r["raw_text"] and len(r["raw_text"]) > 50:
+            score += 1
+        pct = round(score / 6 * 100)
+
+        sources[src]["count"] += 1
+        sources[src]["total_score"] += pct
+        sources[src]["scores"].append(pct)
+
+    result = []
+    for src, data in sources.items():
+        avg = round(data["total_score"] / data["count"]) if data["count"] else 0
+        result.append(
+            {
+                "source": src,
+                "doc_count": data["count"],
+                "avg_completeness": avg,
+                "min_completeness": min(data["scores"]) if data["scores"] else 0,
+                "max_completeness": max(data["scores"]) if data["scores"] else 0,
+            }
+        )
+
+    result.sort(key=lambda x: x["avg_completeness"])
+    return {"sources": result}
+
+
+# ── Event Density Calendar ───────────────────────────
+
+
+@app.get("/api/event-calendar")
+def event_calendar(year: str = ""):
+    """Events per day in a calendar-like view."""
+    with get_db() as conn:
+        year_filter = ""
+        params: list = []
+        if year:
+            year_filter = "AND event_date LIKE ?"
+            params.append(f"{year}%")
+
+        rows = conn.execute(
+            f"SELECT event_date, COUNT(*) as cnt "
+            f"FROM events "
+            f"WHERE event_date IS NOT NULL AND event_date != '' "
+            f"AND LENGTH(event_date) >= 10 "
+            f"{year_filter} "
+            f"GROUP BY event_date ORDER BY event_date",
+            params,
+        ).fetchall()
+
+        years = conn.execute(
+            "SELECT DISTINCT SUBSTR(event_date, 1, 4) as yr "
+            "FROM events WHERE event_date IS NOT NULL AND LENGTH(event_date) >= 10 "
+            "ORDER BY yr"
+        ).fetchall()
+
+    days = [{"date": r["event_date"], "count": r["cnt"]} for r in rows]
+    max_count = max(r["cnt"] for r in rows) if rows else 0
+
+    return {
+        "days": days,
+        "max_count": max_count,
+        "total_days": len(days),
+        "available_years": [y["yr"] for y in years],
+    }
+
+
+# ── Entity Pair History ──────────────────────────────
+
+
+@app.get("/api/entity-pair-history")
+def entity_pair_history(entity_a: int = 0, entity_b: int = 0):
+    """All documents where two entities co-occur."""
+    if not entity_a or not entity_b:
+        return {"entity_a": None, "entity_b": None, "documents": []}
+
+    with get_db() as conn:
+        ea = conn.execute(
+            "SELECT id, name, type FROM entities WHERE id = ?", (entity_a,)
+        ).fetchone()
+        eb = conn.execute(
+            "SELECT id, name, type FROM entities WHERE id = ?", (entity_b,)
+        ).fetchone()
+
+        if not ea or not eb:
+            return {"entity_a": None, "entity_b": None, "documents": []}
+
+        rows = conn.execute(
+            "SELECT d.id, d.title, d.filename, d.category, d.source, d.date, "
+            "de1.count as count_a, de2.count as count_b "
+            "FROM document_entities de1 "
+            "JOIN document_entities de2 ON de1.document_id = de2.document_id "
+            "JOIN documents d ON d.id = de1.document_id "
+            "WHERE de1.entity_id = ? AND de2.entity_id = ? "
+            "ORDER BY (de1.count + de2.count) DESC",
+            (entity_a, entity_b),
+        ).fetchall()
+
+    return {
+        "entity_a": dict(ea),
+        "entity_b": dict(eb),
+        "documents": [dict(r) for r in rows],
+        "total": len(rows),
+    }
+
+
 # ═══════════════════════════════════════════
 # STATIC FILES (serve the frontend)
 # ═══════════════════════════════════════════

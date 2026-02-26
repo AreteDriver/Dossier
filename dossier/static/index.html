@@ -2025,6 +2025,8 @@ body::before {
 .entdensity-view.active, .docdupes-view.active, .connstrength-view.active, .cattimeline-view.active, .orphandocs-view.active, .entfirstlast-view.active { display: flex; }
 .xsource-view, .pagedist-view, .namelen-view, .ingesttl-view, .hvt-view, .kwcontext-view { display: none; flex-direction: column; gap: 16px; }
 .xsource-view.active, .pagedist-view.active, .namelen-view.active, .ingesttl-view.active, .hvt-view.active, .kwcontext-view.active { display: flex; }
+.entconnmap-view, .docwords-view, .mentionheat-view, .srcquality-view, .eventcal-view, .pairhist-view { display: none; flex-direction: column; gap: 16px; }
+.entconnmap-view.active, .docwords-view.active, .mentionheat-view.active, .srcquality-view.active, .eventcal-view.active, .pairhist-view.active { display: flex; }
 .rel-edge { display: flex; align-items: center; gap: 8px; padding: 4px 0; border-bottom: 1px solid var(--border); }
 .sbs-col { flex: 1; padding: 12px; background: var(--bg-card); border-radius: var(--radius); border: 1px solid var(--border); overflow: hidden; }
 .sbs-header { font-family: var(--font-mono); font-size: 12px; font-weight: 600; color: var(--text-primary); margin-bottom: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -2453,6 +2455,30 @@ body::before {
       <div class="sidebar-item" data-view="kwcontext" id="kwcontextNav">
         <div class="sidebar-dot" style="background:var(--entity-place)"></div>
         Keyword Context
+      </div>
+      <div class="sidebar-item" data-view="entconnmap" id="entconnmapNav">
+        <div class="sidebar-dot" style="background:var(--entity-person)"></div>
+        Entity Conn Map
+      </div>
+      <div class="sidebar-item" data-view="docwords" id="docwordsNav">
+        <div class="sidebar-dot" style="background:var(--entity-org)"></div>
+        Word Counts
+      </div>
+      <div class="sidebar-item" data-view="mentionheat" id="mentionheatNav">
+        <div class="sidebar-dot" style="background:var(--entity-place)"></div>
+        Mention Heatmap
+      </div>
+      <div class="sidebar-item" data-view="srcquality" id="srcqualityNav">
+        <div class="sidebar-dot" style="background:#e05555"></div>
+        Source Quality
+      </div>
+      <div class="sidebar-item" data-view="eventcal" id="eventcalNav">
+        <div class="sidebar-dot" style="background:var(--entity-org)"></div>
+        Event Calendar
+      </div>
+      <div class="sidebar-item" data-view="pairhist" id="pairhistNav">
+        <div class="sidebar-dot" style="background:var(--entity-person)"></div>
+        Entity Pair History
       </div>
     </div>
 
@@ -3605,6 +3631,49 @@ body::before {
       <div id="kwcontextContent">Enter a keyword to see context snippets.</div>
     </div>
 
+    <div class="entconnmap-view" id="entconnmapView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Entity Connections Map</div>
+      <div style="display:flex;gap:8px;margin-bottom:8px;">
+        <input type="number" id="entconnmapInput" placeholder="Entity ID..." style="width:120px;padding:8px 12px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);color:var(--text-primary);font-size:13px;">
+        <button onclick="loadEntConnMap()" style="padding:8px 16px;background:var(--accent);color:#000;border:none;border-radius:var(--radius);cursor:pointer;font-size:13px;">Load</button>
+      </div>
+      <div id="entconnmapContent">Enter an entity ID to view connections.</div>
+    </div>
+
+    <div class="docwords-view" id="docwordsView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Document Word Counts</div>
+      <div id="docwordsContent">Loading word counts...</div>
+    </div>
+
+    <div class="mentionheat-view" id="mentionheatView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Mention Heatmap</div>
+      <div id="mentionheatContent">Loading mention heatmap...</div>
+    </div>
+
+    <div class="srcquality-view" id="srcqualityView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Source Quality</div>
+      <div id="srcqualityContent">Loading source quality...</div>
+    </div>
+
+    <div class="eventcal-view" id="eventcalView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Event Density Calendar</div>
+      <div style="display:flex;gap:8px;margin-bottom:8px;">
+        <select id="eventcalYear" style="padding:8px 12px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);color:var(--text-primary);font-size:13px;"></select>
+        <button onclick="loadEventCal()" style="padding:8px 16px;background:var(--accent);color:#000;border:none;border-radius:var(--radius);cursor:pointer;font-size:13px;">Load</button>
+      </div>
+      <div id="eventcalContent">Select a year to view event calendar.</div>
+    </div>
+
+    <div class="pairhist-view" id="pairhistView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Entity Pair History</div>
+      <div style="display:flex;gap:8px;margin-bottom:8px;">
+        <input type="number" id="pairhistA" placeholder="Entity A ID" style="width:120px;padding:8px 12px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);color:var(--text-primary);font-size:13px;">
+        <input type="number" id="pairhistB" placeholder="Entity B ID" style="width:120px;padding:8px 12px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);color:var(--text-primary);font-size:13px;">
+        <button onclick="loadPairHist()" style="padding:8px 16px;background:var(--accent);color:#000;border:none;border-radius:var(--radius);cursor:pointer;font-size:13px;">Search</button>
+      </div>
+      <div id="pairhistContent">Enter two entity IDs to see co-occurrence history.</div>
+    </div>
+
   </main>
 
   <!-- RIGHT PANEL -->
@@ -4289,6 +4358,12 @@ function hideAllViews() {
   document.getElementById('ingesttlView').classList.remove('active');
   document.getElementById('hvtView').classList.remove('active');
   document.getElementById('kwcontextView').classList.remove('active');
+  document.getElementById('entconnmapView').classList.remove('active');
+  document.getElementById('docwordsView').classList.remove('active');
+  document.getElementById('mentionheatView').classList.remove('active');
+  document.getElementById('srcqualityView').classList.remove('active');
+  document.getElementById('eventcalView').classList.remove('active');
+  document.getElementById('pairhistView').classList.remove('active');
 }
 
 function showDocumentView() {
@@ -4426,6 +4501,12 @@ document.querySelectorAll('.sidebar-item[data-view]').forEach(item => {
     else if (view === 'ingesttl') showIngestTlView();
     else if (view === 'hvt') showHvtView();
     else if (view === 'kwcontext') showKwContextView();
+    else if (view === 'entconnmap') showEntConnMapView();
+    else if (view === 'docwords') showDocWordsView();
+    else if (view === 'mentionheat') showMentionHeatView();
+    else if (view === 'srcquality') showSrcQualityView();
+    else if (view === 'eventcal') showEventCalView();
+    else if (view === 'pairhist') showPairHistView();
   });
 });
 
@@ -5561,6 +5642,12 @@ function goBackFromReader() {
   else if (readerPreviousView === 'ingesttl') showIngestTlView();
   else if (readerPreviousView === 'hvt') showHvtView();
   else if (readerPreviousView === 'kwcontext') showKwContextView();
+  else if (readerPreviousView === 'entconnmap') showEntConnMapView();
+  else if (readerPreviousView === 'docwords') showDocWordsView();
+  else if (readerPreviousView === 'mentionheat') showMentionHeatView();
+  else if (readerPreviousView === 'srcquality') showSrcQualityView();
+  else if (readerPreviousView === 'eventcal') showEventCalView();
+  else if (readerPreviousView === 'pairhist') showPairHistView();
   else showDocumentView();
 }
 
@@ -11465,6 +11552,236 @@ async function loadKwContext() {
     }
     el.innerHTML = html;
   } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to search keyword context</div>'; }
+}
+
+
+// ── Entity Connections Map ──
+
+function showEntConnMapView() {
+  currentView = 'entconnmap';
+  hideAllViews();
+  document.getElementById('entconnmapView').classList.add('active');
+}
+
+async function loadEntConnMap() {
+  const el = document.getElementById('entconnmapContent');
+  const eid = document.getElementById('entconnmapInput').value.trim();
+  if (!eid) { el.innerHTML = 'Enter an entity ID.'; return; }
+  el.innerHTML = 'Loading connections...';
+  try {
+    const data = await fetchJSON('/api/entity-connections-map?entity_id=' + eid);
+    if (!data.entity) { el.innerHTML = '<div style="color:#e05555;">Entity not found.</div>'; return; }
+    let html = `<div style="margin-bottom:12px;"><strong>${data.entity.name}</strong> <span class="entity-tag ${data.entity.type}">${data.entity.type}</span> — ${data.connections.length} connections</div>`;
+    if (data.connections.length) {
+      const maxW = Math.max(...data.connections.map(c => c.weight));
+      html += '<table class="data-table"><thead><tr><th>Connected Entity</th><th>Type</th><th>Weight</th><th>Strength</th></tr></thead><tbody>';
+      data.connections.forEach(c => {
+        const pct = maxW ? (c.weight / maxW * 100).toFixed(0) : 0;
+        html += `<tr><td><strong>${c.name}</strong></td><td><span class="entity-tag ${c.type}">${c.type}</span></td><td>${c.weight}</td>`;
+        html += `<td><div style="width:80px;height:12px;background:var(--bg-card);border-radius:3px;overflow:hidden;display:inline-block;">`;
+        html += `<div style="width:${pct}%;height:100%;background:var(--accent);border-radius:3px;"></div></div></td></tr>`;
+      });
+      html += '</tbody></table>';
+    }
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load connections</div>'; }
+}
+
+
+// ── Document Word Counts ──
+
+function showDocWordsView() {
+  currentView = 'docwords';
+  hideAllViews();
+  document.getElementById('docwordsView').classList.add('active');
+  loadDocWords();
+}
+
+async function loadDocWords() {
+  const el = document.getElementById('docwordsContent');
+  el.innerHTML = 'Counting words...';
+  try {
+    const data = await fetchJSON('/api/document-word-count');
+    const s = data.stats;
+    let html = `<div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:12px;">`;
+    html += `<div class="stat-card"><div class="stat-value">${s.total_docs}</div><div class="stat-label">Total Docs</div></div>`;
+    html += `<div class="stat-card"><div class="stat-value">${(s.total_words/1000000).toFixed(2)}M</div><div class="stat-label">Total Words</div></div>`;
+    html += `<div class="stat-card"><div class="stat-value">${s.avg_words.toLocaleString()}</div><div class="stat-label">Avg Words</div></div>`;
+    html += `</div>`;
+
+    const buckets = Object.entries(data.buckets);
+    const maxB = Math.max(...buckets.map(b => b[1]));
+    html += '<div style="font-size:12px;font-weight:600;margin-bottom:8px;color:var(--text-secondary);">Word Count Ranges</div>';
+    buckets.forEach(([label, cnt]) => {
+      const pct = maxB ? (cnt / maxB * 100).toFixed(0) : 0;
+      html += `<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">`;
+      html += `<span style="width:70px;font-size:11px;text-align:right;color:var(--text-muted);">${label}</span>`;
+      html += `<div style="flex:1;height:18px;background:var(--bg-card);border-radius:3px;overflow:hidden;">`;
+      html += `<div style="width:${pct}%;height:100%;background:var(--accent);border-radius:3px;"></div></div>`;
+      html += `<span style="width:40px;font-size:11px;color:var(--text-secondary);">${cnt}</span></div>`;
+    });
+
+    if (data.documents.length) {
+      html += '<div style="font-size:12px;font-weight:600;margin:12px 0 8px;color:var(--text-secondary);">Largest by Word Count</div>';
+      html += '<table class="data-table"><thead><tr><th>Title</th><th>Category</th><th>Words</th></tr></thead><tbody>';
+      data.documents.forEach(d => {
+        html += `<tr><td><a href="#" onclick="openReader(${d.id});return false;">${d.title.substring(0,50)}</a></td>`;
+        html += `<td>${d.category}</td><td>${d.word_count.toLocaleString()}</td></tr>`;
+      });
+      html += '</tbody></table>';
+    }
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load word counts</div>'; }
+}
+
+
+// ── Mention Heatmap ──
+
+function showMentionHeatView() {
+  currentView = 'mentionheat';
+  hideAllViews();
+  document.getElementById('mentionheatView').classList.add('active');
+  loadMentionHeat();
+}
+
+async function loadMentionHeat() {
+  const el = document.getElementById('mentionheatContent');
+  el.innerHTML = 'Building mention heatmap...';
+  try {
+    const data = await fetchJSON('/api/mention-heatmap?limit_entities=15&limit_docs=20');
+    if (!data.matrix.length) { el.innerHTML = '<div style="color:var(--text-muted);">No data.</div>'; return; }
+
+    const maxVal = Math.max(...data.matrix.flatMap(r => r.cells));
+    let html = '<div style="overflow-x:auto;"><table class="data-table" style="font-size:10px;"><thead><tr><th>Entity</th>';
+    data.documents.forEach(d => html += `<th style="writing-mode:vertical-lr;text-align:left;max-width:25px;padding:4px 2px;" title="${d.title}">${d.title.substring(0,15)}</th>`);
+    html += '</tr></thead><tbody>';
+    data.matrix.forEach(row => {
+      html += `<tr><td style="white-space:nowrap;"><span class="entity-tag ${row.type}" style="font-size:9px;">${row.name}</span></td>`;
+      row.cells.forEach(v => {
+        const intensity = maxVal ? (v / maxVal) : 0;
+        const bg = v === 0 ? 'transparent' : `rgba(110, 198, 255, ${0.15 + intensity * 0.85})`;
+        html += `<td style="text-align:center;background:${bg};color:${intensity > 0.5 ? '#000' : 'var(--text-muted)'};" title="${row.name}: ${v}">${v || ''}</td>`;
+      });
+      html += '</tr>';
+    });
+    html += '</tbody></table></div>';
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load mention heatmap</div>'; }
+}
+
+
+// ── Source Quality ──
+
+function showSrcQualityView() {
+  currentView = 'srcquality';
+  hideAllViews();
+  document.getElementById('srcqualityView').classList.add('active');
+  loadSrcQuality();
+}
+
+async function loadSrcQuality() {
+  const el = document.getElementById('srcqualityContent');
+  el.innerHTML = 'Rating source quality...';
+  try {
+    const data = await fetchJSON('/api/source-quality');
+    let html = `<div class="stat-card" style="margin-bottom:12px;"><div class="stat-value">${data.sources.length}</div><div class="stat-label">Sources Rated</div></div>`;
+    if (data.sources.length) {
+      html += '<table class="data-table"><thead><tr><th>Source</th><th>Docs</th><th>Avg Completeness</th><th>Min</th><th>Max</th><th>Quality</th></tr></thead><tbody>';
+      data.sources.forEach(s => {
+        const color = s.avg_completeness >= 80 ? '#50c878' : s.avg_completeness >= 50 ? '#f0ad4e' : '#e05555';
+        html += `<tr><td><strong>${s.source}</strong></td><td>${s.doc_count}</td>`;
+        html += `<td style="color:${color};font-weight:600;">${s.avg_completeness}%</td>`;
+        html += `<td>${s.min_completeness}%</td><td>${s.max_completeness}%</td>`;
+        html += `<td><div style="width:80px;height:12px;background:var(--bg-card);border-radius:3px;overflow:hidden;display:inline-block;">`;
+        html += `<div style="width:${s.avg_completeness}%;height:100%;background:${color};border-radius:3px;"></div></div></td></tr>`;
+      });
+      html += '</tbody></table>';
+    }
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load source quality</div>'; }
+}
+
+
+// ── Event Calendar ──
+
+function showEventCalView() {
+  currentView = 'eventcal';
+  hideAllViews();
+  document.getElementById('eventcalView').classList.add('active');
+  loadEventCalYears();
+}
+
+async function loadEventCalYears() {
+  try {
+    const data = await fetchJSON('/api/event-calendar');
+    const sel = document.getElementById('eventcalYear');
+    sel.innerHTML = '<option value="">All Years</option>';
+    data.available_years.forEach(y => sel.innerHTML += `<option value="${y}">${y}</option>`);
+    loadEventCal();
+  } catch (err) {}
+}
+
+async function loadEventCal() {
+  const el = document.getElementById('eventcalContent');
+  const year = document.getElementById('eventcalYear').value;
+  el.innerHTML = 'Loading event calendar...';
+  try {
+    const data = await fetchJSON('/api/event-calendar?year=' + year);
+    let html = `<div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:12px;">`;
+    html += `<div class="stat-card"><div class="stat-value">${data.total_days}</div><div class="stat-label">Active Days</div></div>`;
+    html += `<div class="stat-card"><div class="stat-value">${data.max_count.toLocaleString()}</div><div class="stat-label">Peak Day</div></div>`;
+    html += `</div>`;
+
+    if (data.days.length) {
+      html += '<div style="font-size:12px;font-weight:600;margin-bottom:8px;color:var(--text-secondary);">Events Per Day</div>';
+      const maxC = data.max_count;
+      data.days.slice(0, 100).forEach(d => {
+        const pct = maxC ? (d.count / maxC * 100).toFixed(0) : 0;
+        html += `<div style="display:flex;align-items:center;gap:8px;margin-bottom:2px;">`;
+        html += `<span style="width:90px;font-size:10px;text-align:right;color:var(--text-muted);">${d.date}</span>`;
+        html += `<div style="flex:1;height:14px;background:var(--bg-card);border-radius:3px;overflow:hidden;">`;
+        html += `<div style="width:${pct}%;height:100%;background:var(--accent);border-radius:3px;"></div></div>`;
+        html += `<span style="width:45px;font-size:10px;color:var(--text-secondary);">${d.count}</span></div>`;
+      });
+      if (data.days.length > 100) html += `<div style="color:var(--text-muted);font-size:11px;margin-top:8px;">Showing 100 of ${data.total_days} days</div>`;
+    }
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load event calendar</div>'; }
+}
+
+
+// ── Entity Pair History ──
+
+function showPairHistView() {
+  currentView = 'pairhist';
+  hideAllViews();
+  document.getElementById('pairhistView').classList.add('active');
+}
+
+async function loadPairHist() {
+  const el = document.getElementById('pairhistContent');
+  const a = document.getElementById('pairhistA').value.trim();
+  const b = document.getElementById('pairhistB').value.trim();
+  if (!a || !b) { el.innerHTML = 'Enter two entity IDs.'; return; }
+  el.innerHTML = 'Searching pair history...';
+  try {
+    const data = await fetchJSON('/api/entity-pair-history?entity_a=' + a + '&entity_b=' + b);
+    if (!data.entity_a || !data.entity_b) { el.innerHTML = '<div style="color:#e05555;">Entity not found.</div>'; return; }
+    let html = `<div style="margin-bottom:12px;">`;
+    html += `<span class="entity-tag ${data.entity_a.type}">${data.entity_a.name}</span> ↔ `;
+    html += `<span class="entity-tag ${data.entity_b.type}">${data.entity_b.name}</span> — `;
+    html += `<strong>${data.total}</strong> shared documents</div>`;
+    if (data.documents.length) {
+      html += '<table class="data-table"><thead><tr><th>Document</th><th>Category</th><th>Source</th><th>Date</th><th>A mentions</th><th>B mentions</th></tr></thead><tbody>';
+      data.documents.forEach(d => {
+        html += `<tr><td><a href="#" onclick="openReader(${d.id});return false;">${(d.title || d.filename).substring(0,45)}</a></td>`;
+        html += `<td>${d.category||''}</td><td>${d.source||''}</td><td>${d.date||''}</td>`;
+        html += `<td>${d.count_a}</td><td>${d.count_b}</td></tr>`;
+      });
+      html += '</tbody></table>';
+    }
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load pair history</div>'; }
 }
 
 
