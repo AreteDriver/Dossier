@@ -5110,6 +5110,400 @@ def bulk_tag_suggestions():
 
 
 # ═══════════════════════════════════════════
+# ENTITY TIMELINE (per-entity chronological view)
+# ═══════════════════════════════════════════
+
+
+@app.get("/api/entities/{entity_id}/timeline")
+def entity_timeline(entity_id: int):
+    """Get a unified chronological timeline for a single entity."""
+    with get_db() as conn:
+        entity = conn.execute(
+            "SELECT id, name, type FROM entities WHERE id = ?", (entity_id,)
+        ).fetchone()
+        if not entity:
+            raise HTTPException(404, "Entity not found")
+
+        # Events linked via event_entities
+        events = conn.execute(
+            """SELECT e.id, e.event_date, e.context, e.precision, e.confidence,
+                      e.document_id, d.title as doc_title, ee.role
+               FROM events e
+               JOIN event_entities ee ON ee.event_id = e.id
+               LEFT JOIN documents d ON d.id = e.document_id
+               WHERE ee.entity_id = ?
+               ORDER BY e.event_date""",
+            (entity_id,),
+        ).fetchall()
+
+        # Documents linked via document_entities
+        docs = conn.execute(
+            """SELECT d.id, d.title, d.filename, d.category, d.date, d.source,
+                      de.count as mention_count
+               FROM documents d
+               JOIN document_entities de ON de.document_id = d.id
+               WHERE de.entity_id = ?
+               ORDER BY d.date""",
+            (entity_id,),
+        ).fetchall()
+
+        # Co-occurring entities (who appears with this entity most)
+        cooccurring = conn.execute(
+            """SELECT e2.id, e2.name, e2.type, COUNT(DISTINCT de1.document_id) as shared_docs
+               FROM document_entities de1
+               JOIN document_entities de2 ON de2.document_id = de1.document_id AND de2.entity_id != de1.entity_id
+               JOIN entities e2 ON e2.id = de2.entity_id
+               WHERE de1.entity_id = ?
+               GROUP BY e2.id ORDER BY shared_docs DESC LIMIT 15""",
+            (entity_id,),
+        ).fetchall()
+
+    return {
+        "entity": dict(entity),
+        "events": [dict(e) for e in events],
+        "documents": [dict(d) for d in docs],
+        "cooccurring": [dict(c) for c in cooccurring],
+    }
+
+
+# ═══════════════════════════════════════════
+# SOURCE CREDIBILITY (rate and track sources)
+# ═══════════════════════════════════════════
+
+
+def _ensure_source_ratings_table(conn):
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS source_ratings (
+            source TEXT PRIMARY KEY,
+            rating TEXT DEFAULT 'C',
+            notes TEXT,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
+
+@app.get("/api/source-credibility")
+def source_credibility():
+    """List all sources with their document counts and reliability ratings."""
+    with get_db() as conn:
+        _ensure_source_ratings_table(conn)
+        sources = conn.execute(
+            """SELECT d.source, COUNT(*) as doc_count,
+                      MIN(d.date) as earliest, MAX(d.date) as latest,
+                      sr.rating, sr.notes as rating_notes
+               FROM documents d
+               LEFT JOIN source_ratings sr ON sr.source = d.source
+               WHERE d.source IS NOT NULL AND d.source != ''
+               GROUP BY d.source
+               ORDER BY doc_count DESC"""
+        ).fetchall()
+
+        # Cross-source entity overlap (corroboration signal)
+        overlap = conn.execute(
+            """SELECT d1.source as source_a, d2.source as source_b,
+                      COUNT(DISTINCT de1.entity_id) as shared_entities
+               FROM document_entities de1
+               JOIN documents d1 ON d1.id = de1.document_id
+               JOIN document_entities de2 ON de2.entity_id = de1.entity_id AND de2.document_id != de1.document_id
+               JOIN documents d2 ON d2.id = de2.document_id
+               WHERE d1.source < d2.source
+                 AND d1.source IS NOT NULL AND d2.source IS NOT NULL
+                 AND d1.source != '' AND d2.source != ''
+               GROUP BY d1.source, d2.source
+               HAVING shared_entities >= 3
+               ORDER BY shared_entities DESC LIMIT 30"""
+        ).fetchall()
+
+    return {
+        "sources": [dict(s) for s in sources],
+        "cross_source_overlap": [dict(o) for o in overlap],
+    }
+
+
+@app.post("/api/source-credibility/{source}/rate")
+async def rate_source(source: str, request: Request):
+    """Rate a document source for credibility (A-F scale)."""
+    body = await request.json()
+    rating = body.get("rating", "C")
+    notes = body.get("notes", "")
+    if rating not in ("A", "B", "C", "D", "F"):
+        raise HTTPException(400, "Rating must be A, B, C, D, or F")
+
+    with get_db() as conn:
+        _ensure_source_ratings_table(conn)
+        conn.execute(
+            """INSERT INTO source_ratings (source, rating, notes, updated_at)
+               VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+               ON CONFLICT(source) DO UPDATE SET rating=excluded.rating, notes=excluded.notes, updated_at=CURRENT_TIMESTAMP""",
+            (source, rating, notes),
+        )
+        conn.commit()
+
+    return {"source": source, "rating": rating}
+
+
+# ═══════════════════════════════════════════
+# DOCUMENT GAPS (temporal gap analysis)
+# ═══════════════════════════════════════════
+
+
+@app.get("/api/document-gaps")
+def document_gaps(min_gap_days: int = Query(30)):
+    """Find temporal gaps in the document record."""
+    with get_db() as conn:
+        # Get all dated documents sorted
+        dated_docs = conn.execute(
+            """SELECT id, title, filename, date, category, source
+               FROM documents
+               WHERE date IS NOT NULL AND date != ''
+               ORDER BY date"""
+        ).fetchall()
+
+        if len(dated_docs) < 2:
+            return {"gaps": [], "coverage": {}, "undated_count": 0}
+
+        # Find gaps
+        gaps = []
+        for i in range(len(dated_docs) - 1):
+            d1 = dated_docs[i]
+            d2 = dated_docs[i + 1]
+            try:
+                from datetime import datetime
+
+                dt1 = datetime.fromisoformat(d1["date"][:10])
+                dt2 = datetime.fromisoformat(d2["date"][:10])
+                delta = (dt2 - dt1).days
+                if delta >= min_gap_days:
+                    gaps.append(
+                        {
+                            "gap_days": delta,
+                            "start_date": d1["date"][:10],
+                            "end_date": d2["date"][:10],
+                            "before_doc": {"id": d1["id"], "title": d1["title"] or d1["filename"]},
+                            "after_doc": {"id": d2["id"], "title": d2["title"] or d2["filename"]},
+                        }
+                    )
+            except (ValueError, TypeError):
+                continue
+
+        gaps.sort(key=lambda g: g["gap_days"], reverse=True)
+
+        # Coverage summary by year
+        year_counts = {}
+        for d in dated_docs:
+            try:
+                yr = d["date"][:4]
+                year_counts[yr] = year_counts.get(yr, 0) + 1
+            except (TypeError, IndexError):
+                continue
+
+        undated = conn.execute(
+            "SELECT COUNT(*) FROM documents WHERE date IS NULL OR date = ''"
+        ).fetchone()[0]
+
+    return {
+        "gaps": gaps[:50],
+        "coverage": dict(sorted(year_counts.items())),
+        "undated_count": undated,
+        "total_dated": len(dated_docs),
+    }
+
+
+# ═══════════════════════════════════════════
+# REDACTION ANALYSIS
+# ═══════════════════════════════════════════
+
+
+@app.get("/api/redaction-analysis")
+def redaction_analysis():
+    """Analyze redaction density and patterns across documents."""
+    with get_db() as conn:
+        # Per-document redaction counts
+        doc_redactions = conn.execute(
+            """SELECT d.id, d.title, d.filename, d.category, d.pages,
+                      COUNT(r.id) as redaction_count,
+                      SUM(r.end_offset - r.start_offset) as total_chars_redacted
+               FROM documents d
+               JOIN redactions r ON r.document_id = d.id
+               GROUP BY d.id
+               ORDER BY redaction_count DESC"""
+        ).fetchall()
+
+        # Redaction reasons breakdown
+        reasons = conn.execute(
+            """SELECT reason, COUNT(*) as count
+               FROM redactions
+               WHERE reason IS NOT NULL AND reason != ''
+               GROUP BY reason ORDER BY count DESC"""
+        ).fetchall()
+
+        # Category distribution
+        category_stats = conn.execute(
+            """SELECT d.category, COUNT(DISTINCT d.id) as doc_count,
+                      COUNT(r.id) as redaction_count
+               FROM documents d
+               JOIN redactions r ON r.document_id = d.id
+               GROUP BY d.category ORDER BY redaction_count DESC"""
+        ).fetchall()
+
+        # Total docs with/without redactions
+        total_docs = conn.execute("SELECT COUNT(*) FROM documents").fetchone()[0]
+        docs_with_redactions = conn.execute(
+            "SELECT COUNT(DISTINCT document_id) FROM redactions"
+        ).fetchone()[0]
+
+    return {
+        "documents": [dict(d) for d in doc_redactions],
+        "reasons": [dict(r) for r in reasons],
+        "by_category": [dict(c) for c in category_stats],
+        "summary": {
+            "total_documents": total_docs,
+            "documents_with_redactions": docs_with_redactions,
+            "documents_clean": total_docs - docs_with_redactions,
+            "total_redactions": sum(d["redaction_count"] for d in doc_redactions),
+        },
+    }
+
+
+# ═══════════════════════════════════════════
+# CORROBORATION ENGINE
+# ═══════════════════════════════════════════
+
+
+@app.get("/api/corroboration")
+def corroboration(min_shared: int = Query(2)):
+    """Find entities corroborated across multiple independent sources."""
+    with get_db() as conn:
+        # Entities appearing in documents from different sources
+        corroborated = conn.execute(
+            """SELECT e.id, e.name, e.type,
+                      COUNT(DISTINCT d.id) as doc_count,
+                      COUNT(DISTINCT d.source) as source_count,
+                      GROUP_CONCAT(DISTINCT d.source) as sources
+               FROM entities e
+               JOIN document_entities de ON de.entity_id = e.id
+               JOIN documents d ON d.id = de.document_id
+               WHERE d.source IS NOT NULL AND d.source != ''
+               GROUP BY e.id
+               HAVING source_count >= ?
+               ORDER BY source_count DESC, doc_count DESC
+               LIMIT 100""",
+            (min_shared,),
+        ).fetchall()
+
+        # Find entity pairs that appear together across multiple sources (strong corroboration)
+        entity_pairs = conn.execute(
+            """WITH pair_sources AS (
+                 SELECT de1.entity_id as e1_id, de2.entity_id as e2_id,
+                        d.source, d.id as doc_id
+                 FROM document_entities de1
+                 JOIN document_entities de2 ON de2.document_id = de1.document_id
+                   AND de2.entity_id > de1.entity_id
+                 JOIN documents d ON d.id = de1.document_id
+                 WHERE d.source IS NOT NULL AND d.source != ''
+               )
+               SELECT e1.name as entity_a, e2.name as entity_b,
+                      e1.type as type_a, e2.type as type_b,
+                      COUNT(DISTINCT ps.source) as source_count,
+                      COUNT(DISTINCT ps.doc_id) as doc_count
+               FROM pair_sources ps
+               JOIN entities e1 ON e1.id = ps.e1_id
+               JOIN entities e2 ON e2.id = ps.e2_id
+               GROUP BY ps.e1_id, ps.e2_id
+               HAVING source_count >= ?
+               ORDER BY source_count DESC, doc_count DESC
+               LIMIT 50""",
+            (min_shared,),
+        ).fetchall()
+
+    return {
+        "corroborated_entities": [dict(c) for c in corroborated],
+        "corroborated_pairs": [dict(p) for p in entity_pairs],
+    }
+
+
+# ═══════════════════════════════════════════
+# DEPOSITION TRACKER
+# ═══════════════════════════════════════════
+
+
+@app.get("/api/depositions")
+def depositions():
+    """Track depositions and testimonies — who testified, when, key entities."""
+    with get_db() as conn:
+        # Find deposition-category documents with their entities
+        depo_docs = conn.execute(
+            """SELECT d.id, d.title, d.filename, d.date, d.source, d.pages,
+                      d.category
+               FROM documents d
+               WHERE d.category = 'deposition'
+                  OR LOWER(d.title) LIKE '%deposition%'
+                  OR LOWER(d.title) LIKE '%testimony%'
+                  OR LOWER(d.title) LIKE '%depo%'
+                  OR LOWER(d.filename) LIKE '%deposition%'
+                  OR LOWER(d.filename) LIKE '%testimony%'
+               ORDER BY d.date"""
+        ).fetchall()
+
+        results = []
+        for doc in depo_docs:
+            # Get people mentioned in this deposition
+            people = conn.execute(
+                """SELECT e.id, e.name, de.count as mentions
+                   FROM entities e
+                   JOIN document_entities de ON de.entity_id = e.id
+                   WHERE de.document_id = ? AND e.type = 'person'
+                   ORDER BY de.count DESC LIMIT 10""",
+                (doc["id"],),
+            ).fetchall()
+
+            # Get orgs mentioned
+            orgs = conn.execute(
+                """SELECT e.name, de.count as mentions
+                   FROM entities e
+                   JOIN document_entities de ON de.entity_id = e.id
+                   WHERE de.document_id = ? AND e.type = 'org'
+                   ORDER BY de.count DESC LIMIT 5""",
+                (doc["id"],),
+            ).fetchall()
+
+            results.append(
+                {
+                    "doc_id": doc["id"],
+                    "title": doc["title"] or doc["filename"],
+                    "date": doc["date"],
+                    "source": doc["source"],
+                    "pages": doc["pages"],
+                    "people": [dict(p) for p in people],
+                    "orgs": [dict(o) for o in orgs],
+                }
+            )
+
+        # Deponent summary (people who appear in deposition docs most)
+        deponent_ids = [d["id"] for d in depo_docs]
+        deponents = []
+        if deponent_ids:
+            placeholders = ",".join("?" * len(deponent_ids))
+            deponents = conn.execute(
+                f"""SELECT e.id, e.name, COUNT(DISTINCT de.document_id) as deposition_count,
+                           SUM(de.count) as total_mentions
+                    FROM entities e
+                    JOIN document_entities de ON de.entity_id = e.id
+                    WHERE de.document_id IN ({placeholders}) AND e.type = 'person'
+                    GROUP BY e.id
+                    ORDER BY deposition_count DESC, total_mentions DESC
+                    LIMIT 30""",
+                deponent_ids,
+            ).fetchall()
+
+    return {
+        "depositions": results,
+        "deponents": [dict(d) for d in deponents],
+        "total": len(results),
+    }
+
+
+# ═══════════════════════════════════════════
 # STATIC FILES (serve the frontend)
 # ═══════════════════════════════════════════
 

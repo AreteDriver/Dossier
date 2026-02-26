@@ -1953,6 +1953,22 @@ body::before {
 .bulktag-doc-row { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-bottom: 1px solid var(--border); font-size: 12px; }
 .bulktag-doc-row:hover { background: var(--bg-hover); }
 .bulktag-checkbox { accent-color: var(--accent); }
+
+.entitytl-view, .srcrel-view, .docgaps-view, .redactanalysis-view, .corroborate-view, .depositions-view { display: none; flex-direction: column; gap: 16px; }
+.entitytl-view.active, .srcrel-view.active, .docgaps-view.active, .redactanalysis-view.active, .corroborate-view.active, .depositions-view.active { display: flex; }
+.entitytl-event { padding: 10px 14px; border-left: 3px solid var(--accent); margin-left: 12px; background: var(--bg-card); border-radius: 0 var(--radius) var(--radius) 0; margin-bottom: 6px; position: relative; }
+.entitytl-event::before { content: ''; position: absolute; left: -9px; top: 14px; width: 10px; height: 10px; border-radius: 50%; background: var(--accent); border: 2px solid var(--bg-primary); }
+.entitytl-date { font-family: var(--font-mono); font-size: 10px; color: var(--accent); margin-bottom: 2px; }
+.srcrel-card { padding: 12px 16px; background: var(--bg-card); border-radius: var(--radius); border: 1px solid var(--border); margin-bottom: 8px; }
+.srcrel-rating { display: inline-flex; gap: 4px; }
+.srcrel-rating button { width: 28px; height: 24px; border-radius: 4px; border: 1px solid var(--border); background: var(--bg-tertiary); color: var(--text-secondary); font-family: var(--font-mono); font-size: 11px; cursor: pointer; }
+.srcrel-rating button.selected { background: var(--accent); color: var(--text-primary); border-color: var(--accent); }
+.gap-bar { height: 20px; background: var(--accent-dim); border-radius: 3px; display: flex; align-items: center; padding: 0 8px; font-family: var(--font-mono); font-size: 10px; color: var(--text-primary); margin-bottom: 4px; }
+.redact-bar { height: 14px; background: linear-gradient(90deg, var(--accent-dim), var(--accent)); border-radius: 3px; transition: width 0.3s ease; }
+.corr-pair { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: var(--bg-card); border-radius: var(--radius); border: 1px solid var(--border); margin-bottom: 6px; }
+.corr-bridge { font-family: var(--font-mono); font-size: 12px; color: var(--accent); }
+.depo-card { padding: 12px 16px; background: var(--bg-card); border-radius: var(--radius); border: 1px solid var(--border); margin-bottom: 8px; cursor: pointer; transition: border-color var(--transition); }
+.depo-card:hover { border-color: var(--accent-dim); }
 </style>
 </head>
 <body>
@@ -2157,6 +2173,30 @@ body::before {
       <div class="sidebar-item" data-view="bulktag" id="bulktagNav">
         <div class="sidebar-dot" style="background:var(--accent)"></div>
         Bulk Tagger
+      </div>
+      <div class="sidebar-item" data-view="entitytl" id="entitytlNav">
+        <div class="sidebar-dot" style="background:var(--entity-person)"></div>
+        Entity Timeline
+      </div>
+      <div class="sidebar-item" data-view="srcrel" id="srcrelNav">
+        <div class="sidebar-dot" style="background:var(--entity-org)"></div>
+        Source Credibility
+      </div>
+      <div class="sidebar-item" data-view="docgaps" id="docgapsNav">
+        <div class="sidebar-dot" style="background:var(--entity-date)"></div>
+        Document Gaps
+      </div>
+      <div class="sidebar-item" data-view="redactanalysis" id="redactanalysisNav">
+        <div class="sidebar-dot" style="background:var(--accent)"></div>
+        Redaction Analysis
+      </div>
+      <div class="sidebar-item" data-view="corroborate" id="corroborateNav">
+        <div class="sidebar-dot" style="background:var(--entity-place)"></div>
+        Corroboration
+      </div>
+      <div class="sidebar-item" data-view="depositions" id="depositionsNav">
+        <div class="sidebar-dot" style="background:var(--entity-thing)"></div>
+        Depositions
       </div>
     </div>
 
@@ -2918,6 +2958,60 @@ body::before {
       <div id="bulktagContent">Loading documents...</div>
     </div>
 
+    <!-- Entity Timeline View -->
+    <div class="entitytl-view" id="entitytlView">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Entity Timeline</div>
+        <select id="entitytlSelect" onchange="loadEntityTimeline(this.value)" style="background:var(--bg-tertiary);border:1px solid var(--border);border-radius:var(--radius);padding:4px 8px;font-family:var(--font-mono);font-size:11px;color:var(--text-primary);outline:none;flex:1;max-width:300px;">
+          <option value="">Select an entity...</option>
+        </select>
+      </div>
+      <div id="entitytlContent" style="color:var(--text-muted);">Select an entity to view their timeline.</div>
+    </div>
+
+    <!-- Source Credibility View -->
+    <div class="srcrel-view" id="srcrelView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Source Credibility</div>
+      <div id="srcrelContent">Loading sources...</div>
+    </div>
+
+    <!-- Document Gaps View -->
+    <div class="docgaps-view" id="docgapsView">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Document Gaps</div>
+        <label style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted);">Min gap:
+          <input id="docgapsMinDays" type="number" value="30" min="1" style="width:60px;background:var(--bg-tertiary);border:1px solid var(--border);border-radius:var(--radius);padding:4px 8px;font-family:var(--font-mono);font-size:11px;color:var(--text-primary);outline:none;">
+          days
+        </label>
+        <button onclick="loadDocGaps()" class="report-btn">Analyze</button>
+      </div>
+      <div id="docgapsContent">Loading gap analysis...</div>
+    </div>
+
+    <!-- Redaction Analysis View -->
+    <div class="redactanalysis-view" id="redactanalysisView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Redaction Analysis</div>
+      <div id="redactanalysisContent">Loading redaction data...</div>
+    </div>
+
+    <!-- Corroboration View -->
+    <div class="corroborate-view" id="corroborateView">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Corroboration Engine</div>
+        <label style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted);">Min sources:
+          <input id="corrMinShared" type="number" value="2" min="2" style="width:50px;background:var(--bg-tertiary);border:1px solid var(--border);border-radius:var(--radius);padding:4px 8px;font-family:var(--font-mono);font-size:11px;color:var(--text-primary);outline:none;">
+        </label>
+        <button onclick="loadCorroboration()" class="report-btn">Analyze</button>
+      </div>
+      <div id="corroborateContent">Loading corroboration data...</div>
+    </div>
+
+    <!-- Depositions View -->
+    <div class="depositions-view" id="depositionsView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Deposition Tracker</div>
+      <div id="depositionsContent">Loading depositions...</div>
+    </div>
+
   </main>
 
   <!-- RIGHT PANEL -->
@@ -3548,6 +3642,12 @@ function hideAllViews() {
   document.getElementById('witnessView').classList.remove('active');
   document.getElementById('heatcalView').classList.remove('active');
   document.getElementById('bulktagView').classList.remove('active');
+  document.getElementById('entitytlView').classList.remove('active');
+  document.getElementById('srcrelView').classList.remove('active');
+  document.getElementById('docgapsView').classList.remove('active');
+  document.getElementById('redactanalysisView').classList.remove('active');
+  document.getElementById('corroborateView').classList.remove('active');
+  document.getElementById('depositionsView').classList.remove('active');
 }
 
 function showDocumentView() {
@@ -3631,6 +3731,12 @@ document.querySelectorAll('.sidebar-item[data-view]').forEach(item => {
     else if (view === 'witness') showWitnessView();
     else if (view === 'heatcal') showHeatCalView();
     else if (view === 'bulktag') showBulkTagView();
+    else if (view === 'entitytl') showEntityTLView();
+    else if (view === 'srcrel') showSrcRelView();
+    else if (view === 'docgaps') showDocGapsView();
+    else if (view === 'redactanalysis') showRedactAnalysisView();
+    else if (view === 'corroborate') showCorroborateView();
+    else if (view === 'depositions') showDepositionsView();
   });
 });
 
@@ -4712,6 +4818,12 @@ function goBackFromReader() {
   else if (readerPreviousView === 'fintrail') showFinTrailView();
   else if (readerPreviousView === 'witness') showWitnessView();
   else if (readerPreviousView === 'bulktag') showBulkTagView();
+  else if (readerPreviousView === 'entitytl') showEntityTLView();
+  else if (readerPreviousView === 'srcrel') showSrcRelView();
+  else if (readerPreviousView === 'docgaps') showDocGapsView();
+  else if (readerPreviousView === 'redactanalysis') showRedactAnalysisView();
+  else if (readerPreviousView === 'corroborate') showCorroborateView();
+  else if (readerPreviousView === 'depositions') showDepositionsView();
   else showDocumentView();
 }
 
@@ -7822,6 +7934,423 @@ async function applyBulkTag() {
 
 function exportEntityDossier(entityId) {
   window.open(`/api/entities/${entityId}/dossier-export`, '_blank');
+}
+
+
+// ─── ENTITY TIMELINE ───
+
+function showEntityTLView() {
+  currentView = 'entitytl';
+  hideAllViews();
+  document.getElementById('entitytlView').classList.add('active');
+  loadEntityTLPicker();
+}
+
+async function loadEntityTLPicker() {
+  const sel = document.getElementById('entitytlSelect');
+  if (sel.options.length > 1) return; // already loaded
+  try {
+    const data = await api('/api/entities?limit=500');
+    const entities = data.entities || data || [];
+    entities.forEach(e => {
+      const opt = document.createElement('option');
+      opt.value = e.id;
+      opt.textContent = `${e.name} (${e.type})`;
+      sel.appendChild(opt);
+    });
+  } catch (err) { console.error('Failed to load entities for timeline picker:', err); }
+}
+
+async function loadEntityTimeline(entityId) {
+  if (!entityId) return;
+  const el = document.getElementById('entitytlContent');
+  el.innerHTML = 'Loading timeline...';
+  try {
+    const data = await api(`/api/entities/${entityId}/timeline`);
+    const ent = data.entity;
+    let html = `<div style="margin-bottom:12px;">
+      <span class="entity-tag ${ent.type}" style="font-size:13px;">${ent.name}</span>
+      <span style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted);margin-left:8px;">${data.events.length} events, ${data.documents.length} documents</span>
+    </div>`;
+
+    // Co-occurring entities
+    if (data.cooccurring.length) {
+      html += '<div style="margin-bottom:12px;"><span style="font-family:var(--font-mono);font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);">Most Connected</span><div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px;">';
+      data.cooccurring.slice(0, 10).forEach(c => {
+        html += `<span class="entity-tag ${c.type}" style="font-size:10px;cursor:pointer;" onclick="document.getElementById('entitytlSelect').value='${c.id}';loadEntityTimeline('${c.id}')">${c.name} (${c.shared_docs})</span>`;
+      });
+      html += '</div></div>';
+    }
+
+    // Merge events and docs into unified timeline
+    const items = [];
+    data.events.forEach(e => items.push({date: e.event_date || '', type: 'event', data: e}));
+    data.documents.forEach(d => items.push({date: d.date || '', type: 'doc', data: d}));
+    items.sort((a, b) => a.date.localeCompare(b.date));
+
+    if (!items.length) {
+      html += '<div style="color:var(--text-muted);">No timeline data found for this entity.</div>';
+    } else {
+      items.forEach(item => {
+        if (item.type === 'event') {
+          const e = item.data;
+          html += `<div class="entitytl-event">
+            <div class="entitytl-date">${e.event_date || 'Unknown date'} ${e.role ? '(' + e.role + ')' : ''}</div>
+            <div style="font-size:12px;">${e.context || 'No context'}</div>
+            ${e.doc_title ? '<div style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted);margin-top:2px;cursor:pointer;" onclick="openReader(' + e.document_id + ',\'entitytl\')">📄 ' + e.doc_title + '</div>' : ''}
+          </div>`;
+        } else {
+          const d = item.data;
+          html += `<div class="entitytl-event" style="border-left-color:var(--entity-place);cursor:pointer;" onclick="openReader(${d.id},'entitytl')">
+            <div class="entitytl-date">${d.date || 'Undated'}</div>
+            <div style="font-size:12px;">${d.title || d.filename}</div>
+            <div style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted);margin-top:2px;">${d.category} · ${d.mention_count} mentions · ${d.source || 'unknown source'}</div>
+          </div>`;
+        }
+      });
+    }
+
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load entity timeline</div>'; }
+}
+
+
+// ─── SOURCE CREDIBILITY ───
+
+function showSrcRelView() {
+  currentView = 'srcrel';
+  hideAllViews();
+  document.getElementById('srcrelView').classList.add('active');
+  loadSourceCredibility();
+}
+
+async function loadSourceCredibility() {
+  const el = document.getElementById('srcrelContent');
+  try {
+    const data = await api('/api/source-credibility');
+    const sources = data.sources || [];
+    const overlaps = data.cross_source_overlap || [];
+
+    if (!sources.length) { el.innerHTML = '<div style="color:var(--text-muted);">No sources found.</div>'; return; }
+
+    const ratingColors = {A: '#4ae0a8', B: '#4a9de0', C: '#e0c94a', D: '#e07c4a', F: '#e05555'};
+    let html = '';
+
+    sources.forEach(s => {
+      const rating = s.rating || 'C';
+      html += `<div class="srcrel-card">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <div>
+            <span style="font-weight:600;">${s.source}</span>
+            <span style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted);margin-left:8px;">${s.doc_count} docs</span>
+            <span style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted);margin-left:8px;">${s.earliest || '?'} — ${s.latest || '?'}</span>
+          </div>
+          <div class="srcrel-rating" data-source="${s.source}">
+            ${['A','B','C','D','F'].map(r => `<button onclick="rateSource('${s.source}','${r}')" class="${r === rating ? 'selected' : ''}" style="${r === rating ? 'background:' + ratingColors[r] : ''}">${r}</button>`).join('')}
+          </div>
+        </div>
+        ${s.rating_notes ? '<div style="font-size:11px;color:var(--text-muted);margin-top:4px;">' + s.rating_notes + '</div>' : ''}
+      </div>`;
+    });
+
+    // Cross-source overlap
+    if (overlaps.length) {
+      html += '<div style="margin-top:16px;"><div style="font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:8px;">Cross-Source Entity Overlap</div>';
+      overlaps.forEach(o => {
+        html += `<div class="corr-pair">
+          <span style="font-weight:500;">${o.source_a}</span>
+          <span class="corr-bridge">⟷ ${o.shared_entities} shared entities ⟷</span>
+          <span style="font-weight:500;">${o.source_b}</span>
+        </div>`;
+      });
+      html += '</div>';
+    }
+
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load source data</div>'; }
+}
+
+async function rateSource(source, rating) {
+  try {
+    await fetch(`/api/source-credibility/${encodeURIComponent(source)}/rate`, {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({rating})
+    });
+    loadSourceCredibility();
+  } catch (err) { console.error('Failed to rate source:', err); }
+}
+
+
+// ─── DOCUMENT GAPS ───
+
+function showDocGapsView() {
+  currentView = 'docgaps';
+  hideAllViews();
+  document.getElementById('docgapsView').classList.add('active');
+  loadDocGaps();
+}
+
+async function loadDocGaps() {
+  const el = document.getElementById('docgapsContent');
+  const minDays = document.getElementById('docgapsMinDays').value || 30;
+  try {
+    const data = await api(`/api/document-gaps?min_gap_days=${minDays}`);
+    const gaps = data.gaps || [];
+    const coverage = data.coverage || {};
+
+    let html = `<div style="display:flex;gap:20px;margin-bottom:16px;">
+      <div class="card" style="flex:1;text-align:center;">
+        <div style="font-size:24px;font-weight:700;color:var(--entity-date);">${data.total_dated || 0}</div>
+        <div style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted);">DATED DOCS</div>
+      </div>
+      <div class="card" style="flex:1;text-align:center;">
+        <div style="font-size:24px;font-weight:700;color:var(--accent);">${data.undated_count || 0}</div>
+        <div style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted);">UNDATED</div>
+      </div>
+      <div class="card" style="flex:1;text-align:center;">
+        <div style="font-size:24px;font-weight:700;color:var(--entity-person);">${gaps.length}</div>
+        <div style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted);">GAPS FOUND</div>
+      </div>
+    </div>`;
+
+    // Year coverage bar chart
+    const years = Object.keys(coverage);
+    if (years.length) {
+      const maxCount = Math.max(...Object.values(coverage));
+      html += '<div style="margin-bottom:16px;"><div style="font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:8px;">Coverage by Year</div>';
+      years.forEach(yr => {
+        const pct = (coverage[yr] / maxCount) * 100;
+        html += `<div style="display:flex;align-items:center;gap:8px;margin-bottom:3px;">
+          <span style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted);min-width:40px;">${yr}</span>
+          <div style="flex:1;height:14px;background:var(--bg-tertiary);border-radius:3px;overflow:hidden;">
+            <div style="width:${pct}%;height:100%;background:var(--entity-date);border-radius:3px;"></div>
+          </div>
+          <span style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted);min-width:30px;text-align:right;">${coverage[yr]}</span>
+        </div>`;
+      });
+      html += '</div>';
+    }
+
+    // Gap list
+    if (gaps.length) {
+      html += '<div style="font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:8px;">Temporal Gaps</div>';
+      const maxGap = Math.max(...gaps.map(g => g.gap_days));
+      gaps.forEach(g => {
+        const pct = (g.gap_days / maxGap) * 100;
+        html += `<div style="margin-bottom:8px;">
+          <div class="gap-bar" style="width:${Math.max(10, pct)}%;">${g.gap_days} days</div>
+          <div style="display:flex;justify-content:space-between;font-family:var(--font-mono);font-size:10px;color:var(--text-muted);">
+            <span>${g.start_date} — <span style="cursor:pointer;color:var(--entity-place);" onclick="openReader(${g.before_doc.id},'docgaps')">${g.before_doc.title}</span></span>
+            <span>${g.end_date} — <span style="cursor:pointer;color:var(--entity-place);" onclick="openReader(${g.after_doc.id},'docgaps')">${g.after_doc.title}</span></span>
+          </div>
+        </div>`;
+      });
+    } else {
+      html += '<div style="color:var(--text-muted);">No gaps found with the specified minimum.</div>';
+    }
+
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load gap analysis</div>'; }
+}
+
+
+// ─── REDACTION ANALYSIS ───
+
+function showRedactAnalysisView() {
+  currentView = 'redactanalysis';
+  hideAllViews();
+  document.getElementById('redactanalysisView').classList.add('active');
+  loadRedactionAnalysis();
+}
+
+async function loadRedactionAnalysis() {
+  const el = document.getElementById('redactanalysisContent');
+  try {
+    const data = await api('/api/redaction-analysis');
+    const docs = data.documents || [];
+    const reasons = data.reasons || [];
+    const byCat = data.by_category || [];
+    const summary = data.summary || {};
+
+    let html = `<div style="display:flex;gap:20px;margin-bottom:16px;">
+      <div class="card" style="flex:1;text-align:center;">
+        <div style="font-size:24px;font-weight:700;color:var(--accent);">${summary.total_redactions || 0}</div>
+        <div style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted);">TOTAL REDACTIONS</div>
+      </div>
+      <div class="card" style="flex:1;text-align:center;">
+        <div style="font-size:24px;font-weight:700;color:var(--entity-person);">${summary.documents_with_redactions || 0}</div>
+        <div style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted);">DOCS REDACTED</div>
+      </div>
+      <div class="card" style="flex:1;text-align:center;">
+        <div style="font-size:24px;font-weight:700;color:var(--entity-date);">${summary.documents_clean || 0}</div>
+        <div style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted);">DOCS CLEAN</div>
+      </div>
+    </div>`;
+
+    // Reasons breakdown
+    if (reasons.length) {
+      html += '<div style="margin-bottom:16px;"><div style="font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:8px;">Redaction Reasons</div>';
+      const maxR = Math.max(...reasons.map(r => r.count));
+      reasons.forEach(r => {
+        const pct = (r.count / maxR) * 100;
+        html += `<div style="display:flex;align-items:center;gap:8px;margin-bottom:3px;">
+          <span style="font-size:12px;min-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${r.reason}</span>
+          <div style="flex:1;height:14px;background:var(--bg-tertiary);border-radius:3px;overflow:hidden;">
+            <div class="redact-bar" style="width:${pct}%;"></div>
+          </div>
+          <span style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted);min-width:30px;text-align:right;">${r.count}</span>
+        </div>`;
+      });
+      html += '</div>';
+    }
+
+    // By category
+    if (byCat.length) {
+      html += '<div style="margin-bottom:16px;"><div style="font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:8px;">By Category</div>';
+      byCat.forEach(c => {
+        html += `<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border);font-size:12px;">
+          <span>${c.category}</span>
+          <span style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted);">${c.doc_count} docs · ${c.redaction_count} redactions</span>
+        </div>`;
+      });
+      html += '</div>';
+    }
+
+    // Most redacted documents
+    if (docs.length) {
+      html += '<div><div style="font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:8px;">Most Redacted Documents</div>';
+      const maxRedact = Math.max(...docs.map(d => d.redaction_count));
+      docs.slice(0, 30).forEach(d => {
+        const pct = (d.redaction_count / maxRedact) * 100;
+        html += `<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;cursor:pointer;" onclick="openReader(${d.id},'redactanalysis')">
+          <span style="font-size:12px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${d.title || d.filename}</span>
+          <div style="width:120px;height:14px;background:var(--bg-tertiary);border-radius:3px;overflow:hidden;">
+            <div class="redact-bar" style="width:${pct}%;"></div>
+          </div>
+          <span style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted);min-width:50px;text-align:right;">${d.redaction_count}</span>
+        </div>`;
+      });
+      html += '</div>';
+    }
+
+    if (!docs.length && !reasons.length) {
+      html = '<div style="color:var(--text-muted);">No redactions found in the database.</div>';
+    }
+
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load redaction analysis</div>'; }
+}
+
+
+// ─── CORROBORATION ENGINE ───
+
+function showCorroborateView() {
+  currentView = 'corroborate';
+  hideAllViews();
+  document.getElementById('corroborateView').classList.add('active');
+  loadCorroboration();
+}
+
+async function loadCorroboration() {
+  const el = document.getElementById('corroborateContent');
+  const minShared = document.getElementById('corrMinShared').value || 2;
+  try {
+    const data = await api(`/api/corroboration?min_shared=${minShared}`);
+    const entities = data.corroborated_entities || [];
+    const pairs = data.corroborated_pairs || [];
+
+    let html = '';
+
+    // Corroborated entity pairs (strongest signal)
+    if (pairs.length) {
+      html += '<div style="margin-bottom:16px;"><div style="font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:8px;">Corroborated Entity Pairs</div>';
+      html += '<div style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted);margin-bottom:8px;">Entities that appear together across multiple independent sources</div>';
+      pairs.forEach(p => {
+        html += `<div class="corr-pair">
+          <span class="entity-tag ${p.type_a}" style="font-size:10px;">${p.entity_a}</span>
+          <span class="corr-bridge">⟷ ${p.source_count} sources, ${p.doc_count} docs ⟷</span>
+          <span class="entity-tag ${p.type_b}" style="font-size:10px;">${p.entity_b}</span>
+        </div>`;
+      });
+      html += '</div>';
+    }
+
+    // Individually corroborated entities
+    if (entities.length) {
+      html += '<div><div style="font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:8px;">Multi-Source Entities</div>';
+      entities.forEach(e => {
+        const srcList = (e.sources || '').split(',').slice(0, 5).join(', ');
+        html += `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);">
+          <span class="entity-tag ${e.type}" style="font-size:10px;">${e.name}</span>
+          <span style="font-family:var(--font-mono);font-size:10px;color:var(--accent);">${e.source_count} sources</span>
+          <span style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted);">${e.doc_count} docs</span>
+          <span style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:right;">${srcList}</span>
+        </div>`;
+      });
+      html += '</div>';
+    }
+
+    if (!entities.length && !pairs.length) {
+      html = '<div style="color:var(--text-muted);">No corroborated entities found. Try lowering the minimum sources threshold.</div>';
+    }
+
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load corroboration data</div>'; }
+}
+
+
+// ─── DEPOSITION TRACKER ───
+
+function showDepositionsView() {
+  currentView = 'depositions';
+  hideAllViews();
+  document.getElementById('depositionsView').classList.add('active');
+  loadDepositions();
+}
+
+async function loadDepositions() {
+  const el = document.getElementById('depositionsContent');
+  try {
+    const data = await api('/api/depositions');
+    const depos = data.depositions || [];
+    const deponents = data.deponents || [];
+
+    let html = `<div style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted);margin-bottom:12px;">${data.total || 0} depositions/testimonies found</div>`;
+
+    // Deponent summary (top people)
+    if (deponents.length) {
+      html += '<div style="margin-bottom:16px;"><div style="font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:8px;">Key Deponents</div>';
+      html += '<div style="display:flex;flex-wrap:wrap;gap:6px;">';
+      deponents.slice(0, 20).forEach(d => {
+        html += `<span class="entity-tag person" style="font-size:10px;cursor:pointer;" onclick="document.getElementById('entitytlSelect').value='${d.id}';showEntityTLView();loadEntityTimeline('${d.id}')">${d.name} <span style="opacity:0.6;">(${d.deposition_count} depos)</span></span>`;
+      });
+      html += '</div></div>';
+    }
+
+    // Individual depositions
+    if (depos.length) {
+      depos.forEach(d => {
+        html += `<div class="depo-card" onclick="openReader(${d.doc_id},'depositions')">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+            <div style="font-weight:600;font-size:13px;">${d.title}</div>
+            <span style="font-family:var(--font-mono);font-size:10px;color:var(--entity-date);">${d.date || 'Undated'}</span>
+          </div>
+          <div style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted);margin-top:2px;">${d.source || 'unknown'} · ${d.pages || '?'} pages</div>
+          <div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;">`;
+        d.people.forEach(p => {
+          html += `<span class="entity-tag person" style="font-size:9px;">${p.name} (${p.mentions})</span>`;
+        });
+        d.orgs.forEach(o => {
+          html += `<span class="entity-tag org" style="font-size:9px;">${o.name}</span>`;
+        });
+        html += '</div></div>';
+      });
+    } else {
+      html += '<div style="color:var(--text-muted);">No depositions or testimonies found. Documents need category "deposition" or relevant title keywords.</div>';
+    }
+
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load depositions</div>'; }
 }
 
 
