@@ -1921,6 +1921,38 @@ body::before {
 .case-item-row:hover { background: var(--bg-hover); }
 .case-item-type { font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; padding: 2px 6px; border-radius: var(--radius); background: var(--bg-tertiary); color: var(--text-muted); min-width: 60px; text-align: center; }
 .case-item-name { flex: 1; font-size: 13px; }
+
+.fintrail-view { display: none; flex-direction: column; gap: 16px; }
+.fintrail-view.active { display: flex; }
+.fin-indicator { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-bottom: 1px solid var(--border); font-size: 12px; cursor: pointer; }
+.fin-indicator:hover { background: var(--bg-hover); }
+.fin-type-badge { font-family: var(--font-mono); font-size: 10px; padding: 2px 8px; border-radius: var(--radius); background: rgba(224, 201, 74, 0.1); color: var(--entity-thing); min-width: 80px; text-align: center; }
+
+.clustermap-view { display: none; flex-direction: column; gap: 16px; }
+.clustermap-view.active { display: flex; }
+.cluster-node { display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; color: #fff; font-weight: 600; cursor: pointer; transition: transform 0.2s ease; }
+.cluster-node:hover { transform: scale(1.1); }
+.cluster-overlap { font-size: 11px; color: var(--text-muted); padding: 4px 8px; }
+
+.witness-view { display: none; flex-direction: column; gap: 16px; }
+.witness-view.active { display: flex; }
+.witness-row { display: flex; align-items: center; gap: 12px; padding: 8px 12px; border-bottom: 1px solid var(--border); }
+.witness-row:hover { background: var(--bg-hover); }
+.witness-name { font-size: 13px; font-weight: 500; color: var(--entity-person); cursor: pointer; min-width: 150px; }
+.witness-name:hover { text-decoration: underline; }
+
+.heatcal-view { display: none; flex-direction: column; gap: 16px; }
+.heatcal-view.active { display: flex; }
+.heatcal-grid { display: flex; gap: 2px; flex-wrap: wrap; }
+.heatcal-cell { width: 14px; height: 14px; border-radius: 2px; cursor: pointer; }
+.heatcal-cell:hover { outline: 1px solid var(--text-primary); }
+.heatcal-month { font-family: var(--font-mono); font-size: 9px; color: var(--text-muted); }
+
+.bulktag-view { display: none; flex-direction: column; gap: 16px; }
+.bulktag-view.active { display: flex; }
+.bulktag-doc-row { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-bottom: 1px solid var(--border); font-size: 12px; }
+.bulktag-doc-row:hover { background: var(--bg-hover); }
+.bulktag-checkbox { accent-color: var(--accent); }
 </style>
 </head>
 <body>
@@ -2105,6 +2137,26 @@ body::before {
       <div class="sidebar-item" data-view="casefile" id="casefileNav">
         <div class="sidebar-dot" style="background:var(--entity-place)"></div>
         Case Files
+      </div>
+      <div class="sidebar-item" data-view="fintrail" id="fintrailNav">
+        <div class="sidebar-dot" style="background:var(--entity-thing)"></div>
+        Financial Trail
+      </div>
+      <div class="sidebar-item" data-view="clustermap" id="clustermapNav">
+        <div class="sidebar-dot" style="background:var(--entity-org)"></div>
+        Cluster Map
+      </div>
+      <div class="sidebar-item" data-view="witness" id="witnessNav">
+        <div class="sidebar-dot" style="background:var(--entity-person)"></div>
+        Witness Index
+      </div>
+      <div class="sidebar-item" data-view="heatcal" id="heatcalNav">
+        <div class="sidebar-dot" style="background:var(--entity-date)"></div>
+        Activity Calendar
+      </div>
+      <div class="sidebar-item" data-view="bulktag" id="bulktagNav">
+        <div class="sidebar-dot" style="background:var(--accent)"></div>
+        Bulk Tagger
       </div>
     </div>
 
@@ -2824,6 +2876,48 @@ body::before {
       <div id="casefileContent">Loading case files...</div>
     </div>
 
+    <!-- Financial Trail View -->
+    <div class="fintrail-view" id="fintrailView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Financial Trail Tracker</div>
+      <div id="fintrailContent">Loading financial data...</div>
+    </div>
+
+    <!-- Cluster Map View -->
+    <div class="clustermap-view" id="clustermapView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Document Cluster Map</div>
+      <div id="clustermapContent">Loading clusters...</div>
+    </div>
+
+    <!-- Witness Index View -->
+    <div class="witness-view" id="witnessView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Witness / Deponent Index</div>
+      <div id="witnessContent">Loading witness data...</div>
+    </div>
+
+    <!-- Activity Heatmap Calendar View -->
+    <div class="heatcal-view" id="heatcalView">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Activity Calendar</div>
+        <select id="heatcalYear" onchange="loadActivityHeatmap()" style="background:var(--bg-tertiary);border:1px solid var(--border);border-radius:var(--radius);padding:4px 8px;font-family:var(--font-mono);font-size:11px;color:var(--text-primary);outline:none;">
+          <option value="">All Years</option>
+        </select>
+      </div>
+      <div id="heatcalContent">Loading activity data...</div>
+    </div>
+
+    <!-- Bulk Tagger View -->
+    <div class="bulktag-view" id="bulktagView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Bulk Tagger</div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <input id="bulktagCategory" placeholder="Set category..." style="background:var(--bg-tertiary);border:1px solid var(--border);border-radius:var(--radius);padding:6px 12px;font-family:var(--font-mono);font-size:12px;color:var(--text-primary);outline:none;width:150px;">
+        <input id="bulktagTag" placeholder="Add tag..." style="background:var(--bg-tertiary);border:1px solid var(--border);border-radius:var(--radius);padding:6px 12px;font-family:var(--font-mono);font-size:12px;color:var(--text-primary);outline:none;width:150px;">
+        <button onclick="applyBulkTag()" class="report-btn">Apply to Selected</button>
+        <button onclick="selectAllBulkDocs()" style="background:var(--bg-tertiary);border:1px solid var(--border);border-radius:var(--radius);padding:6px 12px;font-family:var(--font-mono);font-size:11px;color:var(--text-secondary);cursor:pointer;">Select All</button>
+        <span id="bulktagSelectedCount" style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted);">0 selected</span>
+      </div>
+      <div id="bulktagContent">Loading documents...</div>
+    </div>
+
   </main>
 
   <!-- RIGHT PANEL -->
@@ -3449,6 +3543,11 @@ function hideAllViews() {
   document.getElementById('commflowView').classList.remove('active');
   document.getElementById('ocrqualityView').classList.remove('active');
   document.getElementById('casefileView').classList.remove('active');
+  document.getElementById('fintrailView').classList.remove('active');
+  document.getElementById('clustermapView').classList.remove('active');
+  document.getElementById('witnessView').classList.remove('active');
+  document.getElementById('heatcalView').classList.remove('active');
+  document.getElementById('bulktagView').classList.remove('active');
 }
 
 function showDocumentView() {
@@ -3527,6 +3626,11 @@ document.querySelectorAll('.sidebar-item[data-view]').forEach(item => {
     else if (view === 'commflow') showCommFlowView();
     else if (view === 'ocrquality') showOCRQualityView();
     else if (view === 'casefile') showCaseFileView();
+    else if (view === 'fintrail') showFinTrailView();
+    else if (view === 'clustermap') showClusterMapView();
+    else if (view === 'witness') showWitnessView();
+    else if (view === 'heatcal') showHeatCalView();
+    else if (view === 'bulktag') showBulkTagView();
   });
 });
 
@@ -4605,6 +4709,9 @@ function goBackFromReader() {
   else if (readerPreviousView === 'alerts') showAlertsView();
   else if (readerPreviousView === 'ocrquality') showOCRQualityView();
   else if (readerPreviousView === 'casefile') showCaseFileView();
+  else if (readerPreviousView === 'fintrail') showFinTrailView();
+  else if (readerPreviousView === 'witness') showWitnessView();
+  else if (readerPreviousView === 'bulktag') showBulkTagView();
   else showDocumentView();
 }
 
@@ -5481,6 +5588,7 @@ async function loadEntityProfile(entityId) {
       </div>
       <button class="entity-watch-btn ${e.watched ? 'watched' : ''}" id="entityWatchBtn"
         onclick="toggleWatch(${entityId})">${e.watched ? 'Watching' : 'Watch'}</button>
+      <button class="report-btn" style="margin-left:8px;padding:5px 12px;font-size:11px;" onclick="exportEntityDossier(${entityId})">Export Dossier</button>
     </div>`;
 
     // Tags
@@ -7413,6 +7521,307 @@ async function deleteCaseFile(id) {
 
 function exportCaseFile(caseId) {
   window.open(`/api/case-files/${caseId}/export`, '_blank');
+}
+
+
+// ─── FINANCIAL TRAIL ───
+
+function showFinTrailView() {
+  currentView = 'fintrail';
+  hideAllViews();
+  document.getElementById('fintrailView').classList.add('active');
+  loadFinancialTrail();
+}
+
+async function loadFinancialTrail() {
+  const el = document.getElementById('fintrailContent');
+  try {
+    const data = await api('/api/financial-trail?limit=80');
+    const indicators = data.indicators || [];
+    const entities = data.financial_entities || [];
+    const byType = data.by_type || [];
+
+    let html = '';
+    // Summary by type
+    if (byType.length) {
+      html += `<div class="card" style="margin-bottom:16px;">
+        <div style="font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:8px;">Indicator Types</div>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;">`;
+      byType.forEach(t => {
+        html += `<div style="background:var(--bg-tertiary);border:1px solid var(--border);border-radius:var(--radius);padding:8px 14px;text-align:center;">
+          <div style="font-family:var(--font-mono);font-size:16px;font-weight:600;color:var(--entity-thing);">${t.count}</div>
+          <div style="font-size:11px;color:var(--text-muted);">${t.indicator_type}</div>
+        </div>`;
+      });
+      html += '</div></div>';
+    }
+
+    // Two columns
+    html += '<div style="display:flex;gap:20px;">';
+
+    // Financial entities
+    html += '<div style="min-width:250px;"><div style="font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:8px;">Key Financial Entities</div>';
+    entities.forEach(e => {
+      html += `<div style="display:flex;justify-content:space-between;padding:4px 8px;font-size:12px;cursor:pointer;" onclick="showEntityView(${e.id})">
+        <span style="color:var(--entity-person);">${e.name}</span>
+        <span style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted);">${e.indicator_count} indicators, ${e.financial_doc_count} docs</span>
+      </div>`;
+    });
+    html += '</div>';
+
+    // Indicators list
+    html += '<div style="flex:1;"><div style="font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:8px;">Financial Indicators (${indicators.length})</div>';
+    indicators.forEach(i => {
+      html += `<div class="fin-indicator" onclick="readerPreviousView='fintrail';openReader(${i.document_id})">
+        <span class="fin-type-badge">${i.indicator_type}</span>
+        <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${i.value}</span>
+        <span style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted);">${(i.risk_score * 100).toFixed(0)}% risk</span>
+        <span style="font-size:10px;color:var(--text-muted);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${i.title || i.filename}</span>
+      </div>`;
+    });
+    html += '</div></div>';
+
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load financial data</div>'; }
+}
+
+
+// ─── CLUSTER MAP ───
+
+function showClusterMapView() {
+  currentView = 'clustermap';
+  hideAllViews();
+  document.getElementById('clustermapView').classList.add('active');
+  loadClusterMap();
+}
+
+async function loadClusterMap() {
+  const el = document.getElementById('clustermapContent');
+  try {
+    const data = await api('/api/cluster-map?min_cluster_size=2');
+    const clusters = data.clusters || [];
+    const overlaps = data.overlaps || [];
+
+    if (!clusters.length) { el.innerHTML = '<div style="color:var(--text-muted);">No clusters found.</div>'; return; }
+
+    const colors = ['var(--entity-person)', 'var(--entity-place)', 'var(--entity-org)', 'var(--entity-date)', 'var(--entity-thing)', 'var(--accent)'];
+    const maxDocs = Math.max(...clusters.map(c => c.doc_count));
+
+    // Visual cluster bubbles
+    let html = '<div style="display:flex;flex-wrap:wrap;gap:20px;justify-content:center;padding:20px;">';
+    clusters.forEach((c, i) => {
+      const size = Math.max(60, Math.min(160, (c.doc_count / maxDocs) * 160));
+      const color = colors[i % colors.length];
+      html += `<div style="text-align:center;">
+        <div class="cluster-node" style="width:${size}px;height:${size}px;background:${color};font-size:${Math.max(12, size/5)}px;" title="${c.category}: ${c.doc_count} docs">${c.doc_count}</div>
+        <div style="font-family:var(--font-mono);font-size:11px;color:var(--text-secondary);margin-top:6px;">${c.category}</div>
+      </div>`;
+    });
+    html += '</div>';
+
+    // Overlaps
+    if (overlaps.length) {
+      html += '<div style="margin-top:16px;"><div style="font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:8px;">Cross-Cluster Entity Overlap</div>';
+      overlaps.forEach(o => {
+        html += `<div class="cluster-overlap">${o.cluster_a} ⟷ ${o.cluster_b}: <strong>${o.overlap_count}</strong> shared (${o.shared_entities.slice(0, 5).join(', ')})</div>`;
+      });
+      html += '</div>';
+    }
+
+    // Cluster details
+    html += '<div style="margin-top:16px;">';
+    clusters.forEach((c, i) => {
+      html += `<div class="card" style="margin-bottom:10px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-weight:600;color:${colors[i % colors.length]};">${c.category}</span>
+          <span style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted);">${c.doc_count} documents</span>
+        </div>
+        <div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px;">`;
+      c.top_entities.forEach(e => {
+        html += `<span class="entity-tag ${e.type}" style="font-size:10px;">${e.name} (${e.count})</span>`;
+      });
+      html += '</div></div>';
+    });
+    html += '</div>';
+
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load cluster data</div>'; }
+}
+
+
+// ─── WITNESS INDEX ───
+
+function showWitnessView() {
+  currentView = 'witness';
+  hideAllViews();
+  document.getElementById('witnessView').classList.add('active');
+  loadWitnessIndex();
+}
+
+async function loadWitnessIndex() {
+  const el = document.getElementById('witnessContent');
+  try {
+    const data = await api('/api/witness-index?limit=80');
+    const witnesses = data.witnesses || [];
+    if (!witnesses.length) { el.innerHTML = '<div style="color:var(--text-muted);">No witnesses found in deposition/legal documents.</div>'; return; }
+
+    let html = `<div style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted);margin-bottom:8px;">${witnesses.length} witnesses/deponents</div>`;
+    witnesses.forEach(w => {
+      html += `<div class="witness-row">
+        <span class="witness-name" onclick="showEntityView(${w.id})">${w.name}</span>
+        <span style="font-family:var(--font-mono);font-size:11px;color:var(--entity-date);">${w.deposition_count} depositions</span>
+        <div style="flex:1;display:flex;flex-wrap:wrap;gap:3px;">`;
+      (w.co_deponents || []).slice(0, 5).forEach(cd => {
+        html += `<span style="font-size:10px;color:var(--text-muted);cursor:pointer;" onclick="showEntityView(${cd.id})">${cd.name} (${cd.shared})</span>`;
+      });
+      html += `</div>
+        <div style="display:flex;gap:4px;">`;
+      (w.doc_ids || []).slice(0, 3).forEach(did => {
+        html += `<button onclick="readerPreviousView='witness';openReader(${did})" style="background:var(--bg-tertiary);border:1px solid var(--border);border-radius:var(--radius);padding:2px 6px;font-family:var(--font-mono);font-size:9px;color:var(--text-muted);cursor:pointer;">Doc ${did}</button>`;
+      });
+      html += '</div></div>';
+    });
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load witness data</div>'; }
+}
+
+
+// ─── ACTIVITY HEATMAP CALENDAR ───
+
+function showHeatCalView() {
+  currentView = 'heatcal';
+  hideAllViews();
+  document.getElementById('heatcalView').classList.add('active');
+  loadActivityHeatmap();
+}
+
+async function loadActivityHeatmap() {
+  const el = document.getElementById('heatcalContent');
+  const yearSelect = document.getElementById('heatcalYear');
+  const selectedYear = yearSelect.value || '';
+  try {
+    const url = selectedYear ? `/api/activity-heatmap?year=${selectedYear}` : '/api/activity-heatmap';
+    const data = await api(url);
+    const heatmap = data.heatmap || [];
+    const years = data.years || [];
+
+    // Populate year selector
+    const currentOptions = yearSelect.options.length;
+    if (currentOptions <= 1 && years.length) {
+      years.forEach(y => {
+        const opt = document.createElement('option');
+        opt.value = y; opt.textContent = y;
+        yearSelect.appendChild(opt);
+      });
+    }
+
+    // Stats
+    let html = `<div class="card" style="margin-bottom:16px;">
+      <div style="display:flex;gap:20px;font-size:13px;">
+        <span>Active days: <strong style="color:var(--entity-date);">${data.total_active_days}</strong></span>
+        <span>Peak activity: <strong style="color:var(--accent);">${data.max_activity}</strong> events</span>
+        <span>Peak date: <strong>${data.peak_date || '—'}</strong></span>
+        <span>Year range: <strong>${years[0] || '—'} – ${years[years.length-1] || '—'}</strong></span>
+      </div>
+    </div>`;
+
+    // Build calendar grid grouped by month
+    const byMonth = {};
+    heatmap.forEach(h => {
+      const month = h.date.substring(0, 7);
+      if (!byMonth[month]) byMonth[month] = [];
+      byMonth[month].push(h);
+    });
+
+    const maxCount = data.max_activity || 1;
+    html += '<div style="display:flex;flex-wrap:wrap;gap:12px;">';
+    Object.keys(byMonth).sort().forEach(month => {
+      html += `<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:8px;">
+        <div class="heatcal-month">${month}</div>
+        <div class="heatcal-grid">`;
+      byMonth[month].forEach(h => {
+        const intensity = h.count / maxCount;
+        const alpha = Math.max(0.1, intensity);
+        const color = intensity > 0.7 ? `rgba(196,71,58,${alpha})` : intensity > 0.3 ? `rgba(224,201,74,${alpha})` : `rgba(74,224,168,${alpha})`;
+        html += `<div class="heatcal-cell" style="background:${color};" title="${h.date}: ${h.count} events"></div>`;
+      });
+      html += '</div></div>';
+    });
+    html += '</div>';
+
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load activity data</div>'; }
+}
+
+
+// ─── BULK TAGGER ───
+
+let bulkTagDocs = [];
+
+function showBulkTagView() {
+  currentView = 'bulktag';
+  hideAllViews();
+  document.getElementById('bulktagView').classList.add('active');
+  loadBulkTagDocs();
+}
+
+async function loadBulkTagDocs() {
+  const el = document.getElementById('bulktagContent');
+  try {
+    const data = await api('/api/documents?limit=200');
+    bulkTagDocs = data.documents || [];
+    let html = '';
+    bulkTagDocs.forEach(d => {
+      html += `<div class="bulktag-doc-row">
+        <input type="checkbox" class="bulktag-checkbox" data-docid="${d.id}" onchange="updateBulkCount()">
+        <span style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted);min-width:40px;">#${d.id}</span>
+        <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${d.title || d.filename}</span>
+        <span style="font-family:var(--font-mono);font-size:10px;color:var(--entity-place);min-width:80px;">${d.category}</span>
+      </div>`;
+    });
+    el.innerHTML = html;
+    updateBulkCount();
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load documents</div>'; }
+}
+
+function updateBulkCount() {
+  const checked = document.querySelectorAll('.bulktag-checkbox:checked');
+  document.getElementById('bulktagSelectedCount').textContent = `${checked.length} selected`;
+}
+
+function selectAllBulkDocs() {
+  const boxes = document.querySelectorAll('.bulktag-checkbox');
+  const allChecked = [...boxes].every(b => b.checked);
+  boxes.forEach(b => b.checked = !allChecked);
+  updateBulkCount();
+}
+
+async function applyBulkTag() {
+  const checked = document.querySelectorAll('.bulktag-checkbox:checked');
+  if (!checked.length) { alert('Select at least one document'); return; }
+  const docIds = [...checked].map(b => parseInt(b.dataset.docid, 10));
+  const category = document.getElementById('bulktagCategory').value.trim();
+  const tag = document.getElementById('bulktagTag').value.trim();
+  if (!category && !tag) { alert('Enter a category or tag'); return; }
+
+  try {
+    const res = await fetch('/api/bulk-tag', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({doc_ids: docIds, category, tag})
+    });
+    const data = await res.json();
+    alert(`Updated ${data.updated} documents`);
+    document.getElementById('bulktagCategory').value = '';
+    document.getElementById('bulktagTag').value = '';
+    loadBulkTagDocs();
+  } catch (err) { console.error('Bulk tag failed:', err); }
+}
+
+
+// ─── ENTITY DOSSIER EXPORT (in entity profile) ───
+
+function exportEntityDossier(entityId) {
+  window.open(`/api/entities/${entityId}/dossier-export`, '_blank');
 }
 
 

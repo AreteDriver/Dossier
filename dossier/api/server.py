@@ -25,7 +25,7 @@ from typing import Optional
 from uuid import uuid4
 
 from fastapi import FastAPI, Request, UploadFile, File, Query, HTTPException
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 
 from dossier.db.database import get_db, init_db
@@ -4249,6 +4249,393 @@ def export_case_file(case_id: int):
             html += "<hr>"
 
     return HTMLResponse(html)
+
+
+# ═══════════════════════════════════════════
+# FINANCIAL TRAIL TRACKER
+# ═══════════════════════════════════════════
+
+
+@app.get("/api/financial-trail")
+def financial_trail(
+    limit: int = Query(50, ge=10, le=200),
+):
+    """Track financial indicators, amounts, and entity connections."""
+    with get_db() as conn:
+        # Financial indicators from forensics
+        indicators = conn.execute("""
+            SELECT fi.id, fi.document_id, fi.indicator_type, fi.value,
+                   fi.context, fi.risk_score,
+                   d.title, d.filename, d.category
+            FROM financial_indicators fi
+            JOIN documents d ON d.id = fi.document_id
+            ORDER BY fi.risk_score DESC
+            LIMIT ?
+        """, (limit,)).fetchall()
+
+        # Entities associated with financial documents
+        financial_entities = conn.execute("""
+            SELECT e.id, e.name, e.type,
+                   COUNT(DISTINCT fi.document_id) as financial_doc_count,
+                   COUNT(DISTINCT fi.id) as indicator_count
+            FROM financial_indicators fi
+            JOIN document_entities de ON de.document_id = fi.document_id
+            JOIN entities e ON e.id = de.entity_id
+            WHERE e.type = 'person'
+            GROUP BY e.id
+            ORDER BY indicator_count DESC
+            LIMIT 30
+        """).fetchall()
+
+        # Aggregate by indicator type
+        by_type = conn.execute("""
+            SELECT indicator_type, COUNT(*) as count,
+                   AVG(risk_score) as avg_risk
+            FROM financial_indicators
+            GROUP BY indicator_type
+            ORDER BY count DESC
+        """).fetchall()
+
+    return {
+        "indicators": [dict(i) for i in indicators],
+        "financial_entities": [dict(e) for e in financial_entities],
+        "by_type": [dict(t) for t in by_type],
+    }
+
+
+# ═══════════════════════════════════════════
+# ENTITY DOSSIER EXPORT
+# ═══════════════════════════════════════════
+
+
+@app.get("/api/entities/{entity_id}/dossier-export")
+def export_entity_dossier(entity_id: int):
+    """Export full entity profile as standalone HTML."""
+    with get_db() as conn:
+        entity = conn.execute(
+            "SELECT id, name, type FROM entities WHERE id = ?", (entity_id,)
+        ).fetchone()
+        if not entity:
+            raise HTTPException(404, "Entity not found")
+
+        # Documents
+        docs = conn.execute("""
+            SELECT d.id, d.title, d.filename, d.category, d.date,
+                   SUM(de.count) as mentions
+            FROM document_entities de
+            JOIN documents d ON d.id = de.document_id
+            WHERE de.entity_id = ?
+            GROUP BY d.id
+            ORDER BY mentions DESC
+        """, (entity_id,)).fetchall()
+
+        # Co-occurring entities
+        cooccurring = conn.execute("""
+            SELECT e2.name, e2.type, COUNT(DISTINCT de1.document_id) as shared
+            FROM document_entities de1
+            JOIN document_entities de2 ON de1.document_id = de2.document_id
+            JOIN entities e2 ON e2.id = de2.entity_id
+            WHERE de1.entity_id = ? AND de2.entity_id != ?
+            GROUP BY e2.id
+            ORDER BY shared DESC
+            LIMIT 30
+        """, (entity_id, entity_id)).fetchall()
+
+        # Timeline events
+        events = conn.execute("""
+            SELECT ev.event_date, ev.context, ev.precision
+            FROM events ev
+            JOIN document_entities de ON de.document_id = ev.document_id
+            WHERE de.entity_id = ? AND ev.event_date IS NOT NULL
+            ORDER BY ev.event_date
+            LIMIT 100
+        """, (entity_id,)).fetchall()
+
+        # Aliases
+        _ensure_aliases_table(conn)
+        aliases = conn.execute(
+            "SELECT alias_name FROM entity_aliases WHERE entity_id = ?", (entity_id,)
+        ).fetchall()
+
+        # Tags
+        tags = conn.execute(
+            "SELECT tag FROM entity_tags WHERE entity_id = ?", (entity_id,)
+        ).fetchall()
+
+        # Build HTML
+        html = f"""<!DOCTYPE html><html><head><meta charset="UTF-8">
+        <title>Dossier: {entity['name']}</title>
+        <style>body{{font-family:sans-serif;max-width:900px;margin:40px auto;padding:0 20px;color:#222;}}
+        h1{{border-bottom:3px solid #c4473a;padding-bottom:8px;}}
+        h2{{color:#c4473a;margin-top:30px;border-bottom:1px solid #ddd;padding-bottom:4px;}}
+        .tag{{display:inline-block;background:#f0f0f0;padding:2px 8px;border-radius:4px;margin:2px;font-size:12px;}}
+        table{{border-collapse:collapse;width:100%;margin:10px 0;}} th,td{{border:1px solid #ddd;padding:6px 10px;text-align:left;font-size:13px;}}
+        th{{background:#f5f5f5;}} .meta{{color:#666;font-size:13px;}}</style></head><body>
+        <h1>{entity['name']}</h1>
+        <p class="meta">Type: {entity['type']} | Entity ID: {entity['id']} | Generated: {__import__('datetime').datetime.now().strftime('%Y-%m-%d %H:%M')}</p>"""
+
+        if aliases:
+            html += "<p><strong>Aliases:</strong> " + ", ".join(a['alias_name'] for a in aliases) + "</p>"
+        if tags:
+            html += "<p><strong>Tags:</strong> " + " ".join(f"<span class='tag'>{t['tag']}</span>" for t in tags) + "</p>"
+
+        html += f"<h2>Documents ({len(docs)})</h2><table><tr><th>Title</th><th>Category</th><th>Date</th><th>Mentions</th></tr>"
+        for d in docs:
+            html += f"<tr><td>{d['title'] or d['filename']}</td><td>{d['category']}</td><td>{d['date'] or '—'}</td><td>{d['mentions']}</td></tr>"
+        html += "</table>"
+
+        if events:
+            html += f"<h2>Timeline ({len(events)} events)</h2><table><tr><th>Date</th><th>Context</th><th>Precision</th></tr>"
+            for ev in events:
+                html += f"<tr><td>{ev['event_date']}</td><td>{ev['context']}</td><td>{ev['precision'] or '—'}</td></tr>"
+            html += "</table>"
+
+        if cooccurring:
+            html += f"<h2>Associated Entities ({len(cooccurring)})</h2><table><tr><th>Name</th><th>Type</th><th>Shared Docs</th></tr>"
+            for c in cooccurring:
+                html += f"<tr><td>{c['name']}</td><td>{c['type']}</td><td>{c['shared']}</td></tr>"
+            html += "</table>"
+
+        html += "</body></html>"
+
+    return HTMLResponse(html)
+
+
+# ═══════════════════════════════════════════
+# DOCUMENT CLUSTER VISUALIZATION DATA
+# ═══════════════════════════════════════════
+
+
+@app.get("/api/cluster-map")
+def cluster_map(min_cluster_size: int = Query(3, ge=2, le=20)):
+    """Get cluster data with inter-cluster similarity for visualization."""
+    with get_db() as conn:
+        # Get clusters
+        clusters_raw = conn.execute("""
+            SELECT d.category, COUNT(*) as doc_count,
+                   GROUP_CONCAT(d.id) as doc_ids
+            FROM documents d
+            GROUP BY d.category
+            HAVING doc_count >= ?
+            ORDER BY doc_count DESC
+        """, (min_cluster_size,)).fetchall()
+
+        clusters = []
+        for c in clusters_raw:
+            doc_ids = [int(x) for x in c["doc_ids"].split(",")][:50]
+            placeholders = ",".join("?" * len(doc_ids))
+
+            # Get top entities in this cluster
+            top_entities = conn.execute(f"""
+                SELECT e.name, e.type, COUNT(*) as count
+                FROM document_entities de
+                JOIN entities e ON e.id = de.entity_id
+                WHERE de.document_id IN ({placeholders})
+                GROUP BY e.id
+                ORDER BY count DESC
+                LIMIT 10
+            """, doc_ids).fetchall()
+
+            clusters.append({
+                "category": c["category"],
+                "doc_count": c["doc_count"],
+                "top_entities": [dict(e) for e in top_entities],
+                "sample_doc_ids": doc_ids[:10],
+            })
+
+        # Cross-cluster entity overlap
+        overlaps = []
+        for i in range(len(clusters)):
+            for j in range(i + 1, len(clusters)):
+                ents_i = {e["name"] for e in clusters[i]["top_entities"]}
+                ents_j = {e["name"] for e in clusters[j]["top_entities"]}
+                shared = ents_i & ents_j
+                if shared:
+                    overlaps.append({
+                        "cluster_a": clusters[i]["category"],
+                        "cluster_b": clusters[j]["category"],
+                        "shared_entities": list(shared)[:10],
+                        "overlap_count": len(shared),
+                    })
+
+    return {"clusters": clusters, "overlaps": overlaps}
+
+
+# ═══════════════════════════════════════════
+# WITNESS / DEPONENT INDEX
+# ═══════════════════════════════════════════
+
+
+@app.get("/api/witness-index")
+def witness_index(limit: int = Query(50, ge=10, le=200)):
+    """Index of witnesses/deponents extracted from deposition documents."""
+    with get_db() as conn:
+        # People who appear in depositions
+        witnesses = conn.execute("""
+            SELECT e.id, e.name, e.type,
+                   COUNT(DISTINCT d.id) as deposition_count,
+                   GROUP_CONCAT(DISTINCT d.id) as doc_ids,
+                   GROUP_CONCAT(DISTINCT d.title) as doc_titles
+            FROM document_entities de
+            JOIN entities e ON e.id = de.entity_id
+            JOIN documents d ON d.id = de.document_id
+            WHERE e.type = 'person'
+              AND d.category IN ('deposition', 'legal', 'report')
+            GROUP BY e.id
+            ORDER BY deposition_count DESC
+            LIMIT ?
+        """, (limit,)).fetchall()
+
+        result = []
+        for w in witnesses:
+            wd = dict(w)
+            # Get co-deponents (people who appear in the same depositions)
+            doc_ids = [int(x) for x in (wd["doc_ids"] or "").split(",") if x]
+            if doc_ids:
+                placeholders = ",".join("?" * len(doc_ids))
+                co_deponents = conn.execute(f"""
+                    SELECT e.id, e.name, COUNT(DISTINCT de.document_id) as shared
+                    FROM document_entities de
+                    JOIN entities e ON e.id = de.entity_id
+                    WHERE de.document_id IN ({placeholders})
+                      AND e.type = 'person' AND e.id != ?
+                    GROUP BY e.id
+                    ORDER BY shared DESC
+                    LIMIT 10
+                """, doc_ids + [wd["id"]]).fetchall()
+                wd["co_deponents"] = [dict(c) for c in co_deponents]
+            else:
+                wd["co_deponents"] = []
+            wd["doc_ids"] = doc_ids[:20]
+            result.append(wd)
+
+    return {"witnesses": result}
+
+
+# ═══════════════════════════════════════════
+# ACTIVITY HEATMAP CALENDAR
+# ═══════════════════════════════════════════
+
+
+@app.get("/api/activity-heatmap")
+def activity_heatmap(year: int = Query(None)):
+    """Get daily activity counts for calendar heatmap."""
+    with get_db() as conn:
+        # Events by date
+        event_dates = conn.execute("""
+            SELECT SUBSTR(event_date, 1, 10) as date, COUNT(*) as count
+            FROM events
+            WHERE event_date IS NOT NULL AND LENGTH(event_date) >= 10
+            GROUP BY date
+            ORDER BY date
+        """).fetchall()
+
+        # Documents by date
+        doc_dates = conn.execute("""
+            SELECT SUBSTR(date, 1, 10) as date, COUNT(*) as count
+            FROM documents
+            WHERE date IS NOT NULL AND LENGTH(date) >= 10
+            GROUP BY date
+            ORDER BY date
+        """).fetchall()
+
+        # Merge into a single map
+        heatmap = {}
+        for row in event_dates:
+            d = row["date"]
+            if year and not d.startswith(str(year)):
+                continue
+            heatmap[d] = heatmap.get(d, 0) + row["count"]
+        for row in doc_dates:
+            d = row["date"]
+            if year and not d.startswith(str(year)):
+                continue
+            heatmap[d] = heatmap.get(d, 0) + row["count"]
+
+        # Get available years
+        years = sorted({d[:4] for d in heatmap.keys() if len(d) >= 4})
+
+        # Summary stats
+        total_active_days = len(heatmap)
+        max_activity = max(heatmap.values()) if heatmap else 0
+        peak_date = max(heatmap, key=heatmap.get) if heatmap else None
+
+    return {
+        "heatmap": [{"date": k, "count": v} for k, v in sorted(heatmap.items())],
+        "years": years,
+        "total_active_days": total_active_days,
+        "max_activity": max_activity,
+        "peak_date": peak_date,
+    }
+
+
+# ═══════════════════════════════════════════
+# BULK TAGGER
+# ═══════════════════════════════════════════
+
+
+@app.post("/api/bulk-tag")
+async def bulk_tag(request: Request):
+    """Apply tags or category to multiple documents at once."""
+    body = await request.json()
+    doc_ids = body.get("doc_ids", [])
+    tag = body.get("tag", "").strip()
+    category = body.get("category", "").strip()
+
+    if not doc_ids:
+        raise HTTPException(400, "doc_ids required")
+    if not tag and not category:
+        raise HTTPException(400, "tag or category required")
+
+    with get_db() as conn:
+        updated = 0
+        for doc_id in doc_ids:
+            doc = conn.execute("SELECT id FROM documents WHERE id = ?", (doc_id,)).fetchone()
+            if not doc:
+                continue
+            if category:
+                conn.execute("UPDATE documents SET category = ? WHERE id = ?", (category, doc_id))
+                updated += 1
+            if tag:
+                # Store as document-level tag in a simple approach: append to notes
+                existing = conn.execute("SELECT notes FROM documents WHERE id = ?", (doc_id,)).fetchone()
+                current_notes = existing["notes"] or ""
+                tag_marker = f"[tag:{tag}]"
+                if tag_marker not in current_notes:
+                    conn.execute(
+                        "UPDATE documents SET notes = ? WHERE id = ?",
+                        (current_notes + f" {tag_marker}" if current_notes else tag_marker, doc_id)
+                    )
+                    updated += 1
+        _log_audit(conn, "bulk_tag", "documents", len(doc_ids),
+                   f"tag={tag}, category={category}, count={updated}")
+
+    return {"updated": updated, "total_requested": len(doc_ids)}
+
+
+@app.get("/api/bulk-tag-suggestions")
+def bulk_tag_suggestions():
+    """Get existing categories and common tags for the bulk tagger UI."""
+    with get_db() as conn:
+        categories = conn.execute(
+            "SELECT category, COUNT(*) as count FROM documents GROUP BY category ORDER BY count DESC"
+        ).fetchall()
+
+        # Extract [tag:*] patterns from notes
+        tag_rows = conn.execute(
+            "SELECT notes FROM documents WHERE notes LIKE '%[tag:%'"
+        ).fetchall()
+        import re
+        tag_counts = {}
+        for row in tag_rows:
+            for m in re.finditer(r'\[tag:([^\]]+)\]', row["notes"] or ""):
+                t = m.group(1)
+                tag_counts[t] = tag_counts.get(t, 0) + 1
+
+    return {
+        "categories": [dict(c) for c in categories],
+        "tags": [{"tag": t, "count": c} for t, c in sorted(tag_counts.items(), key=lambda x: -x[1])],
+    }
 
 
 # ═══════════════════════════════════════════
