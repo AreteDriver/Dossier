@@ -10805,6 +10805,160 @@ def connection_type_breakdown():
     return {"type_pairs": [dict(r) for r in rows]}
 
 
+@app.get("/api/entity-isolation-score")
+def entity_isolation_score():
+    """Entities with no connections (isolated nodes)."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT e.id, e.name, e.type, "
+            "COUNT(DISTINCT de.document_id) AS doc_count "
+            "FROM entities e "
+            "LEFT JOIN entity_connections ec1 ON ec1.entity_a_id = e.id "
+            "LEFT JOIN entity_connections ec2 ON ec2.entity_b_id = e.id "
+            "LEFT JOIN document_entities de ON de.entity_id = e.id "
+            "WHERE ec1.entity_a_id IS NULL AND ec2.entity_b_id IS NULL "
+            "GROUP BY e.id ORDER BY doc_count DESC LIMIT 100"
+        ).fetchall()
+        total_isolated = conn.execute(
+            "SELECT COUNT(*) AS cnt FROM entities e "
+            "WHERE NOT EXISTS (SELECT 1 FROM entity_connections ec "
+            "WHERE ec.entity_a_id = e.id OR ec.entity_b_id = e.id)"
+        ).fetchone()["cnt"]
+        total = conn.execute("SELECT COUNT(*) AS cnt FROM entities").fetchone()["cnt"]
+    return {
+        "total_entities": total,
+        "isolated_count": total_isolated,
+        "isolated_pct": round(100.0 * total_isolated / total, 1) if total else 0,
+        "top_isolated": [dict(r) for r in rows],
+    }
+
+
+@app.get("/api/document-category-balance")
+def document_category_balance():
+    """Document count per category with percentage of total."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT category, COUNT(*) AS count FROM documents "
+            "GROUP BY category ORDER BY count DESC"
+        ).fetchall()
+        total = sum(r["count"] for r in rows)
+    return {
+        "total": total,
+        "categories": [
+            {
+                "category": r["category"] or "uncategorized",
+                "count": r["count"],
+                "pct": round(100.0 * r["count"] / total, 1) if total else 0,
+            }
+            for r in rows
+        ],
+    }
+
+
+@app.get("/api/event-temporal-density")
+def event_temporal_density():
+    """Events per year from event dates."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT SUBSTR(event_date, 1, 4) AS year, COUNT(*) AS count "
+            "FROM events WHERE event_date IS NOT NULL AND LENGTH(event_date) >= 4 "
+            "AND SUBSTR(event_date, 1, 4) GLOB '[0-9][0-9][0-9][0-9]' "
+            "GROUP BY year ORDER BY year"
+        ).fetchall()
+    return {"years": [dict(r) for r in rows]}
+
+
+@app.get("/api/source-entity-exclusivity")
+def source_entity_exclusivity():
+    """Entities that appear in only one source."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT e.name, e.type, d.source, "
+            "COUNT(DISTINCT de.document_id) AS doc_count "
+            "FROM entities e "
+            "JOIN document_entities de ON de.entity_id = e.id "
+            "JOIN documents d ON d.id = de.document_id "
+            "GROUP BY e.id "
+            "HAVING COUNT(DISTINCT d.source) = 1 "
+            "ORDER BY doc_count DESC LIMIT 100"
+        ).fetchall()
+        total_exclusive = conn.execute(
+            "SELECT COUNT(*) AS cnt FROM ("
+            "SELECT e.id FROM entities e "
+            "JOIN document_entities de ON de.entity_id = e.id "
+            "JOIN documents d ON d.id = de.document_id "
+            "GROUP BY e.id HAVING COUNT(DISTINCT d.source) = 1)"
+        ).fetchone()["cnt"]
+    return {
+        "exclusive_count": total_exclusive,
+        "entities": [dict(r) for r in rows],
+    }
+
+
+@app.get("/api/entity-name-pattern")
+def entity_name_pattern():
+    """Entity name length distribution and common patterns."""
+    with get_db() as conn:
+        stats = conn.execute(
+            "SELECT AVG(LENGTH(name)) AS avg_len, "
+            "MAX(LENGTH(name)) AS max_len, "
+            "MIN(LENGTH(name)) AS min_len, "
+            "COUNT(*) AS total "
+            "FROM entities"
+        ).fetchone()
+        long_names = conn.execute(
+            "SELECT name, type, LENGTH(name) AS name_len "
+            "FROM entities ORDER BY name_len DESC LIMIT 50"
+        ).fetchall()
+        short_names = conn.execute(
+            "SELECT name, type, LENGTH(name) AS name_len "
+            "FROM entities WHERE LENGTH(name) <= 3 ORDER BY name_len LIMIT 50"
+        ).fetchall()
+    return {
+        "stats": {
+            "total": stats["total"],
+            "avg_len": round(stats["avg_len"] or 0, 1),
+            "max_len": stats["max_len"] or 0,
+            "min_len": stats["min_len"] or 0,
+        },
+        "longest": [dict(r) for r in long_names],
+        "shortest": [dict(r) for r in short_names],
+    }
+
+
+@app.get("/api/connection-cluster-summary")
+def connection_cluster_summary():
+    """Summary of connection weight clusters."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT "
+            "CASE "
+            "  WHEN weight >= 100 THEN 'Very Strong (100+)' "
+            "  WHEN weight >= 50 THEN 'Strong (50-99)' "
+            "  WHEN weight >= 20 THEN 'Moderate (20-49)' "
+            "  WHEN weight >= 5 THEN 'Weak (5-19)' "
+            "  ELSE 'Very Weak (1-4)' "
+            "END AS cluster, "
+            "COUNT(*) AS count, "
+            "ROUND(AVG(weight), 2) AS avg_weight "
+            "FROM entity_connections "
+            "GROUP BY cluster ORDER BY MIN(weight) DESC"
+        ).fetchall()
+        total = conn.execute("SELECT COUNT(*) AS cnt FROM entity_connections").fetchone()["cnt"]
+    return {
+        "total": total,
+        "clusters": [
+            {
+                "cluster": r["cluster"],
+                "count": r["count"],
+                "avg_weight": r["avg_weight"],
+                "pct": round(100.0 * r["count"] / total, 1) if total else 0,
+            }
+            for r in rows
+        ],
+    }
+
+
 # ═══════════════════════════════════════════
 # STATIC FILES (serve the frontend)
 # ═══════════════════════════════════════════

@@ -2057,6 +2057,8 @@ body::before {
 .entcooccur-view.active, .doccattimeline-view.active, .evtresbreak-view.active, .entdocreach-view.active, .srcoverlapmatrix-view.active, .redacttimeline-view.active { display: flex; }
 .enttypedist-view, .doctextlen-view, .evtconfdist-view, .srcdatespan-view, .entmentfreq-view, .conntypebreak-view { display: none; flex-direction: column; gap: 16px; }
 .enttypedist-view.active, .doctextlen-view.active, .evtconfdist-view.active, .srcdatespan-view.active, .entmentfreq-view.active, .conntypebreak-view.active { display: flex; }
+.entisoscore-view, .doccatbal-view, .evttempdensity-view, .srcentexcl-view, .entnamepattern-view, .conncluster-view { display: none; flex-direction: column; gap: 16px; }
+.entisoscore-view.active, .doccatbal-view.active, .evttempdensity-view.active, .srcentexcl-view.active, .entnamepattern-view.active, .conncluster-view.active { display: flex; }
 .rel-edge { display: flex; align-items: center; gap: 8px; padding: 4px 0; border-bottom: 1px solid var(--border); }
 .sbs-col { flex: 1; padding: 12px; background: var(--bg-card); border-radius: var(--radius); border: 1px solid var(--border); overflow: hidden; }
 .sbs-header { font-family: var(--font-mono); font-size: 12px; font-weight: 600; color: var(--text-primary); margin-bottom: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -2869,6 +2871,30 @@ body::before {
       <div class="sidebar-item" data-view="conntypebreak" id="conntypebreakNav">
         <div class="sidebar-dot" style="background:var(--entity-org)"></div>
         Connection Type Breakdown
+      </div>
+      <div class="sidebar-item" data-view="entisoscore" id="entisoscoreNav">
+        <div class="sidebar-dot" style="background:var(--entity-location)"></div>
+        Entity Isolation Score
+      </div>
+      <div class="sidebar-item" data-view="doccatbal" id="doccatbalNav">
+        <div class="sidebar-dot" style="background:var(--accent)"></div>
+        Document Category Balance
+      </div>
+      <div class="sidebar-item" data-view="evttempdensity" id="evttempdensityNav">
+        <div class="sidebar-dot" style="background:var(--entity-person)"></div>
+        Event Temporal Density
+      </div>
+      <div class="sidebar-item" data-view="srcentexcl" id="srcentexclNav">
+        <div class="sidebar-dot" style="background:var(--entity-org)"></div>
+        Source Entity Exclusivity
+      </div>
+      <div class="sidebar-item" data-view="entnamepattern" id="entnamepatternNav">
+        <div class="sidebar-dot" style="background:var(--entity-location)"></div>
+        Entity Name Pattern
+      </div>
+      <div class="sidebar-item" data-view="conncluster" id="connclusterNav">
+        <div class="sidebar-dot" style="background:var(--accent)"></div>
+        Connection Cluster Summary
       </div>
     </div>
 
@@ -4514,6 +4540,36 @@ body::before {
       <div id="conntypebreakContent">Loading connection type breakdown...</div>
     </div>
 
+    <div class="entisoscore-view" id="entisoscoreView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Entity Isolation Score</div>
+      <div id="entisoscoreContent">Loading entity isolation score...</div>
+    </div>
+
+    <div class="doccatbal-view" id="doccatbalView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Document Category Balance</div>
+      <div id="doccatbalContent">Loading document category balance...</div>
+    </div>
+
+    <div class="evttempdensity-view" id="evttempdensityView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Event Temporal Density</div>
+      <div id="evttempdensityContent">Loading event temporal density...</div>
+    </div>
+
+    <div class="srcentexcl-view" id="srcentexclView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Source Entity Exclusivity</div>
+      <div id="srcentexclContent">Loading source entity exclusivity...</div>
+    </div>
+
+    <div class="entnamepattern-view" id="entnamepatternView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Entity Name Pattern</div>
+      <div id="entnamepatternContent">Loading entity name pattern...</div>
+    </div>
+
+    <div class="conncluster-view" id="connclusterView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Connection Cluster Summary</div>
+      <div id="connclusterContent">Loading connection cluster summary...</div>
+    </div>
+
   </main>
 
   <!-- RIGHT PANEL -->
@@ -5294,6 +5350,12 @@ function hideAllViews() {
   document.getElementById('srcdatespanView').classList.remove('active');
   document.getElementById('entmentfreqView').classList.remove('active');
   document.getElementById('conntypebreakView').classList.remove('active');
+  document.getElementById('entisoscoreView').classList.remove('active');
+  document.getElementById('doccatbalView').classList.remove('active');
+  document.getElementById('evttempdensityView').classList.remove('active');
+  document.getElementById('srcentexclView').classList.remove('active');
+  document.getElementById('entnamepatternView').classList.remove('active');
+  document.getElementById('connclusterView').classList.remove('active');
 }
 
 function showDocumentView() {
@@ -5527,6 +5589,12 @@ document.querySelectorAll('.sidebar-item[data-view]').forEach(item => {
     else if (view === 'srcdatespan') showSrcDateSpanView();
     else if (view === 'entmentfreq') showEntMentFreqView();
     else if (view === 'conntypebreak') showConnTypeBreakView();
+    else if (view === 'entisoscore') showEntIsoScoreView();
+    else if (view === 'doccatbal') showDocCatBalView();
+    else if (view === 'evttempdensity') showEvtTempDensityView();
+    else if (view === 'srcentexcl') showSrcEntExclView();
+    else if (view === 'entnamepattern') showEntNamePatternView();
+    else if (view === 'conncluster') showConnClusterView();
   });
 });
 
@@ -6758,6 +6826,12 @@ function goBackFromReader() {
   else if (readerPreviousView === 'srcdatespan') showSrcDateSpanView();
   else if (readerPreviousView === 'entmentfreq') showEntMentFreqView();
   else if (readerPreviousView === 'conntypebreak') showConnTypeBreakView();
+  else if (readerPreviousView === 'entisoscore') showEntIsoScoreView();
+  else if (readerPreviousView === 'doccatbal') showDocCatBalView();
+  else if (readerPreviousView === 'evttempdensity') showEvtTempDensityView();
+  else if (readerPreviousView === 'srcentexcl') showSrcEntExclView();
+  else if (readerPreviousView === 'entnamepattern') showEntNamePatternView();
+  else if (readerPreviousView === 'conncluster') showConnClusterView();
   else showDocumentView();
 }
 
@@ -15626,6 +15700,154 @@ async function loadConnTypeBreak() {
     html += '</tbody></table>';
     el.innerHTML = html;
   } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load connection type breakdown</div>'; }
+}
+
+function showEntIsoScoreView() {
+  currentView = 'entisoscore';
+  hideAllViews();
+  document.getElementById('entisoscoreView').classList.add('active');
+  loadEntIsoScore();
+}
+async function loadEntIsoScore() {
+  const el = document.getElementById('entisoscoreContent');
+  try {
+    const res = await fetch('/api/entity-isolation-score');
+    const data = await res.json();
+    let html = `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px;">`;
+    html += `<div style="background:var(--bg-secondary);padding:12px;border-radius:6px;"><div style="font-size:11px;color:var(--text-muted);">Total Entities</div><div style="font-size:20px;font-weight:700;color:var(--text-primary);">${data.total_entities.toLocaleString()}</div></div>`;
+    html += `<div style="background:var(--bg-secondary);padding:12px;border-radius:6px;"><div style="font-size:11px;color:var(--text-muted);">Isolated</div><div style="font-size:20px;font-weight:700;color:var(--text-primary);">${data.isolated_count.toLocaleString()}</div></div>`;
+    html += `<div style="background:var(--bg-secondary);padding:12px;border-radius:6px;"><div style="font-size:11px;color:var(--text-muted);">Isolated %</div><div style="font-size:20px;font-weight:700;color:var(--text-primary);">${data.isolated_pct}%</div></div>`;
+    html += `</div>`;
+    if (data.top_isolated.length) {
+      html += '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="border-bottom:2px solid var(--border);"><th style="text-align:left;padding:8px;">Entity</th><th style="text-align:left;padding:8px;">Type</th><th style="text-align:right;padding:8px;">Documents</th></tr></thead><tbody>';
+      data.top_isolated.forEach(r => {
+        html += `<tr style="border-bottom:1px solid var(--border);"><td style="padding:8px;">${r.name}</td><td style="padding:8px;"><span class="entity-tag ${r.type}" style="font-size:10px;">${r.type}</span></td><td style="text-align:right;padding:8px;font-weight:600;">${r.doc_count}</td></tr>`;
+      });
+      html += '</tbody></table>';
+    }
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load entity isolation score</div>'; }
+}
+
+function showDocCatBalView() {
+  currentView = 'doccatbal';
+  hideAllViews();
+  document.getElementById('doccatbalView').classList.add('active');
+  loadDocCatBal();
+}
+async function loadDocCatBal() {
+  const el = document.getElementById('doccatbalContent');
+  try {
+    const res = await fetch('/api/document-category-balance');
+    const data = await res.json();
+    let html = `<div style="background:var(--bg-secondary);padding:12px;border-radius:6px;margin-bottom:16px;"><div style="font-size:11px;color:var(--text-muted);">Total Documents</div><div style="font-size:20px;font-weight:700;color:var(--text-primary);">${data.total}</div></div>`;
+    html += '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="border-bottom:2px solid var(--border);"><th style="text-align:left;padding:8px;">Category</th><th style="text-align:right;padding:8px;">Count</th><th style="text-align:right;padding:8px;">%</th><th style="text-align:left;padding:8px;width:40%;">Bar</th></tr></thead><tbody>';
+    data.categories.forEach(r => {
+      html += `<tr style="border-bottom:1px solid var(--border);"><td style="padding:8px;">${r.category}</td><td style="text-align:right;padding:8px;font-weight:600;">${r.count}</td><td style="text-align:right;padding:8px;">${r.pct}%</td><td style="padding:8px;"><div style="background:var(--accent);height:14px;border-radius:3px;width:${r.pct}%;"></div></td></tr>`;
+    });
+    html += '</tbody></table>';
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load document category balance</div>'; }
+}
+
+function showEvtTempDensityView() {
+  currentView = 'evttempdensity';
+  hideAllViews();
+  document.getElementById('evttempdensityView').classList.add('active');
+  loadEvtTempDensity();
+}
+async function loadEvtTempDensity() {
+  const el = document.getElementById('evttempdensityContent');
+  try {
+    const res = await fetch('/api/event-temporal-density');
+    const data = await res.json();
+    const maxCount = Math.max(...data.years.map(r => r.count), 1);
+    let html = '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="border-bottom:2px solid var(--border);"><th style="text-align:left;padding:8px;">Year</th><th style="text-align:right;padding:8px;">Events</th><th style="text-align:left;padding:8px;width:50%;">Bar</th></tr></thead><tbody>';
+    data.years.forEach(r => {
+      const w = Math.round(100 * r.count / maxCount);
+      html += `<tr style="border-bottom:1px solid var(--border);"><td style="padding:8px;">${r.year}</td><td style="text-align:right;padding:8px;font-weight:600;">${r.count.toLocaleString()}</td><td style="padding:8px;"><div style="background:var(--accent);height:14px;border-radius:3px;width:${w}%;"></div></td></tr>`;
+    });
+    html += '</tbody></table>';
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load event temporal density</div>'; }
+}
+
+function showSrcEntExclView() {
+  currentView = 'srcentexcl';
+  hideAllViews();
+  document.getElementById('srcentexclView').classList.add('active');
+  loadSrcEntExcl();
+}
+async function loadSrcEntExcl() {
+  const el = document.getElementById('srcentexclContent');
+  try {
+    const res = await fetch('/api/source-entity-exclusivity');
+    const data = await res.json();
+    let html = `<div style="background:var(--bg-secondary);padding:12px;border-radius:6px;margin-bottom:16px;"><div style="font-size:11px;color:var(--text-muted);">Source-Exclusive Entities</div><div style="font-size:20px;font-weight:700;color:var(--text-primary);">${data.exclusive_count.toLocaleString()}</div></div>`;
+    html += '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="border-bottom:2px solid var(--border);"><th style="text-align:left;padding:8px;">Entity</th><th style="text-align:left;padding:8px;">Type</th><th style="text-align:left;padding:8px;">Source</th><th style="text-align:right;padding:8px;">Docs</th></tr></thead><tbody>';
+    data.entities.forEach(r => {
+      html += `<tr style="border-bottom:1px solid var(--border);"><td style="padding:8px;">${r.name}</td><td style="padding:8px;"><span class="entity-tag ${r.type}" style="font-size:10px;">${r.type}</span></td><td style="padding:8px;">${r.source || '—'}</td><td style="text-align:right;padding:8px;font-weight:600;">${r.doc_count}</td></tr>`;
+    });
+    html += '</tbody></table>';
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load source entity exclusivity</div>'; }
+}
+
+function showEntNamePatternView() {
+  currentView = 'entnamepattern';
+  hideAllViews();
+  document.getElementById('entnamepatternView').classList.add('active');
+  loadEntNamePattern();
+}
+async function loadEntNamePattern() {
+  const el = document.getElementById('entnamepatternContent');
+  try {
+    const res = await fetch('/api/entity-name-pattern');
+    const data = await res.json();
+    const s = data.stats;
+    let html = `<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;">`;
+    html += `<div style="background:var(--bg-secondary);padding:12px;border-radius:6px;"><div style="font-size:11px;color:var(--text-muted);">Total</div><div style="font-size:20px;font-weight:700;color:var(--text-primary);">${s.total.toLocaleString()}</div></div>`;
+    html += `<div style="background:var(--bg-secondary);padding:12px;border-radius:6px;"><div style="font-size:11px;color:var(--text-muted);">Avg Length</div><div style="font-size:20px;font-weight:700;color:var(--text-primary);">${s.avg_len}</div></div>`;
+    html += `<div style="background:var(--bg-secondary);padding:12px;border-radius:6px;"><div style="font-size:11px;color:var(--text-muted);">Max Length</div><div style="font-size:20px;font-weight:700;color:var(--text-primary);">${s.max_len}</div></div>`;
+    html += `<div style="background:var(--bg-secondary);padding:12px;border-radius:6px;"><div style="font-size:11px;color:var(--text-muted);">Min Length</div><div style="font-size:20px;font-weight:700;color:var(--text-primary);">${s.min_len}</div></div>`;
+    html += `</div>`;
+    html += '<div style="font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:8px;">LONGEST NAMES</div>';
+    html += '<table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:16px;"><thead><tr style="border-bottom:2px solid var(--border);"><th style="text-align:left;padding:8px;">Name</th><th style="text-align:left;padding:8px;">Type</th><th style="text-align:right;padding:8px;">Length</th></tr></thead><tbody>';
+    data.longest.forEach(r => {
+      html += `<tr style="border-bottom:1px solid var(--border);"><td style="padding:8px;max-width:400px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${r.name}</td><td style="padding:8px;"><span class="entity-tag ${r.type}" style="font-size:10px;">${r.type}</span></td><td style="text-align:right;padding:8px;font-weight:600;">${r.name_len}</td></tr>`;
+    });
+    html += '</tbody></table>';
+    if (data.shortest.length) {
+      html += '<div style="font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:8px;">SHORTEST NAMES (≤3 chars)</div>';
+      html += '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="border-bottom:2px solid var(--border);"><th style="text-align:left;padding:8px;">Name</th><th style="text-align:left;padding:8px;">Type</th><th style="text-align:right;padding:8px;">Length</th></tr></thead><tbody>';
+      data.shortest.forEach(r => {
+        html += `<tr style="border-bottom:1px solid var(--border);"><td style="padding:8px;">${r.name}</td><td style="padding:8px;"><span class="entity-tag ${r.type}" style="font-size:10px;">${r.type}</span></td><td style="text-align:right;padding:8px;font-weight:600;">${r.name_len}</td></tr>`;
+      });
+      html += '</tbody></table>';
+    }
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load entity name pattern</div>'; }
+}
+
+function showConnClusterView() {
+  currentView = 'conncluster';
+  hideAllViews();
+  document.getElementById('connclusterView').classList.add('active');
+  loadConnCluster();
+}
+async function loadConnCluster() {
+  const el = document.getElementById('connclusterContent');
+  try {
+    const res = await fetch('/api/connection-cluster-summary');
+    const data = await res.json();
+    let html = `<div style="background:var(--bg-secondary);padding:12px;border-radius:6px;margin-bottom:16px;"><div style="font-size:11px;color:var(--text-muted);">Total Connections</div><div style="font-size:20px;font-weight:700;color:var(--text-primary);">${data.total.toLocaleString()}</div></div>`;
+    html += '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="border-bottom:2px solid var(--border);"><th style="text-align:left;padding:8px;">Cluster</th><th style="text-align:right;padding:8px;">Count</th><th style="text-align:right;padding:8px;">%</th><th style="text-align:right;padding:8px;">Avg Weight</th><th style="text-align:left;padding:8px;width:30%;">Bar</th></tr></thead><tbody>';
+    data.clusters.forEach(r => {
+      html += `<tr style="border-bottom:1px solid var(--border);"><td style="padding:8px;">${r.cluster}</td><td style="text-align:right;padding:8px;font-weight:600;">${r.count.toLocaleString()}</td><td style="text-align:right;padding:8px;">${r.pct}%</td><td style="text-align:right;padding:8px;">${r.avg_weight}</td><td style="padding:8px;"><div style="background:var(--accent);height:14px;border-radius:3px;width:${r.pct}%;"></div></td></tr>`;
+    });
+    html += '</tbody></table>';
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load connection cluster summary</div>'; }
 }
 
 // ─── INIT ───
