@@ -2019,6 +2019,8 @@ body::before {
 .relgraph-view.active, .sidebyside-view.active, .locfreq-view.active, .finprofile-view.active, .searchhist-view.active, .catdist-view.active { display: flex; }
 .witoverlap-view, .docage-view, .coappear-view, .unresolved-view, .doccompleteness-view, .keydates-view { display: none; flex-direction: column; gap: 16px; }
 .witoverlap-view.active, .docage-view.active, .coappear-view.active, .unresolved-view.active, .doccompleteness-view.active, .keydates-view.active { display: flex; }
+.aliasnet-view, .doclength-view, .tempheat-view, .typebreak-view, .srcnet-view, .redactdensity-view { display: none; flex-direction: column; gap: 16px; }
+.aliasnet-view.active, .doclength-view.active, .tempheat-view.active, .typebreak-view.active, .srcnet-view.active, .redactdensity-view.active { display: flex; }
 .rel-edge { display: flex; align-items: center; gap: 8px; padding: 4px 0; border-bottom: 1px solid var(--border); }
 .sbs-col { flex: 1; padding: 12px; background: var(--bg-card); border-radius: var(--radius); border: 1px solid var(--border); overflow: hidden; }
 .sbs-header { font-family: var(--font-mono); font-size: 12px; font-weight: 600; color: var(--text-primary); margin-bottom: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -2375,6 +2377,30 @@ body::before {
       <div class="sidebar-item" data-view="keydates" id="keydatesNav">
         <div class="sidebar-dot" style="background:var(--entity-place)"></div>
         Key Dates
+      </div>
+      <div class="sidebar-item" data-view="aliasnet" id="aliasnetNav">
+        <div class="sidebar-dot" style="background:var(--entity-person)"></div>
+        Alias Network
+      </div>
+      <div class="sidebar-item" data-view="doclength" id="doclengthNav">
+        <div class="sidebar-dot" style="background:var(--entity-org)"></div>
+        Doc Length
+      </div>
+      <div class="sidebar-item" data-view="tempheat" id="tempheatNav">
+        <div class="sidebar-dot" style="background:var(--entity-place)"></div>
+        Temporal Heatmap
+      </div>
+      <div class="sidebar-item" data-view="typebreak" id="typebreakNav">
+        <div class="sidebar-dot" style="background:#e05555"></div>
+        Entity Types
+      </div>
+      <div class="sidebar-item" data-view="srcnet" id="srcnetNav">
+        <div class="sidebar-dot" style="background:var(--entity-org)"></div>
+        Source Network
+      </div>
+      <div class="sidebar-item" data-view="redactdensity" id="redactdensityNav">
+        <div class="sidebar-dot" style="background:var(--entity-place)"></div>
+        Redaction Density
       </div>
     </div>
 
@@ -3433,6 +3459,36 @@ body::before {
       <div id="keydatesContent">Loading key dates...</div>
     </div>
 
+    <div class="aliasnet-view" id="aliasnetView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Alias Network</div>
+      <div id="aliasnetContent">Loading alias data...</div>
+    </div>
+
+    <div class="doclength-view" id="doclengthView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Document Length Analysis</div>
+      <div id="doclengthContent">Loading document lengths...</div>
+    </div>
+
+    <div class="tempheat-view" id="tempheatView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Temporal Heatmap</div>
+      <div id="tempheatContent">Loading temporal data...</div>
+    </div>
+
+    <div class="typebreak-view" id="typebreakView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Entity Type Breakdown</div>
+      <div id="typebreakContent">Loading entity types...</div>
+    </div>
+
+    <div class="srcnet-view" id="srcnetView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Source Network</div>
+      <div id="srcnetContent">Loading source network...</div>
+    </div>
+
+    <div class="redactdensity-view" id="redactdensityView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Redaction Density</div>
+      <div id="redactdensityContent">Loading redaction data...</div>
+    </div>
+
   </main>
 
   <!-- RIGHT PANEL -->
@@ -4099,6 +4155,12 @@ function hideAllViews() {
   document.getElementById('unresolvedView').classList.remove('active');
   document.getElementById('doccompletenessView').classList.remove('active');
   document.getElementById('keydatesView').classList.remove('active');
+  document.getElementById('aliasnetView').classList.remove('active');
+  document.getElementById('doclengthView').classList.remove('active');
+  document.getElementById('tempheatView').classList.remove('active');
+  document.getElementById('typebreakView').classList.remove('active');
+  document.getElementById('srcnetView').classList.remove('active');
+  document.getElementById('redactdensityView').classList.remove('active');
 }
 
 function showDocumentView() {
@@ -4218,6 +4280,12 @@ document.querySelectorAll('.sidebar-item[data-view]').forEach(item => {
     else if (view === 'unresolved') showUnresolvedView();
     else if (view === 'doccompleteness') showDocCompletenessView();
     else if (view === 'keydates') showKeyDatesView();
+    else if (view === 'aliasnet') showAliasNetView();
+    else if (view === 'doclength') showDocLengthView();
+    else if (view === 'tempheat') showTempHeatView();
+    else if (view === 'typebreak') showTypeBreakView();
+    else if (view === 'srcnet') showSrcNetView();
+    else if (view === 'redactdensity') showRedactDensityView();
   });
 });
 
@@ -5335,6 +5403,12 @@ function goBackFromReader() {
   else if (readerPreviousView === 'unresolved') showUnresolvedView();
   else if (readerPreviousView === 'doccompleteness') showDocCompletenessView();
   else if (readerPreviousView === 'keydates') showKeyDatesView();
+  else if (readerPreviousView === 'aliasnet') showAliasNetView();
+  else if (readerPreviousView === 'doclength') showDocLengthView();
+  else if (readerPreviousView === 'tempheat') showTempHeatView();
+  else if (readerPreviousView === 'typebreak') showTypeBreakView();
+  else if (readerPreviousView === 'srcnet') showSrcNetView();
+  else if (readerPreviousView === 'redactdensity') showRedactDensityView();
   else showDocumentView();
 }
 
@@ -10528,6 +10602,264 @@ async function loadKeyDates() {
     }
     el.innerHTML = html;
   } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load key dates</div>'; }
+}
+
+
+// ── Alias Network ──
+
+function showAliasNetView() {
+  currentView = 'aliasnet';
+  hideAllViews();
+  document.getElementById('aliasnetView').classList.add('active');
+  loadAliasNet();
+}
+
+async function loadAliasNet() {
+  const el = document.getElementById('aliasnetContent');
+  el.innerHTML = 'Loading alias network...';
+  try {
+    const data = await fetchJSON('/api/alias-network');
+    let html = `<div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:12px;">`;
+    html += `<div class="stat-card"><div class="stat-value">${data.total_entities_with_aliases}</div><div class="stat-label">Entities w/ Aliases</div></div>`;
+    html += `<div class="stat-card"><div class="stat-value">${data.total_aliases}</div><div class="stat-label">Total Aliases</div></div>`;
+    html += `</div>`;
+
+    if (data.entities.length) {
+      html += '<table class="data-table"><thead><tr><th>Entity</th><th>Type</th><th>Aliases</th></tr></thead><tbody>';
+      data.entities.forEach(e => {
+        const aliases = e.aliases.map(a => `<span style="font-size:10px;background:var(--bg-card);padding:2px 6px;border-radius:3px;margin:1px;display:inline-block;">${a.alias_name}</span>`).join(' ');
+        html += `<tr><td><strong>${e.name}</strong></td><td><span class="entity-tag ${e.type}">${e.type}</span></td>`;
+        html += `<td>${aliases}</td></tr>`;
+      });
+      html += '</tbody></table>';
+    } else {
+      html += '<div style="color:var(--text-muted);">No aliases found.</div>';
+    }
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load alias network</div>'; }
+}
+
+
+// ── Document Length Analysis ──
+
+function showDocLengthView() {
+  currentView = 'doclength';
+  hideAllViews();
+  document.getElementById('doclengthView').classList.add('active');
+  loadDocLength();
+}
+
+async function loadDocLength() {
+  const el = document.getElementById('doclengthContent');
+  el.innerHTML = 'Analyzing document lengths...';
+  try {
+    const data = await fetchJSON('/api/document-length');
+    const s = data.stats;
+    let html = `<div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:12px;">`;
+    html += `<div class="stat-card"><div class="stat-value">${s.total_docs}</div><div class="stat-label">Total Docs</div></div>`;
+    html += `<div class="stat-card"><div class="stat-value">${(s.total_chars/1000000).toFixed(1)}M</div><div class="stat-label">Total Chars</div></div>`;
+    html += `<div class="stat-card"><div class="stat-value">${s.total_pages.toLocaleString()}</div><div class="stat-label">Total Pages</div></div>`;
+    html += `<div class="stat-card"><div class="stat-value">${(s.avg_chars/1000).toFixed(1)}K</div><div class="stat-label">Avg Chars</div></div>`;
+    html += `<div class="stat-card"><div class="stat-value">${s.avg_pages}</div><div class="stat-label">Avg Pages</div></div>`;
+    html += `</div>`;
+
+    // Size buckets
+    const buckets = Object.entries(data.size_buckets);
+    const maxB = Math.max(...buckets.map(b => b[1]));
+    html += '<div style="font-size:12px;font-weight:600;margin-bottom:8px;color:var(--text-secondary);">Size Distribution</div>';
+    buckets.forEach(([label, cnt]) => {
+      const pct = maxB ? (cnt / maxB * 100).toFixed(0) : 0;
+      html += `<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">`;
+      html += `<span style="width:70px;font-size:11px;text-align:right;color:var(--text-muted);">${label}</span>`;
+      html += `<div style="flex:1;height:18px;background:var(--bg-card);border-radius:3px;overflow:hidden;">`;
+      html += `<div style="width:${pct}%;height:100%;background:var(--accent);border-radius:3px;"></div></div>`;
+      html += `<span style="width:40px;font-size:11px;color:var(--text-secondary);">${cnt}</span></div>`;
+    });
+
+    // Largest docs
+    if (data.documents.length) {
+      html += '<div style="font-size:12px;font-weight:600;margin:12px 0 8px;color:var(--text-secondary);">Largest Documents</div>';
+      html += '<table class="data-table"><thead><tr><th>Title</th><th>Category</th><th>Pages</th><th>Chars</th></tr></thead><tbody>';
+      data.documents.slice(0, 30).forEach(d => {
+        html += `<tr><td><a href="#" onclick="openReader(${d.id});return false;">${(d.title || d.filename).substring(0,50)}</a></td>`;
+        html += `<td>${d.category || ''}</td><td>${d.pages || 0}</td>`;
+        html += `<td>${d.text_length ? (d.text_length/1000).toFixed(1)+'K' : '0'}</td></tr>`;
+      });
+      html += '</tbody></table>';
+    }
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load document lengths</div>'; }
+}
+
+
+// ── Temporal Heatmap ──
+
+function showTempHeatView() {
+  currentView = 'tempheat';
+  hideAllViews();
+  document.getElementById('tempheatView').classList.add('active');
+  loadTempHeat();
+}
+
+async function loadTempHeat() {
+  const el = document.getElementById('tempheatContent');
+  el.innerHTML = 'Building temporal heatmap...';
+  try {
+    const data = await fetchJSON('/api/temporal-heatmap');
+    const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    let html = `<div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:12px;">`;
+    html += `<div class="stat-card"><div class="stat-value">${data.years.length}</div><div class="stat-label">Years</div></div>`;
+    html += `<div class="stat-card"><div class="stat-value">${data.total_months}</div><div class="stat-label">Active Months</div></div>`;
+    html += `<div class="stat-card"><div class="stat-value">${data.max_count.toLocaleString()}</div><div class="stat-label">Peak Events</div></div>`;
+    html += `</div>`;
+
+    if (data.grid.length) {
+      html += '<div style="overflow-x:auto;"><table class="data-table" style="font-size:11px;"><thead><tr><th>Year</th>';
+      monthNames.forEach(m => html += `<th style="text-align:center;width:55px;">${m}</th>`);
+      html += '</tr></thead><tbody>';
+      data.grid.forEach(row => {
+        html += `<tr><td style="font-weight:600;">${row.year}</td>`;
+        row.months.forEach(m => {
+          const intensity = data.max_count ? (m.count / data.max_count) : 0;
+          const bg = m.count === 0 ? 'transparent' :
+            `rgba(110, 198, 255, ${0.15 + intensity * 0.85})`;
+          html += `<td style="text-align:center;background:${bg};color:${intensity > 0.5 ? '#000' : 'var(--text-secondary)'};" title="${row.year}-${String(m.month).padStart(2,'0')}: ${m.count} events">${m.count || ''}</td>`;
+        });
+        html += '</tr>';
+      });
+      html += '</tbody></table></div>';
+    }
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load temporal heatmap</div>'; }
+}
+
+
+// ── Entity Type Breakdown ──
+
+function showTypeBreakView() {
+  currentView = 'typebreak';
+  hideAllViews();
+  document.getElementById('typebreakView').classList.add('active');
+  loadTypeBreak();
+}
+
+async function loadTypeBreak() {
+  const el = document.getElementById('typebreakContent');
+  el.innerHTML = 'Analyzing entity types...';
+  try {
+    const data = await fetchJSON('/api/entity-type-breakdown');
+    let html = `<div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:12px;">`;
+    html += `<div class="stat-card"><div class="stat-value">${data.total_entities}</div><div class="stat-label">Total Entities</div></div>`;
+    html += `<div class="stat-card"><div class="stat-value">${data.orphan_entities}</div><div class="stat-label">Orphan (no docs)</div></div>`;
+    html += `<div class="stat-card"><div class="stat-value">${data.types.length}</div><div class="stat-label">Entity Types</div></div>`;
+    html += `</div>`;
+
+    // Type bar chart
+    const maxT = data.types.length ? Math.max(...data.types.map(t => t.count)) : 0;
+    html += '<div style="margin-bottom:16px;">';
+    data.types.forEach(t => {
+      const pct = maxT ? (t.count / maxT * 100).toFixed(0) : 0;
+      html += `<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">`;
+      html += `<span class="entity-tag ${t.type}" style="width:70px;text-align:center;">${t.type}</span>`;
+      html += `<div style="flex:1;height:18px;background:var(--bg-card);border-radius:3px;overflow:hidden;">`;
+      html += `<div style="width:${pct}%;height:100%;background:var(--accent);border-radius:3px;"></div></div>`;
+      html += `<span style="width:50px;font-size:11px;color:var(--text-secondary);">${t.count}</span></div>`;
+    });
+    html += '</div>';
+
+    // Top entities per type
+    data.types.forEach(t => {
+      if (!t.top_entities.length) return;
+      html += `<div style="font-size:12px;font-weight:600;margin:8px 0 4px;color:var(--text-secondary);">Top ${t.type} entities</div>`;
+      html += '<table class="data-table" style="font-size:11px;"><thead><tr><th>Name</th><th>Docs</th><th>Mentions</th></tr></thead><tbody>';
+      t.top_entities.slice(0, 10).forEach(e => {
+        html += `<tr><td>${e.name}</td><td>${e.doc_count}</td><td>${e.mentions}</td></tr>`;
+      });
+      html += '</tbody></table>';
+    });
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load entity types</div>'; }
+}
+
+
+// ── Source Network ──
+
+function showSrcNetView() {
+  currentView = 'srcnet';
+  hideAllViews();
+  document.getElementById('srcnetView').classList.add('active');
+  loadSrcNet();
+}
+
+async function loadSrcNet() {
+  const el = document.getElementById('srcnetContent');
+  el.innerHTML = 'Analyzing source network...';
+  try {
+    const data = await fetchJSON('/api/source-network?min_shared=5');
+    let html = `<div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:12px;">`;
+    html += `<div class="stat-card"><div class="stat-value">${data.total_sources}</div><div class="stat-label">Sources</div></div>`;
+    html += `<div class="stat-card"><div class="stat-value">${data.pairs.length}</div><div class="stat-label">Connected Pairs</div></div>`;
+    html += `</div>`;
+
+    // Source stats
+    if (data.sources.length) {
+      html += '<div style="font-size:12px;font-weight:600;margin-bottom:8px;color:var(--text-secondary);">Sources by Entity Count</div>';
+      html += '<table class="data-table"><thead><tr><th>Source</th><th>Docs</th><th>Unique Entities</th></tr></thead><tbody>';
+      data.sources.forEach(s => {
+        html += `<tr><td><strong>${s.source}</strong></td><td>${s.doc_count}</td><td>${s.entity_count}</td></tr>`;
+      });
+      html += '</tbody></table>';
+    }
+
+    // Shared entity pairs
+    if (data.pairs.length) {
+      html += '<div style="font-size:12px;font-weight:600;margin:12px 0 8px;color:var(--text-secondary);">Source Connections (shared entities)</div>';
+      html += '<table class="data-table"><thead><tr><th>Source A</th><th>Source B</th><th>Shared Entities</th></tr></thead><tbody>';
+      data.pairs.forEach(p => {
+        html += `<tr><td>${p.source_a}</td><td>${p.source_b}</td><td>${p.shared_entities}</td></tr>`;
+      });
+      html += '</tbody></table>';
+    }
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load source network</div>'; }
+}
+
+
+// ── Redaction Density ──
+
+function showRedactDensityView() {
+  currentView = 'redactdensity';
+  hideAllViews();
+  document.getElementById('redactdensityView').classList.add('active');
+  loadRedactDensity();
+}
+
+async function loadRedactDensity() {
+  const el = document.getElementById('redactdensityContent');
+  el.innerHTML = 'Analyzing redaction density...';
+  try {
+    const data = await fetchJSON('/api/redaction-density');
+    let html = `<div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:12px;">`;
+    html += `<div class="stat-card"><div class="stat-value">${data.total_redacted_docs}</div><div class="stat-label">Redacted Docs</div></div>`;
+    html += `<div class="stat-card"><div class="stat-value">${data.total_redactions}</div><div class="stat-label">Total Redactions</div></div>`;
+    html += `<div class="stat-card"><div class="stat-value">${data.pct_docs_redacted}%</div><div class="stat-label">% Docs Redacted</div></div>`;
+    html += `</div>`;
+
+    if (data.documents.length) {
+      html += '<table class="data-table"><thead><tr><th>Document</th><th>Category</th><th>Redactions</th><th>Text Size</th><th>Density/1K</th></tr></thead><tbody>';
+      data.documents.forEach(d => {
+        const densityColor = d.density_per_1k_chars > 5 ? '#e05555' : d.density_per_1k_chars > 1 ? '#f0ad4e' : 'var(--text-secondary)';
+        html += `<tr><td><a href="#" onclick="openReader(${d.id});return false;">${(d.title || d.filename).substring(0,50)}</a></td>`;
+        html += `<td>${d.category || ''}</td><td>${d.redaction_count}</td>`;
+        html += `<td>${d.text_length ? (d.text_length/1000).toFixed(1)+'K' : '0'}</td>`;
+        html += `<td style="color:${densityColor};font-weight:500;">${d.density_per_1k_chars}</td></tr>`;
+      });
+      html += '</tbody></table>';
+    } else {
+      html += '<div style="color:var(--text-muted);">No redacted documents found.</div>';
+    }
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load redaction density</div>'; }
 }
 
 

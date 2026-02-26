@@ -7343,6 +7343,311 @@ def key_dates(limit: int = 50):
     }
 
 
+# ── Alias Network ────────────────────────────────────
+
+
+@app.get("/api/alias-network")
+def alias_network(entity_type: str = ""):
+    """Entity alias relationships."""
+    with get_db() as conn:
+        params: list = []
+        type_filter = ""
+        if entity_type:
+            type_filter = "AND e.type = ?"
+            params.append(entity_type)
+
+        rows = conn.execute(
+            f"SELECT ea.id, ea.entity_id, ea.alias_name, e.name, e.type "
+            f"FROM entity_aliases ea "
+            f"JOIN entities e ON e.id = ea.entity_id "
+            f"WHERE 1=1 {type_filter} "
+            f"ORDER BY e.name, ea.alias_name",
+            params,
+        ).fetchall()
+
+    # Group by entity
+    entities = {}
+    for r in rows:
+        eid = r["entity_id"]
+        if eid not in entities:
+            entities[eid] = {
+                "entity_id": eid,
+                "name": r["name"],
+                "type": r["type"],
+                "aliases": [],
+            }
+        entities[eid]["aliases"].append({"alias_id": r["id"], "alias_name": r["alias_name"]})
+
+    result = sorted(entities.values(), key=lambda x: len(x["aliases"]), reverse=True)
+    return {
+        "entities": result,
+        "total_entities_with_aliases": len(result),
+        "total_aliases": len(rows),
+    }
+
+
+# ── Document Length Analysis ─────────────────────────
+
+
+@app.get("/api/document-length")
+def document_length():
+    """Analyze document sizes and page counts."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT id, filename, title, pages, category, source, "
+            "LENGTH(raw_text) as text_length "
+            "FROM documents ORDER BY text_length DESC"
+        ).fetchall()
+
+    docs = [dict(r) for r in rows]
+    total = len(docs)
+    if not total:
+        return {"documents": [], "stats": {}, "by_category": {}}
+
+    lengths = [d["text_length"] or 0 for d in docs]
+    pages = [d["pages"] or 0 for d in docs]
+
+    stats = {
+        "total_docs": total,
+        "total_chars": sum(lengths),
+        "total_pages": sum(pages),
+        "avg_chars": round(sum(lengths) / total),
+        "avg_pages": round(sum(pages) / total, 1),
+        "max_chars": max(lengths),
+        "min_chars": min(lengths),
+        "max_pages": max(pages),
+    }
+
+    # By category
+    by_cat = {}
+    for d in docs:
+        cat = d["category"] or "other"
+        if cat not in by_cat:
+            by_cat[cat] = {"count": 0, "total_chars": 0, "total_pages": 0}
+        by_cat[cat]["count"] += 1
+        by_cat[cat]["total_chars"] += d["text_length"] or 0
+        by_cat[cat]["total_pages"] += d["pages"] or 0
+
+    for cat in by_cat:
+        c = by_cat[cat]
+        c["avg_chars"] = round(c["total_chars"] / c["count"])
+        c["avg_pages"] = round(c["total_pages"] / c["count"], 1)
+
+    # Size buckets
+    buckets = {"<1K": 0, "1K-10K": 0, "10K-50K": 0, "50K-100K": 0, ">100K": 0}
+    for ln in lengths:
+        if ln < 1000:
+            buckets["<1K"] += 1
+        elif ln < 10000:
+            buckets["1K-10K"] += 1
+        elif ln < 50000:
+            buckets["10K-50K"] += 1
+        elif ln < 100000:
+            buckets["50K-100K"] += 1
+        else:
+            buckets[">100K"] += 1
+
+    return {
+        "documents": docs[:100],
+        "stats": stats,
+        "by_category": by_cat,
+        "size_buckets": buckets,
+    }
+
+
+# ── Temporal Heatmap ─────────────────────────────────
+
+
+@app.get("/api/temporal-heatmap")
+def temporal_heatmap():
+    """Events per month heatmap grid."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT event_date, COUNT(*) as cnt "
+            "FROM events "
+            "WHERE event_date IS NOT NULL AND event_date != '' "
+            "AND LENGTH(event_date) >= 7 "
+            "GROUP BY SUBSTR(event_date, 1, 7) "
+            "ORDER BY event_date"
+        ).fetchall()
+
+    # Build year-month grid
+    months = {}
+    years = set()
+    for r in rows:
+        ym = r["event_date"][:7] if r["event_date"] else None
+        if ym and len(ym) >= 7:
+            months[ym] = r["cnt"]
+            years.add(ym[:4])
+
+    grid = []
+    for year in sorted(years):
+        row = {"year": year, "months": []}
+        for m in range(1, 13):
+            key = f"{year}-{m:02d}"
+            row["months"].append({"month": m, "count": months.get(key, 0)})
+        grid.append(row)
+
+    max_count = max(months.values()) if months else 0
+    return {
+        "grid": grid,
+        "max_count": max_count,
+        "total_months": len(months),
+        "years": sorted(years),
+    }
+
+
+# ── Entity Type Breakdown ───────────────────────────
+
+
+@app.get("/api/entity-type-breakdown")
+def entity_type_breakdown():
+    """Detailed entity type analytics."""
+    with get_db() as conn:
+        # Counts by type
+        type_counts = conn.execute(
+            "SELECT type, COUNT(*) as cnt FROM entities GROUP BY type ORDER BY cnt DESC"
+        ).fetchall()
+
+        # Top entities per type
+        types_detail = []
+        for tc in type_counts:
+            top = conn.execute(
+                "SELECT e.id, e.name, COUNT(de.document_id) as doc_count, "
+                "COALESCE(SUM(de.count), 0) as mentions "
+                "FROM entities e "
+                "LEFT JOIN document_entities de ON de.entity_id = e.id "
+                "WHERE e.type = ? "
+                "GROUP BY e.id "
+                "ORDER BY doc_count DESC LIMIT 20",
+                (tc["type"],),
+            ).fetchall()
+            types_detail.append(
+                {
+                    "type": tc["type"],
+                    "count": tc["cnt"],
+                    "top_entities": [dict(t) for t in top],
+                }
+            )
+
+        # Entities with no document associations
+        orphan_count = conn.execute(
+            "SELECT COUNT(*) as cnt FROM entities e "
+            "WHERE NOT EXISTS (SELECT 1 FROM document_entities de WHERE de.entity_id = e.id)"
+        ).fetchone()["cnt"]
+
+        total = conn.execute("SELECT COUNT(*) as cnt FROM entities").fetchone()["cnt"]
+
+    return {
+        "types": types_detail,
+        "total_entities": total,
+        "orphan_entities": orphan_count,
+    }
+
+
+# ── Source Network ───────────────────────────────────
+
+
+@app.get("/api/source-network")
+def source_network(min_shared: int = 5):
+    """Which sources share the most entities."""
+    with get_db() as conn:
+        # Get all sources
+        sources = conn.execute(
+            "SELECT DISTINCT source FROM documents WHERE source IS NOT NULL AND source != '' "
+            "ORDER BY source"
+        ).fetchall()
+        source_names = [s["source"] for s in sources]
+
+        # For each source pair, count shared entities
+        pairs = []
+        for i in range(len(source_names)):
+            for j in range(i + 1, len(source_names)):
+                shared = conn.execute(
+                    "SELECT COUNT(DISTINCT de1.entity_id) as cnt "
+                    "FROM document_entities de1 "
+                    "JOIN documents d1 ON d1.id = de1.document_id "
+                    "JOIN document_entities de2 ON de2.entity_id = de1.entity_id "
+                    "JOIN documents d2 ON d2.id = de2.document_id "
+                    "WHERE d1.source = ? AND d2.source = ?",
+                    (source_names[i], source_names[j]),
+                ).fetchone()["cnt"]
+                if shared >= min_shared:
+                    pairs.append(
+                        {
+                            "source_a": source_names[i],
+                            "source_b": source_names[j],
+                            "shared_entities": shared,
+                        }
+                    )
+
+        # Entity counts per source
+        source_stats = conn.execute(
+            "SELECT d.source, COUNT(DISTINCT de.entity_id) as entity_count, "
+            "COUNT(DISTINCT d.id) as doc_count "
+            "FROM documents d "
+            "JOIN document_entities de ON de.document_id = d.id "
+            "WHERE d.source IS NOT NULL AND d.source != '' "
+            "GROUP BY d.source "
+            "ORDER BY entity_count DESC"
+        ).fetchall()
+
+    pairs.sort(key=lambda x: x["shared_entities"], reverse=True)
+    return {
+        "pairs": pairs,
+        "sources": [dict(s) for s in source_stats],
+        "total_sources": len(source_names),
+    }
+
+
+# ── Redaction Density ────────────────────────────────
+
+
+@app.get("/api/redaction-density")
+def redaction_density():
+    """Documents ranked by redaction density."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT d.id, d.filename, d.title, d.pages, d.category, "
+            "LENGTH(d.raw_text) as text_length, "
+            "COUNT(r.id) as redaction_count "
+            "FROM documents d "
+            "LEFT JOIN redactions r ON r.document_id = d.id "
+            "GROUP BY d.id "
+            "HAVING redaction_count > 0 "
+            "ORDER BY redaction_count DESC"
+        ).fetchall()
+
+        total_docs = conn.execute("SELECT COUNT(*) as cnt FROM documents").fetchone()["cnt"]
+        total_redactions = conn.execute("SELECT COUNT(*) as cnt FROM redactions").fetchone()["cnt"]
+
+    docs = []
+    for r in rows:
+        text_len = r["text_length"] or 1
+        density = round(r["redaction_count"] / (text_len / 1000), 2)
+        docs.append(
+            {
+                "id": r["id"],
+                "filename": r["filename"],
+                "title": r["title"],
+                "pages": r["pages"],
+                "category": r["category"],
+                "redaction_count": r["redaction_count"],
+                "text_length": r["text_length"],
+                "density_per_1k_chars": density,
+            }
+        )
+
+    docs.sort(key=lambda x: x["density_per_1k_chars"], reverse=True)
+    return {
+        "documents": docs,
+        "total_redacted_docs": len(docs),
+        "total_docs": total_docs,
+        "total_redactions": total_redactions,
+        "pct_docs_redacted": round(len(docs) / total_docs * 100, 1) if total_docs else 0,
+    }
+
+
 # ═══════════════════════════════════════════
 # STATIC FILES (serve the frontend)
 # ═══════════════════════════════════════════
