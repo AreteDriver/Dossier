@@ -9215,6 +9215,160 @@ def entity_isolation():
     }
 
 
+# ── Entity Growth Rate ───────────────────────────
+
+
+@app.get("/api/entity-growth")
+def entity_growth():
+    """New entities discovered over time by document ingest date."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT DATE(d.ingested_at) as ingest_date, "
+            "COUNT(DISTINCT de.entity_id) as new_entities, "
+            "COUNT(DISTINCT d.id) as docs_ingested "
+            "FROM documents d "
+            "JOIN document_entities de ON de.document_id = d.id "
+            "WHERE d.ingested_at IS NOT NULL "
+            "GROUP BY ingest_date "
+            "ORDER BY ingest_date"
+        ).fetchall()
+
+    return {"timeline": [dict(r) for r in rows], "total_dates": len(rows)}
+
+
+# ── Document Text Length Distribution ────────────
+
+
+@app.get("/api/text-length-distribution")
+def text_length_distribution():
+    """Raw text length distribution across documents."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT d.id, d.title, d.filename, d.category, d.source, "
+            "LENGTH(d.raw_text) as text_length "
+            "FROM documents d "
+            "WHERE d.raw_text IS NOT NULL "
+            "ORDER BY text_length DESC"
+        ).fetchall()
+
+    docs = [dict(r) for r in rows]
+    lengths = [d["text_length"] for d in docs]
+
+    buckets = {"<1K": 0, "1K-5K": 0, "5K-20K": 0, "20K-100K": 0, ">100K": 0}
+    for tl in lengths:
+        if tl < 1000:
+            buckets["<1K"] += 1
+        elif tl < 5000:
+            buckets["1K-5K"] += 1
+        elif tl < 20000:
+            buckets["5K-20K"] += 1
+        elif tl < 100000:
+            buckets["20K-100K"] += 1
+        else:
+            buckets[">100K"] += 1
+
+    return {
+        "documents": docs[:100],
+        "total": len(docs),
+        "avg_length": round(sum(lengths) / len(lengths)) if lengths else 0,
+        "max_length": max(lengths) if lengths else 0,
+        "buckets": buckets,
+    }
+
+
+# ── Source Entity Density ────────────────────────
+
+
+@app.get("/api/source-entity-density")
+def source_entity_density():
+    """Average entities per document by source."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT d.source, COUNT(DISTINCT d.id) as doc_count, "
+            "COUNT(DISTINCT de.entity_id) as total_entities, "
+            "ROUND(CAST(COUNT(DISTINCT de.entity_id) AS REAL) / COUNT(DISTINCT d.id), 1) as entities_per_doc "
+            "FROM documents d "
+            "LEFT JOIN document_entities de ON de.document_id = d.id "
+            "WHERE d.source IS NOT NULL AND d.source != '' "
+            "GROUP BY d.source "
+            "ORDER BY entities_per_doc DESC"
+        ).fetchall()
+
+    return {"sources": [dict(r) for r in rows], "total": len(rows)}
+
+
+# ── Event Timeline Heatmap ───────────────────────
+
+
+@app.get("/api/event-heatmap")
+def event_heatmap():
+    """Events by year-month grid."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT SUBSTR(event_date, 1, 4) as year, "
+            "SUBSTR(event_date, 6, 2) as month, "
+            "COUNT(*) as cnt "
+            "FROM events "
+            "WHERE event_date IS NOT NULL AND LENGTH(event_date) >= 7 "
+            "AND CAST(SUBSTR(event_date, 1, 4) AS INTEGER) BETWEEN 1950 AND 2030 "
+            "GROUP BY year, month "
+            "ORDER BY year, month"
+        ).fetchall()
+
+    return {"cells": [dict(r) for r in rows], "total": len(rows)}
+
+
+# ── Connection Weight Distribution ───────────────
+
+
+@app.get("/api/connection-weight-distribution")
+def connection_weight_distribution():
+    """Edge weight histogram for entity connections."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT weight, COUNT(*) as cnt FROM entity_connections GROUP BY weight ORDER BY weight"
+        ).fetchall()
+
+        stats = conn.execute(
+            "SELECT COUNT(*) as total, ROUND(AVG(weight), 2) as avg_weight, "
+            "MAX(weight) as max_weight, MIN(weight) as min_weight "
+            "FROM entity_connections"
+        ).fetchone()
+
+    return {
+        "distribution": [dict(r) for r in rows],
+        "total": stats["total"],
+        "avg_weight": stats["avg_weight"],
+        "max_weight": stats["max_weight"],
+        "min_weight": stats["min_weight"],
+    }
+
+
+# ── Multi-Source Entities ────────────────────────
+
+
+@app.get("/api/multi-source-entities")
+def multi_source_entities():
+    """Entities appearing in 3+ different sources."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT e.id, e.name, e.type, "
+            "COUNT(DISTINCT d.source) as source_count, "
+            "COUNT(DISTINCT d.id) as doc_count, "
+            "GROUP_CONCAT(DISTINCT d.source) as sources "
+            "FROM entities e "
+            "JOIN document_entities de ON de.entity_id = e.id "
+            "JOIN documents d ON d.id = de.document_id "
+            "WHERE d.source IS NOT NULL AND d.source != '' "
+            "GROUP BY e.id "
+            "HAVING source_count >= 3 "
+            "ORDER BY source_count DESC, doc_count DESC "
+            "LIMIT 100"
+        ).fetchall()
+
+    return {"entities": [dict(r) for r in rows], "total": len(rows)}
+
+
 # ═══════════════════════════════════════════
 # STATIC FILES (serve the frontend)
 # ═══════════════════════════════════════════

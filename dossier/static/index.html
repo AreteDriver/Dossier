@@ -2035,6 +2035,8 @@ body::before {
 .aliaslist-view.active, .catstats-view.active, .redactsrc-view.active, .paircodocs-view.active, .eventtypes-view.active, .finsummary-view.active { display: flex; }
 .entdoccount-view, .srcoverlap-view, .eventctx-view, .datecluster-view, .redactpattern-view, .entiso-view { display: none; flex-direction: column; gap: 16px; }
 .entdoccount-view.active, .srcoverlap-view.active, .eventctx-view.active, .datecluster-view.active, .redactpattern-view.active, .entiso-view.active { display: flex; }
+.entgrowth-view, .txtlen-view, .srcentdensity-view, .eventheat-view, .connweight-view, .multisrc-view { display: none; flex-direction: column; gap: 16px; }
+.entgrowth-view.active, .txtlen-view.active, .srcentdensity-view.active, .eventheat-view.active, .connweight-view.active, .multisrc-view.active { display: flex; }
 .rel-edge { display: flex; align-items: center; gap: 8px; padding: 4px 0; border-bottom: 1px solid var(--border); }
 .sbs-col { flex: 1; padding: 12px; background: var(--bg-card); border-radius: var(--radius); border: 1px solid var(--border); overflow: hidden; }
 .sbs-header { font-family: var(--font-mono); font-size: 12px; font-weight: 600; color: var(--text-primary); margin-bottom: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -2583,6 +2585,30 @@ body::before {
       <div class="sidebar-item" data-view="entiso" id="entisoNav">
         <div class="sidebar-dot" style="background:var(--entity-org)"></div>
         Entity Isolation
+      </div>
+      <div class="sidebar-item" data-view="entgrowth" id="entgrowthNav">
+        <div class="sidebar-dot" style="background:var(--entity-date)"></div>
+        Entity Growth
+      </div>
+      <div class="sidebar-item" data-view="txtlen" id="txtlenNav">
+        <div class="sidebar-dot" style="background:var(--entity-place)"></div>
+        Text Length Dist
+      </div>
+      <div class="sidebar-item" data-view="srcentdensity" id="srcentdensityNav">
+        <div class="sidebar-dot" style="background:var(--entity-person)"></div>
+        Source Entity Density
+      </div>
+      <div class="sidebar-item" data-view="eventheat" id="eventheatNav">
+        <div class="sidebar-dot" style="background:var(--entity-org)"></div>
+        Event Heatmap
+      </div>
+      <div class="sidebar-item" data-view="connweight" id="connweightNav">
+        <div class="sidebar-dot" style="background:var(--entity-date)"></div>
+        Connection Weights
+      </div>
+      <div class="sidebar-item" data-view="multisrc" id="multisrcNav">
+        <div class="sidebar-dot" style="background:var(--entity-place)"></div>
+        Multi-Source Entities
       </div>
     </div>
 
@@ -3898,6 +3924,36 @@ body::before {
       <div id="entisoContent">Loading entity isolation...</div>
     </div>
 
+    <div class="entgrowth-view" id="entgrowthView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Entity Growth Rate</div>
+      <div id="entgrowthContent">Loading entity growth...</div>
+    </div>
+
+    <div class="txtlen-view" id="txtlenView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Text Length Distribution</div>
+      <div id="txtlenContent">Loading text length distribution...</div>
+    </div>
+
+    <div class="srcentdensity-view" id="srcentdensityView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Source Entity Density</div>
+      <div id="srcentdensityContent">Loading source entity density...</div>
+    </div>
+
+    <div class="eventheat-view" id="eventheatView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Event Timeline Heatmap</div>
+      <div id="eventheatContent">Loading event heatmap...</div>
+    </div>
+
+    <div class="connweight-view" id="connweightView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Connection Weight Distribution</div>
+      <div id="connweightContent">Loading connection weights...</div>
+    </div>
+
+    <div class="multisrc-view" id="multisrcView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Multi-Source Entities</div>
+      <div id="multisrcContent">Loading multi-source entities...</div>
+    </div>
+
   </main>
 
   <!-- RIGHT PANEL -->
@@ -4612,6 +4668,12 @@ function hideAllViews() {
   document.getElementById('dateclusterView').classList.remove('active');
   document.getElementById('redactpatternView').classList.remove('active');
   document.getElementById('entisoView').classList.remove('active');
+  document.getElementById('entgrowthView').classList.remove('active');
+  document.getElementById('txtlenView').classList.remove('active');
+  document.getElementById('srcentdensityView').classList.remove('active');
+  document.getElementById('eventheatView').classList.remove('active');
+  document.getElementById('connweightView').classList.remove('active');
+  document.getElementById('multisrcView').classList.remove('active');
 }
 
 function showDocumentView() {
@@ -4779,6 +4841,12 @@ document.querySelectorAll('.sidebar-item[data-view]').forEach(item => {
     else if (view === 'datecluster') showDateClusterView();
     else if (view === 'redactpattern') showRedactPatternView();
     else if (view === 'entiso') showEntIsoView();
+    else if (view === 'entgrowth') showEntGrowthView();
+    else if (view === 'txtlen') showTxtLenView();
+    else if (view === 'srcentdensity') showSrcEntDensityView();
+    else if (view === 'eventheat') showEventHeatView();
+    else if (view === 'connweight') showConnWeightView();
+    else if (view === 'multisrc') showMultiSrcView();
   });
 });
 
@@ -5944,6 +6012,12 @@ function goBackFromReader() {
   else if (readerPreviousView === 'datecluster') showDateClusterView();
   else if (readerPreviousView === 'redactpattern') showRedactPatternView();
   else if (readerPreviousView === 'entiso') showEntIsoView();
+  else if (readerPreviousView === 'entgrowth') showEntGrowthView();
+  else if (readerPreviousView === 'txtlen') showTxtLenView();
+  else if (readerPreviousView === 'srcentdensity') showSrcEntDensityView();
+  else if (readerPreviousView === 'eventheat') showEventHeatView();
+  else if (readerPreviousView === 'connweight') showConnWeightView();
+  else if (readerPreviousView === 'multisrc') showMultiSrcView();
   else showDocumentView();
 }
 
@@ -12950,6 +13024,214 @@ async function loadEntIso() {
     }
     el.innerHTML = html;
   } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load entity isolation</div>'; }
+}
+
+
+// ── Entity Growth ──
+
+function showEntGrowthView() {
+  currentView = 'entgrowth';
+  hideAllViews();
+  document.getElementById('entgrowthView').classList.add('active');
+  loadEntGrowth();
+}
+
+async function loadEntGrowth() {
+  const el = document.getElementById('entgrowthContent');
+  el.innerHTML = 'Loading entity growth...';
+  try {
+    const data = await fetchJSON('/api/entity-growth');
+    let html = `<div class="stat-card" style="margin-bottom:12px;"><div class="stat-value">${data.total_dates}</div><div class="stat-label">Ingest Dates</div></div>`;
+
+    if (data.timeline.length) {
+      const maxE = Math.max(...data.timeline.map(t => t.new_entities));
+      html += '<div style="display:flex;gap:2px;align-items:end;height:80px;margin-bottom:12px;">';
+      data.timeline.forEach(t => {
+        const pct = maxE ? (t.new_entities / maxE * 100) : 0;
+        html += `<div title="${t.ingest_date}: ${t.new_entities} entities, ${t.docs_ingested} docs" style="flex:1;background:var(--accent);min-height:2px;height:${pct}%;border-radius:2px;"></div>`;
+      });
+      html += '</div>';
+
+      html += '<table class="data-table"><thead><tr><th>Date</th><th>New Entities</th><th>Docs Ingested</th></tr></thead><tbody>';
+      data.timeline.forEach(t => {
+        html += `<tr><td>${t.ingest_date}</td><td>${t.new_entities.toLocaleString()}</td><td>${t.docs_ingested}</td></tr>`;
+      });
+      html += '</tbody></table>';
+    }
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load entity growth</div>'; }
+}
+
+// ── Text Length Distribution ──
+
+function showTxtLenView() {
+  currentView = 'txtlen';
+  hideAllViews();
+  document.getElementById('txtlenView').classList.add('active');
+  loadTxtLen();
+}
+
+async function loadTxtLen() {
+  const el = document.getElementById('txtlenContent');
+  el.innerHTML = 'Loading text length distribution...';
+  try {
+    const data = await fetchJSON('/api/text-length-distribution');
+    let html = `<div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:12px;">`;
+    html += `<div class="stat-card"><div class="stat-value">${data.total}</div><div class="stat-label">Documents</div></div>`;
+    html += `<div class="stat-card"><div class="stat-value">${data.avg_length.toLocaleString()}</div><div class="stat-label">Avg Length</div></div>`;
+    html += `<div class="stat-card"><div class="stat-value">${data.max_length.toLocaleString()}</div><div class="stat-label">Max Length</div></div>`;
+    html += `</div>`;
+
+    html += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">';
+    Object.entries(data.buckets).forEach(([k,v]) => html += `<span style="font-size:11px;background:var(--bg-card);padding:3px 8px;border-radius:3px;">${k}: ${v}</span>`);
+    html += '</div>';
+
+    if (data.documents.length) {
+      html += '<table class="data-table"><thead><tr><th>Document</th><th>Category</th><th>Source</th><th>Length</th></tr></thead><tbody>';
+      data.documents.forEach(d => {
+        html += `<tr><td><a href="#" onclick="openReader(${d.id});return false;">${(d.title||d.filename).substring(0,40)}</a></td>`;
+        html += `<td>${d.category||''}</td><td>${d.source||''}</td>`;
+        html += `<td>${d.text_length.toLocaleString()}</td></tr>`;
+      });
+      html += '</tbody></table>';
+    }
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load text length distribution</div>'; }
+}
+
+// ── Source Entity Density ──
+
+function showSrcEntDensityView() {
+  currentView = 'srcentdensity';
+  hideAllViews();
+  document.getElementById('srcentdensityView').classList.add('active');
+  loadSrcEntDensity();
+}
+
+async function loadSrcEntDensity() {
+  const el = document.getElementById('srcentdensityContent');
+  el.innerHTML = 'Loading source entity density...';
+  try {
+    const data = await fetchJSON('/api/source-entity-density');
+    let html = `<div class="stat-card" style="margin-bottom:12px;"><div class="stat-value">${data.total}</div><div class="stat-label">Sources</div></div>`;
+
+    if (data.sources.length) {
+      html += '<table class="data-table"><thead><tr><th>Source</th><th>Docs</th><th>Unique Entities</th><th>Entities/Doc</th></tr></thead><tbody>';
+      data.sources.forEach(s => {
+        html += `<tr><td>${s.source}</td><td>${s.doc_count}</td>`;
+        html += `<td>${s.total_entities.toLocaleString()}</td>`;
+        html += `<td style="font-weight:600;color:var(--accent);">${s.entities_per_doc}</td></tr>`;
+      });
+      html += '</tbody></table>';
+    }
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load source entity density</div>'; }
+}
+
+// ── Event Heatmap ──
+
+function showEventHeatView() {
+  currentView = 'eventheat';
+  hideAllViews();
+  document.getElementById('eventheatView').classList.add('active');
+  loadEventHeat();
+}
+
+async function loadEventHeat() {
+  const el = document.getElementById('eventheatContent');
+  el.innerHTML = 'Loading event heatmap...';
+  try {
+    const data = await fetchJSON('/api/event-heatmap');
+    if (!data.cells.length) { el.innerHTML = '<div style="color:var(--text-muted);">No event data.</div>'; return; }
+
+    const years = [...new Set(data.cells.map(c => c.year))].sort();
+    const months = ['01','02','03','04','05','06','07','08','09','10','11','12'];
+    const lookup = {};
+    let maxCnt = 0;
+    data.cells.forEach(c => { lookup[c.year+'-'+c.month] = c.cnt; if (c.cnt > maxCnt) maxCnt = c.cnt; });
+
+    let html = '<div style="overflow-x:auto;"><table class="data-table" style="font-size:11px;"><thead><tr><th>Year</th>';
+    months.forEach(m => html += `<th>${m}</th>`);
+    html += '</tr></thead><tbody>';
+
+    years.forEach(y => {
+      html += `<tr><td style="font-weight:600;">${y}</td>`;
+      months.forEach(m => {
+        const v = lookup[y+'-'+m] || 0;
+        const intensity = maxCnt ? Math.round(v / maxCnt * 255) : 0;
+        const bg = v ? `rgba(59,130,246,${intensity/255})` : 'transparent';
+        html += `<td style="text-align:center;background:${bg};color:${intensity>128?'#fff':'var(--text-muted)'}">${v||''}</td>`;
+      });
+      html += '</tr>';
+    });
+    html += '</tbody></table></div>';
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load event heatmap</div>'; }
+}
+
+// ── Connection Weight Distribution ──
+
+function showConnWeightView() {
+  currentView = 'connweight';
+  hideAllViews();
+  document.getElementById('connweightView').classList.add('active');
+  loadConnWeight();
+}
+
+async function loadConnWeight() {
+  const el = document.getElementById('connweightContent');
+  el.innerHTML = 'Loading connection weights...';
+  try {
+    const data = await fetchJSON('/api/connection-weight-distribution');
+    let html = `<div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:12px;">`;
+    html += `<div class="stat-card"><div class="stat-value">${data.total.toLocaleString()}</div><div class="stat-label">Total Edges</div></div>`;
+    html += `<div class="stat-card"><div class="stat-value">${data.avg_weight}</div><div class="stat-label">Avg Weight</div></div>`;
+    html += `<div class="stat-card"><div class="stat-value">${data.min_weight}–${data.max_weight}</div><div class="stat-label">Range</div></div>`;
+    html += `</div>`;
+
+    if (data.distribution.length) {
+      const maxC = Math.max(...data.distribution.map(d => d.cnt));
+      html += '<table class="data-table"><thead><tr><th>Weight</th><th>Count</th><th>Bar</th></tr></thead><tbody>';
+      data.distribution.slice(0, 50).forEach(d => {
+        const pct = maxC ? (d.cnt / maxC * 100) : 0;
+        html += `<tr><td>${d.weight}</td><td>${d.cnt.toLocaleString()}</td>`;
+        html += `<td style="width:200px;"><div style="height:8px;background:var(--accent);width:${pct}%;border-radius:3px;"></div></td></tr>`;
+      });
+      html += '</tbody></table>';
+    }
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load connection weights</div>'; }
+}
+
+// ── Multi-Source Entities ──
+
+function showMultiSrcView() {
+  currentView = 'multisrc';
+  hideAllViews();
+  document.getElementById('multisrcView').classList.add('active');
+  loadMultiSrc();
+}
+
+async function loadMultiSrc() {
+  const el = document.getElementById('multisrcContent');
+  el.innerHTML = 'Loading multi-source entities...';
+  try {
+    const data = await fetchJSON('/api/multi-source-entities');
+    let html = `<div class="stat-card" style="margin-bottom:12px;"><div class="stat-value">${data.total}</div><div class="stat-label">Entities in 3+ Sources</div></div>`;
+
+    if (data.entities.length) {
+      html += '<table class="data-table"><thead><tr><th>Entity</th><th>Type</th><th>Sources</th><th>Docs</th><th>Source List</th></tr></thead><tbody>';
+      data.entities.forEach(e => {
+        html += `<tr><td>${e.name}</td><td><span class="entity-tag ${e.type}" style="font-size:9px;">${e.type}</span></td>`;
+        html += `<td style="font-weight:600;color:var(--accent);">${e.source_count}</td><td>${e.doc_count}</td>`;
+        html += `<td style="font-size:10px;color:var(--text-muted);">${(e.sources||'').substring(0,80)}</td></tr>`;
+      });
+      html += '</tbody></table>';
+    } else {
+      html += '<div style="color:var(--text-muted);">No entities found in 3+ sources.</div>';
+    }
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load multi-source entities</div>'; }
 }
 
 
