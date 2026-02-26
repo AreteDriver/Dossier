@@ -10389,6 +10389,159 @@ def connection_weight_stats():
     }
 
 
+# ── Round 32 ──────────────────────────────────
+
+
+@app.get("/api/entity-category-breakdown")
+def entity_category_breakdown():
+    """Entity types per document category."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT d.category, e.type, COUNT(DISTINCT e.id) AS count "
+            "FROM document_entities de "
+            "JOIN documents d ON d.id = de.document_id "
+            "JOIN entities e ON e.id = de.entity_id "
+            "GROUP BY d.category, e.type ORDER BY d.category, count DESC"
+        ).fetchall()
+    matrix = {}
+    types = set()
+    for r in rows:
+        cat = r["category"]
+        if cat not in matrix:
+            matrix[cat] = {}
+        matrix[cat][r["type"]] = r["count"]
+        types.add(r["type"])
+    return {
+        "categories": list(matrix.keys()),
+        "types": sorted(types),
+        "matrix": matrix,
+    }
+
+
+@app.get("/api/document-age-distribution")
+def document_age_distribution():
+    """How old documents are by ingestion date."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT "
+            "CAST(JULIANDAY('now') - JULIANDAY(ingested_at) AS INTEGER) AS age_days, "
+            "COUNT(*) AS count "
+            "FROM documents WHERE ingested_at IS NOT NULL "
+            "GROUP BY age_days ORDER BY age_days"
+        ).fetchall()
+    buckets = {"< 1 day": 0, "1-7 days": 0, "8-30 days": 0, "31-90 days": 0, "90+ days": 0}
+    for r in rows:
+        age = r["age_days"]
+        cnt = r["count"]
+        if age < 1:
+            buckets["< 1 day"] += cnt
+        elif age <= 7:
+            buckets["1-7 days"] += cnt
+        elif age <= 30:
+            buckets["8-30 days"] += cnt
+        elif age <= 90:
+            buckets["31-90 days"] += cnt
+        else:
+            buckets["90+ days"] += cnt
+    return {"buckets": [{"range": k, "count": v} for k, v in buckets.items()]}
+
+
+@app.get("/api/event-source-density")
+def event_source_density():
+    """Events per document by source."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT d.source, COUNT(ev.id) AS event_count, "
+            "COUNT(DISTINCT d.id) AS doc_count, "
+            "ROUND(CAST(COUNT(ev.id) AS REAL) / COUNT(DISTINCT d.id), 1) AS avg_events "
+            "FROM documents d "
+            "LEFT JOIN events ev ON ev.document_id = d.id "
+            "GROUP BY d.source ORDER BY avg_events DESC"
+        ).fetchall()
+    return {"sources": [dict(r) for r in rows]}
+
+
+@app.get("/api/entity-pair-strength")
+def entity_pair_strength():
+    """Strongest entity pair connections by weight."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT ea.name AS name_a, ea.type AS type_a, "
+            "eb.name AS name_b, eb.type AS type_b, "
+            "ec.weight, "
+            "(SELECT COUNT(DISTINCT de.document_id) FROM document_entities de "
+            " WHERE de.entity_id = ec.entity_a_id) AS docs_a, "
+            "(SELECT COUNT(DISTINCT de.document_id) FROM document_entities de "
+            " WHERE de.entity_id = ec.entity_b_id) AS docs_b "
+            "FROM entity_connections ec "
+            "JOIN entities ea ON ea.id = ec.entity_a_id "
+            "JOIN entities eb ON eb.id = ec.entity_b_id "
+            "ORDER BY ec.weight DESC LIMIT 100"
+        ).fetchall()
+    return {"pairs": [dict(r) for r in rows]}
+
+
+@app.get("/api/source-document-quality")
+def source_document_quality():
+    """Text/entity/event richness per source."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT d.source, COUNT(*) AS doc_count, "
+            "ROUND(AVG(d.pages), 1) AS avg_pages, "
+            "ROUND(100.0 * SUM(CASE WHEN d.raw_text IS NOT NULL AND LENGTH(d.raw_text) > 0 THEN 1 ELSE 0 END) / COUNT(*), 1) AS with_text, "
+            "ROUND(100.0 * SUM(CASE WHEN d.date IS NOT NULL AND d.date != '' THEN 1 ELSE 0 END) / COUNT(*), 1) AS with_date "
+            "FROM documents d GROUP BY d.source ORDER BY doc_count DESC"
+        ).fetchall()
+    return [
+        {
+            "source": r["source"],
+            "doc_count": r["doc_count"],
+            "avg_pages": r["avg_pages"] or 0,
+            "with_text": r["with_text"],
+            "with_date": r["with_date"],
+            "quality_score": round((r["with_text"] + r["with_date"]) / 2, 1),
+        }
+        for r in rows
+    ]
+
+
+@app.get("/api/entity-alias-coverage")
+def entity_alias_coverage():
+    """Entities with vs without aliases."""
+    with get_db() as conn:
+        with_aliases = conn.execute(
+            "SELECT COUNT(DISTINCT entity_id) AS cnt FROM entity_aliases"
+        ).fetchone()["cnt"]
+        total = conn.execute("SELECT COUNT(*) AS cnt FROM entities").fetchone()["cnt"]
+        total_aliases = conn.execute("SELECT COUNT(*) AS cnt FROM entity_aliases").fetchone()["cnt"]
+        top = conn.execute(
+            "SELECT e.id, e.name, e.type, COUNT(ea.id) AS alias_count "
+            "FROM entities e "
+            "JOIN entity_aliases ea ON ea.entity_id = e.id "
+            "GROUP BY e.id ORDER BY alias_count DESC LIMIT 50"
+        ).fetchall()
+        top_aliased = []
+        for r in top:
+            aliases = conn.execute(
+                "SELECT alias_name FROM entity_aliases WHERE entity_id = ?", (r["id"],)
+            ).fetchall()
+            top_aliased.append(
+                {
+                    "name": r["name"],
+                    "type": r["type"],
+                    "alias_count": r["alias_count"],
+                    "aliases": [a["alias_name"] for a in aliases],
+                }
+            )
+    return {
+        "total_entities": total,
+        "with_aliases": with_aliases,
+        "total_aliases": total_aliases,
+        "coverage_pct": round(100.0 * with_aliases / total, 1) if total else 0,
+        "top_aliased": top_aliased,
+    }
+
+
 # ═══════════════════════════════════════════
 # STATIC FILES (serve the frontend)
 # ═══════════════════════════════════════════
