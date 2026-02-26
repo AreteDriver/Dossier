@@ -2055,6 +2055,8 @@ body::before {
 .entcatbreak-view.active, .docage-view.active, .evtsrcdensity-view.active, .entpairstr-view.active, .srcdocqual-view.active, .aliascov-view.active { display: flex; }
 .entcooccur-view, .doccattimeline-view, .evtresbreak-view, .entdocreach-view, .srcoverlapmatrix-view, .redacttimeline-view { display: none; flex-direction: column; gap: 16px; }
 .entcooccur-view.active, .doccattimeline-view.active, .evtresbreak-view.active, .entdocreach-view.active, .srcoverlapmatrix-view.active, .redacttimeline-view.active { display: flex; }
+.enttypedist-view, .doctextlen-view, .evtconfdist-view, .srcdatespan-view, .entmentfreq-view, .conntypebreak-view { display: none; flex-direction: column; gap: 16px; }
+.enttypedist-view.active, .doctextlen-view.active, .evtconfdist-view.active, .srcdatespan-view.active, .entmentfreq-view.active, .conntypebreak-view.active { display: flex; }
 .rel-edge { display: flex; align-items: center; gap: 8px; padding: 4px 0; border-bottom: 1px solid var(--border); }
 .sbs-col { flex: 1; padding: 12px; background: var(--bg-card); border-radius: var(--radius); border: 1px solid var(--border); overflow: hidden; }
 .sbs-header { font-family: var(--font-mono); font-size: 12px; font-weight: 600; color: var(--text-primary); margin-bottom: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -2843,6 +2845,30 @@ body::before {
       <div class="sidebar-item" data-view="redacttimeline" id="redacttimelineNav">
         <div class="sidebar-dot" style="background:var(--accent)"></div>
         Redaction Timeline
+      </div>
+      <div class="sidebar-item" data-view="enttypedist" id="enttypedistNav">
+        <div class="sidebar-dot" style="background:var(--entity-person)"></div>
+        Entity Type Distribution
+      </div>
+      <div class="sidebar-item" data-view="doctextlen" id="doctextlenNav">
+        <div class="sidebar-dot" style="background:var(--entity-org)"></div>
+        Document Text Length
+      </div>
+      <div class="sidebar-item" data-view="evtconfdist" id="evtconfdistNav">
+        <div class="sidebar-dot" style="background:var(--entity-location)"></div>
+        Event Confidence Distribution
+      </div>
+      <div class="sidebar-item" data-view="srcdatespan" id="srcdatespanNav">
+        <div class="sidebar-dot" style="background:var(--accent)"></div>
+        Source Date Span
+      </div>
+      <div class="sidebar-item" data-view="entmentfreq" id="entmentfreqNav">
+        <div class="sidebar-dot" style="background:var(--entity-person)"></div>
+        Entity Mention Frequency
+      </div>
+      <div class="sidebar-item" data-view="conntypebreak" id="conntypebreakNav">
+        <div class="sidebar-dot" style="background:var(--entity-org)"></div>
+        Connection Type Breakdown
       </div>
     </div>
 
@@ -4458,6 +4484,36 @@ body::before {
       <div id="redacttimelineContent">Loading redaction timeline...</div>
     </div>
 
+    <div class="enttypedist-view" id="enttypedistView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Entity Type Distribution</div>
+      <div id="enttypedistContent">Loading entity type distribution...</div>
+    </div>
+
+    <div class="doctextlen-view" id="doctextlenView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Document Text Length</div>
+      <div id="doctextlenContent">Loading document text length...</div>
+    </div>
+
+    <div class="evtconfdist-view" id="evtconfdistView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Event Confidence Distribution</div>
+      <div id="evtconfdistContent">Loading event confidence distribution...</div>
+    </div>
+
+    <div class="srcdatespan-view" id="srcdatespanView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Source Date Span</div>
+      <div id="srcdatespanContent">Loading source date span...</div>
+    </div>
+
+    <div class="entmentfreq-view" id="entmentfreqView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Entity Mention Frequency</div>
+      <div id="entmentfreqContent">Loading entity mention frequency...</div>
+    </div>
+
+    <div class="conntypebreak-view" id="conntypebreakView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Connection Type Breakdown</div>
+      <div id="conntypebreakContent">Loading connection type breakdown...</div>
+    </div>
+
   </main>
 
   <!-- RIGHT PANEL -->
@@ -5232,6 +5288,12 @@ function hideAllViews() {
   document.getElementById('entdocreachView').classList.remove('active');
   document.getElementById('srcoverlapmatrixView').classList.remove('active');
   document.getElementById('redacttimelineView').classList.remove('active');
+  document.getElementById('enttypedistView').classList.remove('active');
+  document.getElementById('doctextlenView').classList.remove('active');
+  document.getElementById('evtconfdistView').classList.remove('active');
+  document.getElementById('srcdatespanView').classList.remove('active');
+  document.getElementById('entmentfreqView').classList.remove('active');
+  document.getElementById('conntypebreakView').classList.remove('active');
 }
 
 function showDocumentView() {
@@ -5459,6 +5521,12 @@ document.querySelectorAll('.sidebar-item[data-view]').forEach(item => {
     else if (view === 'entdocreach') showEntDocReachView();
     else if (view === 'srcoverlapmatrix') showSrcOverlapMatrixView();
     else if (view === 'redacttimeline') showRedactTimelineView();
+    else if (view === 'enttypedist') showEntTypeDistView();
+    else if (view === 'doctextlen') showDocTextLenView();
+    else if (view === 'evtconfdist') showEvtConfDistView();
+    else if (view === 'srcdatespan') showSrcDateSpanView();
+    else if (view === 'entmentfreq') showEntMentFreqView();
+    else if (view === 'conntypebreak') showConnTypeBreakView();
   });
 });
 
@@ -6684,6 +6752,12 @@ function goBackFromReader() {
   else if (readerPreviousView === 'entdocreach') showEntDocReachView();
   else if (readerPreviousView === 'srcoverlapmatrix') showSrcOverlapMatrixView();
   else if (readerPreviousView === 'redacttimeline') showRedactTimelineView();
+  else if (readerPreviousView === 'enttypedist') showEntTypeDistView();
+  else if (readerPreviousView === 'doctextlen') showDocTextLenView();
+  else if (readerPreviousView === 'evtconfdist') showEvtConfDistView();
+  else if (readerPreviousView === 'srcdatespan') showSrcDateSpanView();
+  else if (readerPreviousView === 'entmentfreq') showEntMentFreqView();
+  else if (readerPreviousView === 'conntypebreak') showConnTypeBreakView();
   else showDocumentView();
 }
 
@@ -15423,6 +15497,135 @@ async function loadRedactTimeline() {
     } else { html += '<div style="color:var(--text-muted);">No redaction timeline data available.</div>'; }
     el.innerHTML = html;
   } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load redaction timeline</div>'; }
+}
+
+function showEntTypeDistView() {
+  currentView = 'enttypedist';
+  hideAllViews();
+  document.getElementById('enttypedistView').classList.add('active');
+  loadEntTypeDist();
+}
+async function loadEntTypeDist() {
+  const el = document.getElementById('enttypedistContent');
+  try {
+    const res = await fetch('/api/entity-type-distribution');
+    const data = await res.json();
+    let html = `<div style="background:var(--bg-secondary);padding:12px;border-radius:6px;margin-bottom:16px;"><div style="font-size:11px;color:var(--text-muted);">Total Entities</div><div style="font-size:20px;font-weight:700;color:var(--text-primary);">${data.total.toLocaleString()}</div></div>`;
+    html += '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="border-bottom:2px solid var(--border);"><th style="text-align:left;padding:8px;">Type</th><th style="text-align:right;padding:8px;">Count</th><th style="text-align:right;padding:8px;">%</th><th style="text-align:left;padding:8px;width:40%;">Bar</th></tr></thead><tbody>';
+    data.types.forEach(r => {
+      html += `<tr style="border-bottom:1px solid var(--border);"><td style="padding:8px;"><span class="entity-tag ${r.type}" style="font-size:10px;">${r.type}</span></td><td style="text-align:right;padding:8px;font-weight:600;">${r.count.toLocaleString()}</td><td style="text-align:right;padding:8px;">${r.pct}%</td><td style="padding:8px;"><div style="background:var(--accent);height:14px;border-radius:3px;width:${r.pct}%;"></div></td></tr>`;
+    });
+    html += '</tbody></table>';
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load entity type distribution</div>'; }
+}
+
+function showDocTextLenView() {
+  currentView = 'doctextlen';
+  hideAllViews();
+  document.getElementById('doctextlenView').classList.add('active');
+  loadDocTextLen();
+}
+async function loadDocTextLen() {
+  const el = document.getElementById('doctextlenContent');
+  try {
+    const res = await fetch('/api/document-text-length');
+    const data = await res.json();
+    const s = data.stats;
+    let html = `<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;">`;
+    html += `<div style="background:var(--bg-secondary);padding:12px;border-radius:6px;"><div style="font-size:11px;color:var(--text-muted);">Docs With Text</div><div style="font-size:20px;font-weight:700;color:var(--text-primary);">${s.total}</div></div>`;
+    html += `<div style="background:var(--bg-secondary);padding:12px;border-radius:6px;"><div style="font-size:11px;color:var(--text-muted);">Avg Length</div><div style="font-size:20px;font-weight:700;color:var(--text-primary);">${s.avg_len.toLocaleString()}</div></div>`;
+    html += `<div style="background:var(--bg-secondary);padding:12px;border-radius:6px;"><div style="font-size:11px;color:var(--text-muted);">Max Length</div><div style="font-size:20px;font-weight:700;color:var(--text-primary);">${s.max_len.toLocaleString()}</div></div>`;
+    html += `<div style="background:var(--bg-secondary);padding:12px;border-radius:6px;"><div style="font-size:11px;color:var(--text-muted);">Min Length</div><div style="font-size:20px;font-weight:700;color:var(--text-primary);">${s.min_len.toLocaleString()}</div></div>`;
+    html += `</div>`;
+    html += '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="border-bottom:2px solid var(--border);"><th style="text-align:left;padding:8px;">Document</th><th style="text-align:right;padding:8px;">Text Length</th></tr></thead><tbody>';
+    data.top_docs.forEach(r => {
+      html += `<tr style="border-bottom:1px solid var(--border);"><td style="padding:8px;">${r.filename}</td><td style="text-align:right;padding:8px;font-weight:600;">${r.text_len.toLocaleString()}</td></tr>`;
+    });
+    html += '</tbody></table>';
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load document text length</div>'; }
+}
+
+function showEvtConfDistView() {
+  currentView = 'evtconfdist';
+  hideAllViews();
+  document.getElementById('evtconfdistView').classList.add('active');
+  loadEvtConfDist();
+}
+async function loadEvtConfDist() {
+  const el = document.getElementById('evtconfdistContent');
+  try {
+    const res = await fetch('/api/event-confidence-distribution');
+    const data = await res.json();
+    let html = `<div style="background:var(--bg-secondary);padding:12px;border-radius:6px;margin-bottom:16px;"><div style="font-size:11px;color:var(--text-muted);">Events With Confidence</div><div style="font-size:20px;font-weight:700;color:var(--text-primary);">${data.total.toLocaleString()}</div></div>`;
+    html += '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="border-bottom:2px solid var(--border);"><th style="text-align:left;padding:8px;">Confidence Level</th><th style="text-align:right;padding:8px;">Count</th><th style="text-align:right;padding:8px;">%</th><th style="text-align:left;padding:8px;width:40%;">Bar</th></tr></thead><tbody>';
+    data.buckets.forEach(r => {
+      html += `<tr style="border-bottom:1px solid var(--border);"><td style="padding:8px;">${r.bucket}</td><td style="text-align:right;padding:8px;font-weight:600;">${r.count.toLocaleString()}</td><td style="text-align:right;padding:8px;">${r.pct}%</td><td style="padding:8px;"><div style="background:var(--accent);height:14px;border-radius:3px;width:${r.pct}%;"></div></td></tr>`;
+    });
+    html += '</tbody></table>';
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load event confidence distribution</div>'; }
+}
+
+function showSrcDateSpanView() {
+  currentView = 'srcdatespan';
+  hideAllViews();
+  document.getElementById('srcdatespanView').classList.add('active');
+  loadSrcDateSpan();
+}
+async function loadSrcDateSpan() {
+  const el = document.getElementById('srcdatespanContent');
+  try {
+    const res = await fetch('/api/source-date-span');
+    const data = await res.json();
+    let html = '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="border-bottom:2px solid var(--border);"><th style="text-align:left;padding:8px;">Source</th><th style="text-align:left;padding:8px;">Earliest</th><th style="text-align:left;padding:8px;">Latest</th><th style="text-align:right;padding:8px;">Events</th></tr></thead><tbody>';
+    data.sources.forEach(r => {
+      html += `<tr style="border-bottom:1px solid var(--border);"><td style="padding:8px;">${r.source || '—'}</td><td style="padding:8px;">${r.earliest || '—'}</td><td style="padding:8px;">${r.latest || '—'}</td><td style="text-align:right;padding:8px;font-weight:600;">${r.event_count.toLocaleString()}</td></tr>`;
+    });
+    html += '</tbody></table>';
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load source date span</div>'; }
+}
+
+function showEntMentFreqView() {
+  currentView = 'entmentfreq';
+  hideAllViews();
+  document.getElementById('entmentfreqView').classList.add('active');
+  loadEntMentFreq();
+}
+async function loadEntMentFreq() {
+  const el = document.getElementById('entmentfreqContent');
+  try {
+    const res = await fetch('/api/entity-mention-frequency');
+    const data = await res.json();
+    let html = '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="border-bottom:2px solid var(--border);"><th style="text-align:left;padding:8px;">Entity</th><th style="text-align:left;padding:8px;">Type</th><th style="text-align:right;padding:8px;">Mentions</th></tr></thead><tbody>';
+    data.entities.forEach(r => {
+      html += `<tr style="border-bottom:1px solid var(--border);"><td style="padding:8px;">${r.name}</td><td style="padding:8px;"><span class="entity-tag ${r.type}" style="font-size:10px;">${r.type}</span></td><td style="text-align:right;padding:8px;font-weight:600;">${r.mentions}</td></tr>`;
+    });
+    html += '</tbody></table>';
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load entity mention frequency</div>'; }
+}
+
+function showConnTypeBreakView() {
+  currentView = 'conntypebreak';
+  hideAllViews();
+  document.getElementById('conntypebreakView').classList.add('active');
+  loadConnTypeBreak();
+}
+async function loadConnTypeBreak() {
+  const el = document.getElementById('conntypebreakContent');
+  try {
+    const res = await fetch('/api/connection-type-breakdown');
+    const data = await res.json();
+    let html = '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="border-bottom:2px solid var(--border);"><th style="text-align:left;padding:8px;">Type A</th><th style="text-align:left;padding:8px;">Type B</th><th style="text-align:right;padding:8px;">Count</th><th style="text-align:right;padding:8px;">Avg Weight</th></tr></thead><tbody>';
+    data.type_pairs.forEach(r => {
+      html += `<tr style="border-bottom:1px solid var(--border);"><td style="padding:8px;"><span class="entity-tag ${r.type_a}" style="font-size:10px;">${r.type_a}</span></td><td style="padding:8px;"><span class="entity-tag ${r.type_b}" style="font-size:10px;">${r.type_b}</span></td><td style="text-align:right;padding:8px;font-weight:600;">${r.count.toLocaleString()}</td><td style="text-align:right;padding:8px;">${r.avg_weight}</td></tr>`;
+    });
+    html += '</tbody></table>';
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load connection type breakdown</div>'; }
 }
 
 // ─── INIT ───

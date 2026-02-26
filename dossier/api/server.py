@@ -10679,6 +10679,132 @@ def redaction_timeline():
     }
 
 
+@app.get("/api/entity-type-distribution")
+def entity_type_distribution():
+    """Count of entities per type with percentage."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT type, COUNT(*) AS count FROM entities GROUP BY type ORDER BY count DESC"
+        ).fetchall()
+        total = sum(r["count"] for r in rows)
+    return {
+        "total": total,
+        "types": [
+            {
+                "type": r["type"],
+                "count": r["count"],
+                "pct": round(100.0 * r["count"] / total, 1) if total else 0,
+            }
+            for r in rows
+        ],
+    }
+
+
+@app.get("/api/document-text-length")
+def document_text_length():
+    """Distribution of document text lengths."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT id, filename, LENGTH(raw_text) AS text_len "
+            "FROM documents WHERE raw_text IS NOT NULL AND LENGTH(raw_text) > 0 "
+            "ORDER BY text_len DESC LIMIT 100"
+        ).fetchall()
+        stats = conn.execute(
+            "SELECT COUNT(*) AS total, "
+            "AVG(LENGTH(raw_text)) AS avg_len, "
+            "MAX(LENGTH(raw_text)) AS max_len, "
+            "MIN(LENGTH(raw_text)) AS min_len "
+            "FROM documents WHERE raw_text IS NOT NULL AND LENGTH(raw_text) > 0"
+        ).fetchone()
+    return {
+        "stats": {
+            "total": stats["total"],
+            "avg_len": round(stats["avg_len"] or 0),
+            "max_len": stats["max_len"] or 0,
+            "min_len": stats["min_len"] or 0,
+        },
+        "top_docs": [dict(r) for r in rows],
+    }
+
+
+@app.get("/api/event-confidence-distribution")
+def event_confidence_distribution():
+    """Distribution of event confidence scores."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT "
+            "CASE "
+            "  WHEN confidence >= 0.9 THEN 'Very High (0.9-1.0)' "
+            "  WHEN confidence >= 0.7 THEN 'High (0.7-0.9)' "
+            "  WHEN confidence >= 0.5 THEN 'Medium (0.5-0.7)' "
+            "  WHEN confidence >= 0.3 THEN 'Low (0.3-0.5)' "
+            "  ELSE 'Very Low (0-0.3)' "
+            "END AS bucket, "
+            "COUNT(*) AS count "
+            "FROM events WHERE confidence IS NOT NULL "
+            "GROUP BY bucket ORDER BY MIN(confidence) DESC"
+        ).fetchall()
+        total = conn.execute(
+            "SELECT COUNT(*) AS cnt FROM events WHERE confidence IS NOT NULL"
+        ).fetchone()["cnt"]
+    return {
+        "total": total,
+        "buckets": [
+            {
+                "bucket": r["bucket"],
+                "count": r["count"],
+                "pct": round(100.0 * r["count"] / total, 1) if total else 0,
+            }
+            for r in rows
+        ],
+    }
+
+
+@app.get("/api/source-date-span")
+def source_date_span():
+    """Earliest and latest event dates per source."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT d.source, "
+            "MIN(ev.event_date) AS earliest, "
+            "MAX(ev.event_date) AS latest, "
+            "COUNT(ev.id) AS event_count "
+            "FROM events ev "
+            "JOIN documents d ON d.id = ev.document_id "
+            "WHERE ev.event_date IS NOT NULL AND ev.event_date != '' "
+            "GROUP BY d.source ORDER BY earliest"
+        ).fetchall()
+    return {"sources": [dict(r) for r in rows]}
+
+
+@app.get("/api/entity-mention-frequency")
+def entity_mention_frequency():
+    """How many times entities are mentioned across documents (top 100)."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT e.name, e.type, COUNT(de.document_id) AS mentions "
+            "FROM entities e "
+            "JOIN document_entities de ON de.entity_id = e.id "
+            "GROUP BY e.id ORDER BY mentions DESC LIMIT 100"
+        ).fetchall()
+    return {"entities": [dict(r) for r in rows]}
+
+
+@app.get("/api/connection-type-breakdown")
+def connection_type_breakdown():
+    """Connection counts grouped by entity type pairs."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT ea.type AS type_a, eb.type AS type_b, "
+            "COUNT(*) AS count, ROUND(AVG(ec.weight), 2) AS avg_weight "
+            "FROM entity_connections ec "
+            "JOIN entities ea ON ea.id = ec.entity_a_id "
+            "JOIN entities eb ON eb.id = ec.entity_b_id "
+            "GROUP BY ea.type, eb.type ORDER BY count DESC"
+        ).fetchall()
+    return {"type_pairs": [dict(r) for r in rows]}
+
+
 # ═══════════════════════════════════════════
 # STATIC FILES (serve the frontend)
 # ═══════════════════════════════════════════
