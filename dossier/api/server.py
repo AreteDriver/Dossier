@@ -11504,6 +11504,115 @@ def connection_asymmetry():
     return {"entities": [dict(r) for r in rows]}
 
 
+# ── Round 40 ─────────────────────────────────────────────────────────
+
+
+@app.get("/api/entity-betweenness-score")
+def entity_betweenness_score():
+    """Entities ranked by how many unique partners they bridge (proxy betweenness)."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT e.id, e.name, e.type, sub.partners "
+            "FROM ("
+            "  SELECT entity_id, COUNT(DISTINCT partner) AS partners FROM ("
+            "    SELECT entity_a_id AS entity_id, entity_b_id AS partner FROM entity_connections "
+            "    UNION ALL "
+            "    SELECT entity_b_id, entity_a_id FROM entity_connections"
+            "  ) GROUP BY entity_id"
+            ") sub "
+            "JOIN entities e ON e.id = sub.entity_id "
+            "ORDER BY sub.partners DESC LIMIT 100"
+        ).fetchall()
+    return {"entities": [dict(r) for r in rows]}
+
+
+@app.get("/api/document-source-diversity")
+def document_source_diversity():
+    """Shannon-style source diversity per category: how many distinct sources cover each."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT category, COUNT(*) AS doc_count, "
+            "COUNT(DISTINCT source) AS distinct_sources "
+            "FROM documents WHERE category IS NOT NULL AND category != '' "
+            "GROUP BY category ORDER BY distinct_sources DESC"
+        ).fetchall()
+    return {"categories": [dict(r) for r in rows]}
+
+
+@app.get("/api/event-burst-detection")
+def event_burst_detection():
+    """Find months with abnormally high event counts (> 2x average)."""
+    with get_db() as conn:
+        months = conn.execute(
+            "SELECT SUBSTR(event_date, 1, 7) AS month, COUNT(*) AS cnt "
+            "FROM events WHERE event_date IS NOT NULL AND LENGTH(event_date) >= 7 "
+            "GROUP BY month ORDER BY month"
+        ).fetchall()
+        if not months:
+            return {"avg": 0, "threshold": 0, "bursts": []}
+        total = sum(r["cnt"] for r in months)
+        avg = total / len(months)
+        threshold = avg * 2
+        bursts = [dict(r) for r in months if r["cnt"] > threshold]
+    return {"avg": round(avg, 2), "threshold": round(threshold, 2), "bursts": bursts}
+
+
+@app.get("/api/source-unique-entities")
+def source_unique_entities():
+    """Entities that appear exclusively in one source."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT d.source, COUNT(DISTINCT de.entity_id) AS unique_entities "
+            "FROM document_entities de "
+            "JOIN documents d ON d.id = de.document_id "
+            "WHERE de.entity_id IN ("
+            "  SELECT de2.entity_id FROM document_entities de2 "
+            "  JOIN documents d2 ON d2.id = de2.document_id "
+            "  GROUP BY de2.entity_id "
+            "  HAVING COUNT(DISTINCT d2.source) = 1"
+            ") "
+            "AND d.source IS NOT NULL AND d.source != '' "
+            "GROUP BY d.source ORDER BY unique_entities DESC"
+        ).fetchall()
+    return {"sources": [dict(r) for r in rows]}
+
+
+@app.get("/api/entity-lifecycle-span")
+def entity_lifecycle_span():
+    """Time span between first and last event appearance for each entity."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT e.id, e.name, e.type, "
+            "MIN(ev.event_date) AS first_seen, MAX(ev.event_date) AS last_seen, "
+            "CAST(JULIANDAY(MAX(ev.event_date)) - JULIANDAY(MIN(ev.event_date)) AS INTEGER) AS span_days "
+            "FROM entities e "
+            "JOIN document_entities de ON de.entity_id = e.id "
+            "JOIN events ev ON ev.document_id = de.document_id "
+            "WHERE ev.event_date IS NOT NULL AND LENGTH(ev.event_date) >= 10 "
+            "GROUP BY e.id HAVING COUNT(DISTINCT ev.event_date) >= 2 "
+            "ORDER BY span_days DESC LIMIT 100"
+        ).fetchall()
+    return {"entities": [dict(r) for r in rows]}
+
+
+@app.get("/api/connection-growth-timeline")
+def connection_growth_timeline():
+    """Connection count over time based on shared document dates."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT SUBSTR(d.date, 1, 7) AS month, "
+            "COUNT(DISTINCT ec.entity_a_id || '-' || ec.entity_b_id) AS connections "
+            "FROM entity_connections ec "
+            "JOIN document_entities de_a ON de_a.entity_id = ec.entity_a_id "
+            "JOIN document_entities de_b ON de_b.entity_id = ec.entity_b_id "
+            "  AND de_a.document_id = de_b.document_id "
+            "JOIN documents d ON d.id = de_a.document_id "
+            "WHERE d.date IS NOT NULL AND LENGTH(d.date) >= 7 "
+            "GROUP BY month ORDER BY month"
+        ).fetchall()
+    return {"timeline": [dict(r) for r in rows]}
+
+
 # ═══════════════════════════════════════════
 # STATIC FILES (serve the frontend)
 # ═══════════════════════════════════════════

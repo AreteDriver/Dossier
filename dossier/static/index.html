@@ -2067,6 +2067,8 @@ body::before {
 .entsharedsrc-view.active, .docfilepattern-view.active, .evtmonthmap-view.active, .srcentconc-view.active, .entconnstrrank-view.active, .redactdoccov-view.active { display: flex; }
 .enttypesrc-view, .docingestgap-view, .evtweekday-view, .srccatcov-view, .entmultialias-view, .connasym-view { display: none; flex-direction: column; gap: 16px; }
 .enttypesrc-view.active, .docingestgap-view.active, .evtweekday-view.active, .srccatcov-view.active, .entmultialias-view.active, .connasym-view.active { display: flex; }
+.entbetween-view, .docsrcdiv-view, .evtburst-view, .srcuniqent-view, .entlifecycle-view, .conngrowth-view { display: none; flex-direction: column; gap: 16px; }
+.entbetween-view.active, .docsrcdiv-view.active, .evtburst-view.active, .srcuniqent-view.active, .entlifecycle-view.active, .conngrowth-view.active { display: flex; }
 .rel-edge { display: flex; align-items: center; gap: 8px; padding: 4px 0; border-bottom: 1px solid var(--border); }
 .sbs-col { flex: 1; padding: 12px; background: var(--bg-card); border-radius: var(--radius); border: 1px solid var(--border); overflow: hidden; }
 .sbs-header { font-family: var(--font-mono); font-size: 12px; font-weight: 600; color: var(--text-primary); margin-bottom: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -2999,6 +3001,30 @@ body::before {
       <div class="sidebar-item" data-view="connasym" id="connasymNav">
         <div class="sidebar-dot" style="background:var(--entity-org)"></div>
         Connection Asymmetry
+      </div>
+      <div class="sidebar-item" data-view="entbetween" id="entbetweenNav">
+        <div class="sidebar-dot" style="background:var(--entity-person)"></div>
+        Entity Betweenness Score
+      </div>
+      <div class="sidebar-item" data-view="docsrcdiv" id="docsrcdivNav">
+        <div class="sidebar-dot" style="background:var(--accent)"></div>
+        Document Source Diversity
+      </div>
+      <div class="sidebar-item" data-view="evtburst" id="evtburstNav">
+        <div class="sidebar-dot" style="background:var(--danger)"></div>
+        Event Burst Detection
+      </div>
+      <div class="sidebar-item" data-view="srcuniqent" id="srcuniqentNav">
+        <div class="sidebar-dot" style="background:var(--entity-location)"></div>
+        Source Unique Entities
+      </div>
+      <div class="sidebar-item" data-view="entlifecycle" id="entlifecycleNav">
+        <div class="sidebar-dot" style="background:var(--entity-person)"></div>
+        Entity Lifecycle Span
+      </div>
+      <div class="sidebar-item" data-view="conngrowth" id="conngrowthNav">
+        <div class="sidebar-dot" style="background:var(--entity-org)"></div>
+        Connection Growth Timeline
       </div>
     </div>
 
@@ -4794,6 +4820,36 @@ body::before {
       <div id="connasymContent">Loading connection asymmetry...</div>
     </div>
 
+    <div class="entbetween-view" id="entbetweenView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Entity Betweenness Score</div>
+      <div id="entbetweenContent">Loading entity betweenness...</div>
+    </div>
+
+    <div class="docsrcdiv-view" id="docsrcdivView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Document Source Diversity</div>
+      <div id="docsrcdivContent">Loading source diversity...</div>
+    </div>
+
+    <div class="evtburst-view" id="evtburstView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Event Burst Detection</div>
+      <div id="evtburstContent">Loading event bursts...</div>
+    </div>
+
+    <div class="srcuniqent-view" id="srcuniqentView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Source Unique Entities</div>
+      <div id="srcuniqentContent">Loading source unique entities...</div>
+    </div>
+
+    <div class="entlifecycle-view" id="entlifecycleView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Entity Lifecycle Span</div>
+      <div id="entlifecycleContent">Loading entity lifecycle...</div>
+    </div>
+
+    <div class="conngrowth-view" id="conngrowthView">
+      <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);">Connection Growth Timeline</div>
+      <div id="conngrowthContent">Loading connection growth...</div>
+    </div>
+
   </main>
 
   <!-- RIGHT PANEL -->
@@ -5604,6 +5660,12 @@ function hideAllViews() {
   document.getElementById('srccatcovView').classList.remove('active');
   document.getElementById('entmultialiasView').classList.remove('active');
   document.getElementById('connasymView').classList.remove('active');
+  document.getElementById('entbetweenView').classList.remove('active');
+  document.getElementById('docsrcdivView').classList.remove('active');
+  document.getElementById('evtburstView').classList.remove('active');
+  document.getElementById('srcuniqentView').classList.remove('active');
+  document.getElementById('entlifecycleView').classList.remove('active');
+  document.getElementById('conngrowthView').classList.remove('active');
 }
 
 function showDocumentView() {
@@ -5867,6 +5929,12 @@ document.querySelectorAll('.sidebar-item[data-view]').forEach(item => {
     else if (view === 'srccatcov') showSrcCatCovView();
     else if (view === 'entmultialias') showEntMultiAliasView();
     else if (view === 'connasym') showConnAsymView();
+    else if (view === 'entbetween') showEntBetweenView();
+    else if (view === 'docsrcdiv') showDocSrcDivView();
+    else if (view === 'evtburst') showEvtBurstView();
+    else if (view === 'srcuniqent') showSrcUniqEntView();
+    else if (view === 'entlifecycle') showEntLifecycleView();
+    else if (view === 'conngrowth') showConnGrowthView();
   });
 });
 
@@ -7128,6 +7196,12 @@ function goBackFromReader() {
   else if (readerPreviousView === 'srccatcov') showSrcCatCovView();
   else if (readerPreviousView === 'entmultialias') showEntMultiAliasView();
   else if (readerPreviousView === 'connasym') showConnAsymView();
+  else if (readerPreviousView === 'entbetween') showEntBetweenView();
+  else if (readerPreviousView === 'docsrcdiv') showDocSrcDivView();
+  else if (readerPreviousView === 'evtburst') showEvtBurstView();
+  else if (readerPreviousView === 'srcuniqent') showSrcUniqEntView();
+  else if (readerPreviousView === 'entlifecycle') showEntLifecycleView();
+  else if (readerPreviousView === 'conngrowth') showConnGrowthView();
   else showDocumentView();
 }
 
@@ -16697,6 +16771,149 @@ async function loadConnAsym() {
     html += '</tbody></table>';
     el.innerHTML = html;
   } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load connection asymmetry</div>'; }
+}
+
+function showEntBetweenView() {
+  currentView = 'entbetween';
+  hideAllViews();
+  document.getElementById('entbetweenView').classList.add('active');
+  loadEntBetween();
+}
+async function loadEntBetween() {
+  const el = document.getElementById('entbetweenContent');
+  try {
+    const res = await fetch('/api/entity-betweenness-score');
+    const data = await res.json();
+    if (!data.entities.length) { el.innerHTML = '<div style="color:var(--text-muted);">No connection data.</div>'; return; }
+    const max = data.entities[0].partners;
+    let html = '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="border-bottom:2px solid var(--border);"><th style="text-align:left;padding:8px;">Entity</th><th style="text-align:left;padding:8px;">Type</th><th style="text-align:right;padding:8px;">Partners</th><th style="text-align:left;padding:8px;width:40%;">Bar</th></tr></thead><tbody>';
+    data.entities.forEach(r => {
+      const pct = max > 0 ? (r.partners / max * 100) : 0;
+      html += `<tr style="border-bottom:1px solid var(--border);"><td style="padding:8px;font-weight:600;">${r.name}</td><td style="padding:8px;"><span class="entity-tag ${r.type}">${r.type}</span></td><td style="text-align:right;padding:8px;">${r.partners}</td><td style="padding:8px;"><div style="background:var(--accent);height:14px;border-radius:3px;width:${pct}%;"></div></td></tr>`;
+    });
+    html += '</tbody></table>';
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load entity betweenness</div>'; }
+}
+
+function showDocSrcDivView() {
+  currentView = 'docsrcdiv';
+  hideAllViews();
+  document.getElementById('docsrcdivView').classList.add('active');
+  loadDocSrcDiv();
+}
+async function loadDocSrcDiv() {
+  const el = document.getElementById('docsrcdivContent');
+  try {
+    const res = await fetch('/api/document-source-diversity');
+    const data = await res.json();
+    if (!data.categories.length) { el.innerHTML = '<div style="color:var(--text-muted);">No category data.</div>'; return; }
+    const max = Math.max(...data.categories.map(r => r.distinct_sources));
+    let html = '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="border-bottom:2px solid var(--border);"><th style="text-align:left;padding:8px;">Category</th><th style="text-align:right;padding:8px;">Documents</th><th style="text-align:right;padding:8px;">Distinct Sources</th><th style="text-align:left;padding:8px;width:35%;">Bar</th></tr></thead><tbody>';
+    data.categories.forEach(r => {
+      const pct = max > 0 ? (r.distinct_sources / max * 100) : 0;
+      html += `<tr style="border-bottom:1px solid var(--border);"><td style="padding:8px;font-weight:600;">${r.category}</td><td style="text-align:right;padding:8px;">${r.doc_count}</td><td style="text-align:right;padding:8px;font-weight:600;">${r.distinct_sources}</td><td style="padding:8px;"><div style="background:var(--entity-location);height:14px;border-radius:3px;width:${pct}%;"></div></td></tr>`;
+    });
+    html += '</tbody></table>';
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load source diversity</div>'; }
+}
+
+function showEvtBurstView() {
+  currentView = 'evtburst';
+  hideAllViews();
+  document.getElementById('evtburstView').classList.add('active');
+  loadEvtBurst();
+}
+async function loadEvtBurst() {
+  const el = document.getElementById('evtburstContent');
+  try {
+    const res = await fetch('/api/event-burst-detection');
+    const data = await res.json();
+    let html = `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px;">`;
+    html += `<div style="background:var(--bg-secondary);padding:12px;border-radius:6px;"><div style="font-size:11px;color:var(--text-muted);">Avg Events/Month</div><div style="font-size:20px;font-weight:700;color:var(--text-primary);">${data.avg}</div></div>`;
+    html += `<div style="background:var(--bg-secondary);padding:12px;border-radius:6px;"><div style="font-size:11px;color:var(--text-muted);">Burst Threshold (2x)</div><div style="font-size:20px;font-weight:700;color:var(--danger);">${data.threshold}</div></div>`;
+    html += `<div style="background:var(--bg-secondary);padding:12px;border-radius:6px;"><div style="font-size:11px;color:var(--text-muted);">Burst Months</div><div style="font-size:20px;font-weight:700;color:var(--accent);">${data.bursts.length}</div></div></div>`;
+    if (data.bursts.length) {
+      const max = Math.max(...data.bursts.map(r => r.cnt));
+      html += '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="border-bottom:2px solid var(--border);"><th style="text-align:left;padding:8px;">Month</th><th style="text-align:right;padding:8px;">Events</th><th style="text-align:left;padding:8px;width:50%;">Bar</th></tr></thead><tbody>';
+      data.bursts.forEach(r => {
+        const pct = max > 0 ? (r.cnt / max * 100) : 0;
+        html += `<tr style="border-bottom:1px solid var(--border);"><td style="padding:8px;font-weight:600;">${r.month}</td><td style="text-align:right;padding:8px;">${r.cnt}</td><td style="padding:8px;"><div style="background:var(--danger);height:14px;border-radius:3px;width:${pct}%;"></div></td></tr>`;
+      });
+      html += '</tbody></table>';
+    } else { html += '<div style="color:var(--text-muted);">No burst months detected.</div>'; }
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load event bursts</div>'; }
+}
+
+function showSrcUniqEntView() {
+  currentView = 'srcuniqent';
+  hideAllViews();
+  document.getElementById('srcuniqentView').classList.add('active');
+  loadSrcUniqEnt();
+}
+async function loadSrcUniqEnt() {
+  const el = document.getElementById('srcuniqentContent');
+  try {
+    const res = await fetch('/api/source-unique-entities');
+    const data = await res.json();
+    if (!data.sources.length) { el.innerHTML = '<div style="color:var(--text-muted);">No exclusive entities found.</div>'; return; }
+    const max = Math.max(...data.sources.map(r => r.unique_entities));
+    let html = '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="border-bottom:2px solid var(--border);"><th style="text-align:left;padding:8px;">Source</th><th style="text-align:right;padding:8px;">Unique Entities</th><th style="text-align:left;padding:8px;width:45%;">Bar</th></tr></thead><tbody>';
+    data.sources.forEach(r => {
+      const pct = max > 0 ? (r.unique_entities / max * 100) : 0;
+      html += `<tr style="border-bottom:1px solid var(--border);"><td style="padding:8px;font-weight:600;">${r.source}</td><td style="text-align:right;padding:8px;">${r.unique_entities}</td><td style="padding:8px;"><div style="background:var(--entity-location);height:14px;border-radius:3px;width:${pct}%;"></div></td></tr>`;
+    });
+    html += '</tbody></table>';
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load source unique entities</div>'; }
+}
+
+function showEntLifecycleView() {
+  currentView = 'entlifecycle';
+  hideAllViews();
+  document.getElementById('entlifecycleView').classList.add('active');
+  loadEntLifecycle();
+}
+async function loadEntLifecycle() {
+  const el = document.getElementById('entlifecycleContent');
+  try {
+    const res = await fetch('/api/entity-lifecycle-span');
+    const data = await res.json();
+    if (!data.entities.length) { el.innerHTML = '<div style="color:var(--text-muted);">No lifecycle data.</div>'; return; }
+    const max = Math.max(...data.entities.map(r => r.span_days));
+    let html = '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="border-bottom:2px solid var(--border);"><th style="text-align:left;padding:8px;">Entity</th><th style="text-align:left;padding:8px;">Type</th><th style="padding:8px;">First Seen</th><th style="padding:8px;">Last Seen</th><th style="text-align:right;padding:8px;">Span (days)</th><th style="text-align:left;padding:8px;width:25%;">Bar</th></tr></thead><tbody>';
+    data.entities.forEach(r => {
+      const pct = max > 0 ? (r.span_days / max * 100) : 0;
+      html += `<tr style="border-bottom:1px solid var(--border);"><td style="padding:8px;font-weight:600;">${r.name}</td><td style="padding:8px;"><span class="entity-tag ${r.type}">${r.type}</span></td><td style="padding:8px;font-size:12px;">${r.first_seen}</td><td style="padding:8px;font-size:12px;">${r.last_seen}</td><td style="text-align:right;padding:8px;font-weight:600;">${r.span_days}</td><td style="padding:8px;"><div style="background:var(--accent);height:14px;border-radius:3px;width:${pct}%;"></div></td></tr>`;
+    });
+    html += '</tbody></table>';
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load entity lifecycle</div>'; }
+}
+
+function showConnGrowthView() {
+  currentView = 'conngrowth';
+  hideAllViews();
+  document.getElementById('conngrowthView').classList.add('active');
+  loadConnGrowth();
+}
+async function loadConnGrowth() {
+  const el = document.getElementById('conngrowthContent');
+  try {
+    const res = await fetch('/api/connection-growth-timeline');
+    const data = await res.json();
+    if (!data.timeline.length) { el.innerHTML = '<div style="color:var(--text-muted);">No timeline data.</div>'; return; }
+    const max = Math.max(...data.timeline.map(r => r.connections));
+    let html = '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="border-bottom:2px solid var(--border);"><th style="text-align:left;padding:8px;">Month</th><th style="text-align:right;padding:8px;">Connections</th><th style="text-align:left;padding:8px;width:55%;">Bar</th></tr></thead><tbody>';
+    data.timeline.forEach(r => {
+      const pct = max > 0 ? (r.connections / max * 100) : 0;
+      html += `<tr style="border-bottom:1px solid var(--border);"><td style="padding:8px;font-weight:600;">${r.month}</td><td style="text-align:right;padding:8px;">${r.connections}</td><td style="padding:8px;"><div style="background:var(--entity-org);height:14px;border-radius:3px;width:${pct}%;"></div></td></tr>`;
+    });
+    html += '</tbody></table>';
+    el.innerHTML = html;
+  } catch (err) { el.innerHTML = '<div style="color:#e05555;">Failed to load connection growth</div>'; }
 }
 
 // ─── INIT ───
