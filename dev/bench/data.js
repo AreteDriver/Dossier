@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1772101038486,
+  "lastUpdate": 1772266416627,
   "repoUrl": "https://github.com/AreteDriver/Dossier",
   "entries": {
     "Benchmark": [
@@ -912,6 +912,72 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.0008656532283142805",
             "extra": "mean: 7.653645307691817 msec\nrounds: 91"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "AreteDriver@users.noreply.github.com",
+            "name": "AreteDriver",
+            "username": "AreteDriver"
+          },
+          "committer": {
+            "email": "AreteDriver@users.noreply.github.com",
+            "name": "AreteDriver",
+            "username": "AreteDriver"
+          },
+          "distinct": true,
+          "id": "64924f8f9db560242acb7ec7af35dcd0a41ca433",
+          "message": "fix(ci): omit server.py and __main__.py from coverage scope\n\nserver.py is a 3851-line monolith at 23% coverage, dragging total\nfrom ~83% to 42%. __main__.py (576 lines, 68%) also untestable CLI\ncode. Omitting these keeps coverage gate meaningful for core logic.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>",
+          "timestamp": "2026-02-28T00:11:59-08:00",
+          "tree_id": "1afb444953a051ed278a7fc749000307092d5c39",
+          "url": "https://github.com/AreteDriver/Dossier/commit/64924f8f9db560242acb7ec7af35dcd0a41ca433"
+        },
+        "date": 1772266415688,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/test_benchmarks.py::TestNERBenchmark::test_extract_entities_5k",
+            "value": 115.58677623947337,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00005862568015623627",
+            "extra": "mean: 8.651508697917087 msec\nrounds: 96"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestFTS5Benchmark::test_fts5_search_500_docs",
+            "value": 1527.7086818350747,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000015492242524634757",
+            "extra": "mean: 654.5750586419433 usec\nrounds: 1296"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestResolverBenchmark::test_resolve_all_200_entities",
+            "value": 13.770770297919238,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00022035117146233883",
+            "extra": "mean: 72.61757899999972 msec\nrounds: 14"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestGraphBenchmark::test_centrality_betweenness_100",
+            "value": 36.43680463255994,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00015202927384310388",
+            "extra": "mean: 27.44477761110807 msec\nrounds: 36"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestGraphBenchmark::test_communities_100",
+            "value": 213.58428395879685,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0009318625977791008",
+            "extra": "mean: 4.681992426900252 msec\nrounds: 171"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestBulkInsertBenchmark::test_bulk_insert_100_docs",
+            "value": 122.03196393731379,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0011497468921101246",
+            "extra": "mean: 8.194574337209609 msec\nrounds: 86"
           }
         ]
       }
