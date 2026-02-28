@@ -253,7 +253,7 @@ class TestPathTraversal:
 class TestFilenameSanitization:
     def test_upload_sanitizes_traversal_filename(self, client, tmp_path):
         """Path traversal in filename is stripped to basename only."""
-        import dossier.api.server as srv_mod
+        import dossier.api.utils as utils_mod
 
         r = client.post(
             "/api/upload",
@@ -263,7 +263,7 @@ class TestFilenameSanitization:
         # Should succeed (file saved with sanitized name)
         assert r.status_code in (201, 422)  # 422 if ingestion fails on tiny content
         # Verify no file was written outside UPLOAD_DIR
-        assert not (srv_mod.UPLOAD_DIR.parent.parent / "evil.txt").exists()
+        assert not (utils_mod.UPLOAD_DIR.parent.parent / "evil.txt").exists()
 
     def test_upload_empty_filename_fallback(self, client):
         """Empty filename gets a uuid-based fallback."""
@@ -277,7 +277,7 @@ class TestFilenameSanitization:
 
     def test_sanitize_filename_unit(self):
         """Unit test for _sanitize_filename edge cases."""
-        from dossier.api.server import _sanitize_filename
+        from dossier.api.utils import _sanitize_filename
 
         # Path traversal stripped
         assert _sanitize_filename("../../etc/evil.txt") == "evil.txt"
@@ -322,10 +322,10 @@ class TestFTSEscaping:
 class TestUploadSizeLimit:
     def test_upload_too_large(self, client, monkeypatch):
         """Files exceeding MAX_UPLOAD_SIZE return 413."""
-        import dossier.api.server as srv_mod
+        import dossier.api.utils as utils_mod
 
         # Set limit to 1KB for testing
-        monkeypatch.setattr(srv_mod, "MAX_UPLOAD_SIZE", 1024)
+        monkeypatch.setattr(utils_mod, "MAX_UPLOAD_SIZE", 1024)
         big_content = b"x" * 2048  # 2KB, exceeds 1KB limit
         r = client.post(
             "/api/upload",
@@ -346,12 +346,13 @@ class TestGenericErrorHandler:
         from fastapi.testclient import TestClient
 
         import dossier.db.database as db_mod
+        import dossier.api.utils as utils_mod
         import dossier.api.server as srv_mod
 
         db_path = str(tmp_path / "err_test.db")
         monkeypatch.setattr(db_mod, "DB_PATH", db_path)
-        monkeypatch.setattr(srv_mod, "UPLOAD_DIR", tmp_path / "inbox")
-        monkeypatch.setattr(srv_mod, "ALLOWED_BASE_DIRS", [tmp_path])
+        monkeypatch.setattr(utils_mod, "UPLOAD_DIR", tmp_path / "inbox")
+        monkeypatch.setattr(utils_mod, "ALLOWED_BASE_DIRS", [tmp_path])
 
         def _exploding_db():
             raise RuntimeError("DB connection exploded")

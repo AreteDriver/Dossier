@@ -80,14 +80,14 @@ def client(tmp_path, monkeypatch):
     monkeypatch.setattr(db_mod, "DB_PATH", db_path)
 
     # Redirect upload and processed dirs to tmp_path
-    import dossier.api.server as srv_mod
+    import dossier.api.utils as utils_mod
     import dossier.ingestion.pipeline as pipe_mod
 
-    monkeypatch.setattr(srv_mod, "UPLOAD_DIR", tmp_path / "inbox")
+    monkeypatch.setattr(utils_mod, "UPLOAD_DIR", tmp_path / "inbox")
     monkeypatch.setattr(pipe_mod, "PROCESSED_DIR", tmp_path / "processed")
 
     # Allow tmp_path for directory ingest in tests
-    monkeypatch.setattr(srv_mod, "ALLOWED_BASE_DIRS", [tmp_path, Path.home()])
+    monkeypatch.setattr(utils_mod, "ALLOWED_BASE_DIRS", [tmp_path, Path.home()])
 
     from dossier.api.server import app
 
