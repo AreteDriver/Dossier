@@ -15,27 +15,35 @@ Local-first document intelligence system
 
 ```
 Dossier/
-├── .benchmarks/
-├── .github/
-│   └── workflows/
-├── data/
-├── docs/
 ├── dossier/
 │   ├── api/
+│   │   ├── server.py              (84 lines — app setup, middleware, router mounts)
+│   │   ├── utils.py               (shared constants + helpers)
+│   │   ├── routes_ingestion.py    (5 routes — upload, directory, email ingest)
+│   │   ├── routes_search.py       (6 routes — FTS5, advanced, keywords, connections)
+│   │   ├── routes_documents.py    (14 routes — CRUD, text, notes, provenance)
+│   │   ├── routes_entities.py     (17 routes — CRUD, tags, aliases, merge, profiles)
+│   │   ├── routes_forensics.py    (22 routes — forensics, redactions, risk, OCR)
+│   │   ├── routes_collaboration.py (27 routes — annotations, audit, watchlist, alerts)
+│   │   ├── routes_investigation.py (23 routes — board, case files, evidence chains)
+│   │   ├── routes_intelligence.py  (21 routes — AI, duplicates, patterns, narrative)
+│   │   └── routes_analytics.py     (189 routes — metrics/analytics endpoints)
 │   ├── core/
 │   ├── data/
 │   ├── db/
 │   ├── forensics/
 │   ├── ingestion/
 │   └── static/
-├── test_corpus/
 ├── tests/
-├── .gitignore
-├── .gitleaks.toml
-├── README.md
 ├── pyproject.toml
 ├── requirements.txt
 ```
+
+### API Module Pattern
+All router modules follow the same pattern:
+- `from dossier.api import utils` (module import, not name import)
+- Access shared state via `utils.UPLOAD_DIR`, `utils._validate_path()`, etc.
+- This ensures monkeypatching `utils.ATTR` in tests propagates correctly
 
 ## Tech Stack
 
