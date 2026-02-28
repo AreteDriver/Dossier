@@ -348,6 +348,7 @@ class TestGenericErrorHandler:
         import dossier.db.database as db_mod
         import dossier.api.utils as utils_mod
         import dossier.api.server as srv_mod
+        import dossier.api.routes_search as search_mod
 
         db_path = str(tmp_path / "err_test.db")
         monkeypatch.setattr(db_mod, "DB_PATH", db_path)
@@ -357,7 +358,7 @@ class TestGenericErrorHandler:
         def _exploding_db():
             raise RuntimeError("DB connection exploded")
 
-        monkeypatch.setattr(srv_mod, "get_db", _exploding_db)
+        monkeypatch.setattr(search_mod, "get_db", _exploding_db)
 
         with TestClient(srv_mod.app, raise_server_exceptions=False) as c:
             r = c.get("/api/stats")
