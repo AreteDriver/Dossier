@@ -5093,8 +5093,6 @@ def bulk_tag_suggestions():
 
         # Extract [tag:*] patterns from notes
         tag_rows = conn.execute("SELECT notes FROM documents WHERE notes LIKE '%[tag:%'").fetchall()
-        import re
-
         tag_counts = {}
         for row in tag_rows:
             for m in re.finditer(r"\[tag:([^\]]+)\]", row["notes"] or ""):
@@ -7856,7 +7854,7 @@ def entity_first_last(limit: int = 100, entity_type: str = ""):
                 d2 = datetime.strptime(last[:10], "%Y-%m-%d")
                 span_days = (d2 - d1).days
             except ValueError:
-                pass
+                span_days = 0
         entities.append(
             {
                 "id": r["id"],
