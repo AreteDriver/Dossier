@@ -1,5 +1,6 @@
 """Shared fixtures for Dossier test suite."""
 
+import io
 import sqlite3
 import textwrap
 
@@ -93,3 +94,75 @@ def client(tmp_path, monkeypatch):
 
     with TestClient(app) as c:
         yield c
+
+
+def upload_sample(client, filename="test_doc.txt", content=None):
+    """Upload a sample text file and return the response."""
+    if content is None:
+        content = (
+            "Jeffrey Epstein and Ghislaine Maxwell were investigated by the FBI "
+            "in Palm Beach. The deposition was taken on January 15, 2015. "
+            "Goldman Sachs provided financial records related to the case."
+        )
+    return client.post(
+        "/api/upload",
+        files={"file": (filename, io.BytesIO(content.encode()), "text/plain")},
+        params={"source": "Test Upload"},
+    )
+
+
+def seed_forensics(client):
+    """Upload a sample doc and seed forensics tables for testing.
+
+    Returns the document ID of the uploaded document.
+    """
+    r = upload_sample(client)
+    doc_id = r.json()["document_id"]
+
+    from dossier.db.database import get_db
+
+    with get_db() as conn:
+        # Seed document_forensics
+        conn.execute(
+            "INSERT INTO document_forensics (document_id, analysis_type, label, score, severity, evidence) VALUES (?, ?, ?, ?, ?, ?)",
+            (doc_id, "risk_score", "risk_score", 0.85, "high", "High risk indicators"),
+        )
+        conn.execute(
+            "INSERT INTO document_forensics (document_id, analysis_type, label, score, severity, evidence) VALUES (?, ?, ?, ?, ?, ?)",
+            (doc_id, "aml_flag", "shell_company", 0.9, "high", "Shell company detected"),
+        )
+        conn.execute(
+            "INSERT INTO document_forensics (document_id, analysis_type, label, score, severity, evidence) VALUES (?, ?, ?, ?, ?, ?)",
+            (doc_id, "topic", "financial_crime", 0.75, None, "Topic classification"),
+        )
+        conn.execute(
+            "INSERT INTO document_forensics (document_id, analysis_type, label, score, severity, evidence) VALUES (?, ?, ?, ?, ?, ?)",
+            (doc_id, "intent", "concealment", 0.65, None, "Intent classification"),
+        )
+        conn.execute(
+            "INSERT INTO document_forensics (document_id, analysis_type, label, score, severity, evidence) VALUES (?, ?, ?, ?, ?, ?)",
+            (doc_id, "codeword", "package", 0.5, None, "Suspicious term in context"),
+        )
+
+        # Seed financial_indicators
+        conn.execute(
+            "INSERT INTO financial_indicators (document_id, indicator_type, value, context, risk_score) VALUES (?, ?, ?, ?, ?)",
+            (doc_id, "currency_amount", "$500,000", "Wire transfer of $500,000", 0.8),
+        )
+
+        # Seed phrases table
+        conn.execute(
+            "INSERT OR IGNORE INTO phrases (phrase, doc_count, total_count) VALUES (?, ?, ?)",
+            ("financial records", 1, 3),
+        )
+        phrase_id = conn.execute(
+            "SELECT id FROM phrases WHERE phrase = ?", ("financial records",)
+        ).fetchone()[0]
+        conn.execute(
+            "INSERT OR IGNORE INTO document_phrases (document_id, phrase_id, count) VALUES (?, ?, ?)",
+            (doc_id, phrase_id, 3),
+        )
+
+        conn.commit()
+
+    return doc_id

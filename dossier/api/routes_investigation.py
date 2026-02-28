@@ -382,7 +382,9 @@ async def create_snapshot(request: Request):
         ]
         board = [
             dict(r)
-            for r in conn.execute("SELECT document_id, x, y, notes FROM board_items").fetchall()
+            for r in conn.execute(
+                "SELECT id, item_type, ref_id, title, x, y FROM board_items"
+            ).fetchall()
         ]
         flagged = [
             r["id"] for r in conn.execute("SELECT id FROM documents WHERE flagged = 1").fetchall()
@@ -605,6 +607,30 @@ def export_case_file(case_id: int):
 def investigation_stats():
     """Comprehensive investigation metrics dashboard."""
     with get_db() as conn:
+        _ensure_evidence_chains_table(conn)
+        _ensure_watchlist_table(conn)
+        _ensure_annotations_table(conn)
+        _ensure_case_files_table(conn)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS redactions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                document_id INTEGER NOT NULL,
+                start_offset INTEGER NOT NULL,
+                end_offset INTEGER NOT NULL,
+                reason TEXT DEFAULT '',
+                created_at TEXT DEFAULT (datetime('now'))
+            )
+        """)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS analyst_notes (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                document_id INTEGER NOT NULL,
+                note TEXT NOT NULL,
+                author TEXT DEFAULT 'analyst',
+                created_at TEXT DEFAULT (datetime('now'))
+            )
+        """)
+
         # Core counts
         total_docs = conn.execute("SELECT COUNT(*) FROM documents").fetchone()[0]
         total_entities = conn.execute("SELECT COUNT(*) FROM entities").fetchone()[0]

@@ -3,6 +3,8 @@
 import io
 from unittest.mock import MagicMock, patch
 
+from tests.conftest import upload_sample as _upload_sample
+
 
 class TestEmptyDb:
     def test_root_returns_200(self, client):
@@ -46,21 +48,6 @@ class TestEmptyDb:
     def test_document_not_found(self, client):
         r = client.get("/api/documents/999")
         assert r.status_code == 404
-
-
-def _upload_sample(client, filename="test_doc.txt", content=None):
-    """Helper to upload a sample text file."""
-    if content is None:
-        content = (
-            "Jeffrey Epstein and Ghislaine Maxwell were investigated by the FBI "
-            "in Palm Beach. The deposition was taken on January 15, 2015. "
-            "Goldman Sachs provided financial records related to the case."
-        )
-    return client.post(
-        "/api/upload",
-        files={"file": (filename, io.BytesIO(content.encode()), "text/plain")},
-        params={"source": "Test Upload"},
-    )
 
 
 class TestUpload:
