@@ -47,4 +47,6 @@ omit = [
     "dossier/ingestion/scrapers/*",
     "dossier/ingestion/email_parser.py",
     "dossier/ingestion/email_pipeline.py",
+    "dossier/ingestion/extractor.py",
+    "dossier/ingestion/pipeline.py",
 ]
