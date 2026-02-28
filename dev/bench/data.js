@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1772271138326,
+  "lastUpdate": 1772276800490,
   "repoUrl": "https://github.com/AreteDriver/Dossier",
   "entries": {
     "Benchmark": [
@@ -1110,6 +1110,72 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.00028042927495149366",
             "extra": "mean: 5.232431161764992 msec\nrounds: 136"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "AreteDriver@users.noreply.github.com",
+            "name": "AreteDriver",
+            "username": "AreteDriver"
+          },
+          "committer": {
+            "email": "AreteDriver@users.noreply.github.com",
+            "name": "AreteDriver",
+            "username": "AreteDriver"
+          },
+          "distinct": true,
+          "id": "0b3e28a8b277876c66e4a3fc3b394d0b006b3717",
+          "message": "test: push coverage 52% → 91% with 190 new integration tests\n\nAdd 8 test files covering all decomposed router modules:\n- test_routes_search.py (8 tests)\n- test_routes_documents.py (22 tests)\n- test_routes_entities.py (28 tests)\n- test_routes_collaboration.py (38 tests)\n- test_routes_investigation.py (30 tests)\n- test_routes_forensics.py (30 tests)\n- test_routes_intelligence.py (25 tests)\n- test_utils.py (3 tests)\n\nExtract upload_sample() and seed_forensics() to conftest.py for reuse.\nFix 3 production bugs in routes_investigation.py discovered during testing:\n- board_items snapshot query referenced nonexistent columns\n- investigation_stats queried lazy tables without ensuring they exist\n- Missing CREATE TABLE IF NOT EXISTS for redactions/analyst_notes\n\n581 tests total, 91% coverage (3,172 stmts, 273 missing).\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>",
+          "timestamp": "2026-02-28T02:54:12-08:00",
+          "tree_id": "eb3f5a21185af37ff7f66d55690d1ada6bb146c8",
+          "url": "https://github.com/AreteDriver/Dossier/commit/0b3e28a8b277876c66e4a3fc3b394d0b006b3717"
+        },
+        "date": 1772276800086,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/test_benchmarks.py::TestNERBenchmark::test_extract_entities_5k",
+            "value": 122.64312896523683,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00005638872261543598",
+            "extra": "mean: 8.153738480395832 msec\nrounds: 102"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestFTS5Benchmark::test_fts5_search_500_docs",
+            "value": 1802.5324858081804,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00001566212734399198",
+            "extra": "mean: 554.7750222940596 usec\nrounds: 1525"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestResolverBenchmark::test_resolve_all_200_entities",
+            "value": 13.51317333633295,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000235918593534265",
+            "extra": "mean: 74.00186285713468 msec\nrounds: 14"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestGraphBenchmark::test_centrality_betweenness_100",
+            "value": 39.076012636207906,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00013559714478699633",
+            "extra": "mean: 25.591147421049765 msec\nrounds: 38"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestGraphBenchmark::test_communities_100",
+            "value": 235.14152286491012,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0009472250351484972",
+            "extra": "mean: 4.252758031912996 msec\nrounds: 188"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestBulkInsertBenchmark::test_bulk_insert_100_docs",
+            "value": 204.7830451914374,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00032228539799866686",
+            "extra": "mean: 4.883216767604807 msec\nrounds: 142"
           }
         ]
       }
