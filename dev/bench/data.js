@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1772266416627,
+  "lastUpdate": 1772270966323,
   "repoUrl": "https://github.com/AreteDriver/Dossier",
   "entries": {
     "Benchmark": [
@@ -978,6 +978,72 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.0011497468921101246",
             "extra": "mean: 8.194574337209609 msec\nrounds: 86"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "AreteDriver@users.noreply.github.com",
+            "name": "AreteDriver",
+            "username": "AreteDriver"
+          },
+          "committer": {
+            "email": "AreteDriver@users.noreply.github.com",
+            "name": "AreteDriver",
+            "username": "AreteDriver"
+          },
+          "distinct": true,
+          "id": "07f4e84b026aaffa2b20d1469fff6d1085ce3e7a",
+          "message": "refactor: complete server.py decomposition into 9 domain routers\n\nExtract all remaining routes from the 11,897-line server.py monolith\ninto domain-specific router modules:\n\n- routes_documents.py: 14 routes (CRUD, text, notes, provenance)\n- routes_entities.py: 17 routes (CRUD, tags, aliases, merge, profiles)\n- routes_forensics.py: 22 routes (forensics, risk, redactions, OCR)\n- routes_collaboration.py: 27 routes (annotations, audit, watchlist, alerts)\n- routes_investigation.py: 23 routes (board, case files, evidence chains)\n- routes_intelligence.py: 21 routes (patterns, AI, duplicates, analysis)\n- routes_analytics.py: 189 routes (metrics, exports, remaining endpoints)\n\nserver.py reduced to 84-line thin orchestration layer.\nCoverage config updated: server.py removed from omit,\nroutes_analytics.py added (same coverage drag, now isolated).\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>",
+          "timestamp": "2026-02-28T01:27:15-08:00",
+          "tree_id": "e04569d5be512766445ca5a928f5dcaa8968e4c7",
+          "url": "https://github.com/AreteDriver/Dossier/commit/07f4e84b026aaffa2b20d1469fff6d1085ce3e7a"
+        },
+        "date": 1772270965812,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/test_benchmarks.py::TestNERBenchmark::test_extract_entities_5k",
+            "value": 114.53549355995378,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0000690094976136936",
+            "extra": "mean: 8.730917979382072 msec\nrounds: 97"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestFTS5Benchmark::test_fts5_search_500_docs",
+            "value": 1513.2778165326802,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000013157471115070747",
+            "extra": "mean: 660.8171936936633 usec\nrounds: 1332"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestResolverBenchmark::test_resolve_all_200_entities",
+            "value": 13.504709537871376,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00015729258029632487",
+            "extra": "mean: 74.04824199999942 msec\nrounds: 14"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestGraphBenchmark::test_centrality_betweenness_100",
+            "value": 36.59203062347912,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00013125917196909638",
+            "extra": "mean: 27.328354916667408 msec\nrounds: 36"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestGraphBenchmark::test_communities_100",
+            "value": 213.82931364205848,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0009532735515601886",
+            "extra": "mean: 4.67662727325571 msec\nrounds: 172"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestBulkInsertBenchmark::test_bulk_insert_100_docs",
+            "value": 152.19981987492568,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0006215295593055855",
+            "extra": "mean: 6.570310009708139 msec\nrounds: 103"
           }
         ]
       }
