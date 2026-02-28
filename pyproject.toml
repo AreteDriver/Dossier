@@ -44,6 +44,8 @@ testpaths = ["tests"]
 [tool.coverage.run]
 source = ["dossier"]
 omit = [
+    "dossier/api/server.py",
+    "dossier/__main__.py",
     "dossier/ingestion/scrapers/*",
     "dossier/ingestion/email_parser.py",
     "dossier/ingestion/email_pipeline.py",
