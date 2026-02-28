@@ -4,7 +4,6 @@ from fastapi import APIRouter, File, Query, HTTPException, UploadFile
 from fastapi.responses import JSONResponse
 
 from dossier.api import utils
-from dossier.db.database import get_db
 from dossier.ingestion.pipeline import ingest_file, ingest_directory
 
 router = APIRouter()
