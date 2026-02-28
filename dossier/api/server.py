@@ -34,6 +34,7 @@ from dossier.forensics.api_timeline import router as timeline_router
 from dossier.core.api_resolver import router as resolver_router
 from dossier.core.api_graph import router as graph_router
 from dossier.api import utils
+from dossier.api.routes_ingestion import router as ingestion_router
 
 logger = logging.getLogger(__name__)
 
@@ -49,6 +50,7 @@ app.add_middleware(
 app.include_router(timeline_router, prefix="/api/timeline", tags=["timeline"])
 app.include_router(resolver_router, prefix="/api/resolver", tags=["resolver"])
 app.include_router(graph_router, prefix="/api/graph", tags=["graph"])
+app.include_router(ingestion_router, prefix="/api", tags=["ingestion"])
 
 
 @app.exception_handler(Exception)
@@ -415,106 +417,6 @@ def get_stats():
     }
 
 
-# ═══════════════════════════════════════════
-# FILE UPLOAD / INGESTION
-# ═══════════════════════════════════════════
-
-
-@app.post("/api/upload")
-async def upload_file(
-    file: UploadFile = File(...),
-    source: str = Query("Manual Upload"),
-    date: str = Query(""),
-):
-    """Upload and ingest a single file."""
-    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
-
-    # Sanitize filename and enforce upload size limit
-    safe_name = _sanitize_filename(file.filename or "")
-    content = await _read_upload(file)
-    dest = UPLOAD_DIR / safe_name
-    with open(dest, "wb") as f:
-        f.write(content)
-
-    # Ingest
-    result = ingest_file(str(dest), source=source, date=date)
-
-    if result["success"]:
-        return JSONResponse(result, status_code=201)
-    else:
-        return JSONResponse(result, status_code=409 if "Duplicate" in result["message"] else 422)
-
-
-@app.post("/api/ingest-directory")
-def ingest_dir(dirpath: str = Query(...)):
-    """Ingest all supported files from a directory path on disk."""
-    path = _validate_path(dirpath)
-    if not path.exists() or not path.is_dir():
-        raise HTTPException(400, f"Directory not found: {dirpath}")
-
-    results = ingest_directory(str(path))
-    success = sum(1 for r in results if r["success"])
-    failed = len(results) - success
-
-    return {"ingested": success, "failed": failed, "details": results}
-
-
-@app.post("/api/upload-email")
-async def upload_email(
-    file: UploadFile = File(...),
-    source: str = Query("Email Upload"),
-    corpus: str = Query(""),
-):
-    """Upload and ingest an email file (eml, mbox, json, csv)."""
-    from dossier.ingestion.email_pipeline import ingest_email_file
-
-    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
-    safe_name = _sanitize_filename(file.filename or "")
-    content = await _read_upload(file)
-    dest = UPLOAD_DIR / safe_name
-    with open(dest, "wb") as f:
-        f.write(content)
-
-    results = ingest_email_file(str(dest), source=source, corpus=corpus)
-    success = sum(1 for r in results if r.get("success"))
-    failed = len(results) - success
-
-    status = 201 if success > 0 else 422
-    return JSONResponse(
-        {"ingested": success, "failed": failed, "details": results}, status_code=status
-    )
-
-
-@app.post("/api/ingest-emails-directory")
-def ingest_emails_dir(
-    dirpath: str = Query(...),
-    source: str = Query("Email Import"),
-    corpus: str = Query(""),
-):
-    """Ingest all email files from a directory on disk."""
-    from dossier.ingestion.email_pipeline import ingest_email_directory
-
-    path = _validate_path(dirpath)
-    if not path.exists() or not path.is_dir():
-        raise HTTPException(400, f"Directory not found: {dirpath}")
-
-    result = ingest_email_directory(str(path), source=source, corpus=corpus)
-    return result
-
-
-@app.post("/api/lobbying/generate")
-def generate_lobbying():
-    """Generate and ingest Podesta Group lobbying records."""
-    from dossier.ingestion.scrapers.fara_lobbying import (
-        create_lobbying_index,
-        generate_ingestable_documents,
-        ingest_lobbying_docs,
-    )
-
-    create_lobbying_index()
-    count = generate_ingestable_documents()
-    ingest_lobbying_docs()
-    return {"message": f"Generated and ingested {count} lobbying documents"}
 
 
 # ═══════════════════════════════════════════
