@@ -6,7 +6,7 @@ Local-first document intelligence system
 
 ## Current State
 
-- **Version**: 0.5.0
+- **Version**: 0.6.0
 - **Language**: Python
 - **Tests**: 1031
 - **Files**: 89 across 1 languages

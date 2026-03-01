@@ -130,9 +130,15 @@ def timeline_cmd():
 pytest dossier/tests/test_timeline.py -v
 ```
 
+## What's Done
+
+All three planned forensics modules are complete:
+1. **Provenance module** (`forensics/provenance.py`) — PDF metadata extraction, corpus stats, search, timeline (v0.6.0)
+2. **Anomaly module** (`forensics/anomaly.py`) — temporal gaps, activity bursts, page outliers, isolation, missing metadata (v0.5.0)
+3. **Timeline visualization** — monthly grouping with risk scores, entity timeline endpoints (v0.5.0)
+
 ## What's Next
 
-The timeline module is designed to be extended with:
-1. **Provenance module** (`forensics/provenance.py`) — PDF metadata extraction
-2. **Anomaly module** (`forensics/anomaly.py`) — gap detection, metadata outliers
-3. **Timeline visualization** — add to the frontend as a horizontal scrollable timeline
+1. **Frontend provenance views** — wire PDF metadata endpoints into the dashboard
+2. **Cross-module correlation** — link provenance metadata anomalies (e.g., creation date after modification date) to the anomaly detector
+3. **Bulk re-extraction** — endpoint to extract PDF metadata for previously ingested documents
