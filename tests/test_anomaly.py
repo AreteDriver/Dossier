@@ -2,10 +2,14 @@
 
 from dossier.forensics.anomaly import (
     detect_activity_bursts,
+    detect_creation_clusters,
+    detect_date_inconsistencies,
     detect_ingestion_anomalies,
     detect_isolation_anomalies,
+    detect_metadata_stripping,
     detect_missing_metadata,
     detect_page_outliers,
+    detect_producer_inconsistencies,
     detect_sudden_appearances,
     detect_temporal_gaps,
 )
@@ -249,3 +253,194 @@ class TestDetectSuddenAppearances:
         result = detect_sudden_appearances(entities, events)
         assert len(result) == 1
         assert "Entity 99" in result[0]["description"]
+
+
+# ── Provenance anomaly detection tests ────────────────────────
+
+
+class TestDetectDateInconsistencies:
+    def test_creation_after_modification(self):
+        meta = [
+            {
+                "document_id": 1,
+                "creation_date": "2025-06-01T10:00:00",
+                "modification_date": "2020-01-01T10:00:00",
+            }
+        ]
+        result = detect_date_inconsistencies(meta)
+        matched = [a for a in result if a["type"] == "date_inconsistency"]
+        assert len(matched) == 1
+        assert matched[0]["severity"] == "high"
+
+    def test_future_creation_date(self):
+        meta = [
+            {
+                "document_id": 2,
+                "creation_date": "2099-01-01T00:00:00",
+                "modification_date": None,
+            }
+        ]
+        result = detect_date_inconsistencies(meta)
+        future = [a for a in result if a["type"] == "future_date"]
+        assert len(future) == 1
+        assert future[0]["severity"] == "high"
+        assert future[0]["evidence"]["field"] == "creation"
+
+    def test_future_modification_date(self):
+        meta = [
+            {
+                "document_id": 3,
+                "creation_date": None,
+                "modification_date": "2099-12-31T00:00:00",
+            }
+        ]
+        result = detect_date_inconsistencies(meta)
+        future = [a for a in result if a["type"] == "future_date"]
+        assert len(future) == 1
+        assert future[0]["evidence"]["field"] == "modification"
+
+    def test_ancient_creation_recent_modification(self):
+        meta = [
+            {
+                "document_id": 4,
+                "creation_date": "1990-01-01T00:00:00",
+                "modification_date": "2025-01-01T00:00:00",
+            }
+        ]
+        result = detect_date_inconsistencies(meta)
+        gaps = [a for a in result if a["type"] == "suspicious_date_gap"]
+        assert len(gaps) == 1
+        assert gaps[0]["severity"] == "medium"
+        assert gaps[0]["evidence"]["gap_years"] > 20
+
+    def test_no_dates(self):
+        meta = [{"document_id": 5, "creation_date": None, "modification_date": None}]
+        assert detect_date_inconsistencies(meta) == []
+
+    def test_valid_dates(self):
+        meta = [
+            {
+                "document_id": 6,
+                "creation_date": "2020-01-01T10:00:00",
+                "modification_date": "2020-06-01T10:00:00",
+            }
+        ]
+        assert detect_date_inconsistencies(meta) == []
+
+
+class TestDetectMetadataStripping:
+    def test_all_null(self):
+        meta = [
+            {
+                "document_id": 1,
+                "author": None,
+                "creator": None,
+                "producer": None,
+                "title": None,
+            }
+        ]
+        result = detect_metadata_stripping(meta)
+        assert len(result) == 1
+        assert result[0]["type"] == "metadata_stripped"
+        assert result[0]["severity"] == "medium"
+
+    def test_author_only_stripped(self):
+        meta = [
+            {
+                "document_id": 2,
+                "author": None,
+                "creator": "Word",
+                "producer": "Adobe",
+                "title": "Report",
+            }
+        ]
+        result = detect_metadata_stripping(meta)
+        assert len(result) == 1
+        assert result[0]["type"] == "author_stripped"
+        assert result[0]["severity"] == "low"
+
+    def test_all_present(self):
+        meta = [
+            {
+                "document_id": 3,
+                "author": "John",
+                "creator": "Word",
+                "producer": "Adobe",
+                "title": "Report",
+            }
+        ]
+        assert detect_metadata_stripping(meta) == []
+
+    def test_empty_list(self):
+        assert detect_metadata_stripping([]) == []
+
+
+class TestDetectProducerInconsistencies:
+    def test_three_plus_producers(self):
+        meta = [
+            {"document_id": 1, "author": "John", "producer": "Adobe PDF"},
+            {"document_id": 2, "author": "John", "producer": "LibreOffice"},
+            {"document_id": 3, "author": "John", "producer": "Chrome Print"},
+        ]
+        result = detect_producer_inconsistencies(meta)
+        assert len(result) == 1
+        assert result[0]["type"] == "producer_inconsistency"
+        assert result[0]["severity"] == "medium"
+        assert len(result[0]["evidence"]["producers"]) == 3
+
+    def test_single_producer(self):
+        meta = [
+            {"document_id": 1, "author": "Jane", "producer": "Adobe"},
+            {"document_id": 2, "author": "Jane", "producer": "Adobe"},
+        ]
+        assert detect_producer_inconsistencies(meta) == []
+
+    def test_no_author(self):
+        meta = [
+            {"document_id": 1, "author": None, "producer": "Adobe"},
+            {"document_id": 2, "author": None, "producer": "LibreOffice"},
+        ]
+        assert detect_producer_inconsistencies(meta) == []
+
+    def test_different_authors(self):
+        meta = [
+            {"document_id": 1, "author": "A", "producer": "P1"},
+            {"document_id": 2, "author": "B", "producer": "P2"},
+            {"document_id": 3, "author": "C", "producer": "P3"},
+        ]
+        assert detect_producer_inconsistencies(meta) == []
+
+
+class TestDetectCreationClusters:
+    def test_cluster_within_window(self):
+        meta = [
+            {"document_id": 1, "creation_date": "2020-01-01T10:00:00"},
+            {"document_id": 2, "creation_date": "2020-01-01T10:00:30"},
+            {"document_id": 3, "creation_date": "2020-01-01T10:00:50"},
+        ]
+        result = detect_creation_clusters(meta, window_seconds=60)
+        assert len(result) == 1
+        assert result[0]["type"] == "creation_cluster"
+        assert result[0]["evidence"]["count"] == 3
+
+    def test_spread_out_no_cluster(self):
+        meta = [
+            {"document_id": 1, "creation_date": "2020-01-01T10:00:00"},
+            {"document_id": 2, "creation_date": "2020-01-02T10:00:00"},
+            {"document_id": 3, "creation_date": "2020-01-03T10:00:00"},
+        ]
+        assert detect_creation_clusters(meta, window_seconds=60) == []
+
+    def test_no_creation_dates(self):
+        meta = [
+            {"document_id": 1, "creation_date": None},
+            {"document_id": 2, "creation_date": None},
+        ]
+        assert detect_creation_clusters(meta) == []
+
+    def test_too_few_docs(self):
+        meta = [
+            {"document_id": 1, "creation_date": "2020-01-01T10:00:00"},
+            {"document_id": 2, "creation_date": "2020-01-01T10:00:05"},
+        ]
+        assert detect_creation_clusters(meta) == []

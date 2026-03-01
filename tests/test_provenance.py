@@ -772,3 +772,12 @@ class TestAPIEndpoints:
         assert r.status_code == 200
         # Force includes existing — file doesn't exist so it skips
         assert r.json()["total_pdfs"] == 1
+
+
+class TestAnomaliesIncludesProvenance:
+    def test_anomalies_includes_provenance(self, client):
+        r = client.get("/api/anomalies")
+        assert r.status_code == 200
+        data = r.json()
+        assert "provenance_anomalies" in data
+        assert isinstance(data["provenance_anomalies"], list)

@@ -3,6 +3,12 @@
 from fastapi import APIRouter, Query, HTTPException, Request
 
 from dossier.db.database import get_db
+from dossier.forensics.anomaly import (
+    detect_creation_clusters,
+    detect_date_inconsistencies,
+    detect_metadata_stripping,
+    detect_producer_inconsistencies,
+)
 
 router = APIRouter()
 
@@ -555,6 +561,21 @@ def detect_anomalies():
             LIMIT 20
         """).fetchall()
         anomalies["isolated_entities"] = [dict(r) for r in isolated]
+
+        # 5. Provenance anomalies from PDF metadata
+        anomalies["provenance_anomalies"] = []
+        has_table = conn.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='document_pdf_metadata'"
+        ).fetchone()
+        if has_table:
+            pdf_meta = [
+                dict(r) for r in conn.execute("SELECT * FROM document_pdf_metadata").fetchall()
+            ]
+            if pdf_meta:
+                anomalies["provenance_anomalies"].extend(detect_date_inconsistencies(pdf_meta))
+                anomalies["provenance_anomalies"].extend(detect_metadata_stripping(pdf_meta))
+                anomalies["provenance_anomalies"].extend(detect_producer_inconsistencies(pdf_meta))
+                anomalies["provenance_anomalies"].extend(detect_creation_clusters(pdf_meta))
 
     return anomalies
 

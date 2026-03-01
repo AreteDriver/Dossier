@@ -7,8 +7,8 @@ Each function takes pre-fetched data and returns a list of anomaly dicts with:
 from __future__ import annotations
 
 import statistics
-from collections import Counter
-from datetime import datetime, timedelta
+from collections import Counter, defaultdict
+from datetime import datetime, timedelta, timezone
 
 
 def detect_temporal_gaps(events: list[dict], min_gap_days: int = 90) -> list[dict]:
@@ -277,5 +277,214 @@ def detect_sudden_appearances(entities: list[dict], events: list[dict]) -> list[
                     "affected_ids": [eid],
                 }
             )
+
+    return anomalies
+
+
+# ── Provenance anomaly detection ──────────────────────────────
+
+
+def _parse_iso(date_str: str | None) -> datetime | None:
+    """Parse an ISO 8601 date string, returning None on failure."""
+    if not date_str or not isinstance(date_str, str):
+        return None
+    try:
+        return datetime.fromisoformat(date_str.replace("Z", "+00:00").replace("+00:00", ""))
+    except (ValueError, TypeError):
+        return None
+
+
+def detect_date_inconsistencies(metadata: list[dict]) -> list[dict]:
+    """Find PDF metadata with suspicious date patterns."""
+    now = datetime.now(tz=timezone.utc).replace(tzinfo=None)
+    anomalies = []
+
+    for m in metadata:
+        doc_id = m.get("document_id") or m.get("id")
+        creation = _parse_iso(m.get("creation_date"))
+        modification = _parse_iso(m.get("modification_date"))
+
+        # Creation date after modification date
+        if creation and modification and creation > modification:
+            anomalies.append(
+                {
+                    "type": "date_inconsistency",
+                    "severity": "high",
+                    "description": (
+                        f"Document {doc_id}: creation date "
+                        f"({creation.date()}) after modification "
+                        f"date ({modification.date()})"
+                    ),
+                    "evidence": {
+                        "creation_date": str(creation),
+                        "modification_date": str(modification),
+                    },
+                    "affected_ids": [doc_id],
+                }
+            )
+
+        # Future dates
+        for label, dt in [("creation", creation), ("modification", modification)]:
+            if dt and dt > now:
+                anomalies.append(
+                    {
+                        "type": "future_date",
+                        "severity": "high",
+                        "description": (
+                            f"Document {doc_id}: {label} date ({dt.date()}) is in the future"
+                        ),
+                        "evidence": {"field": label, "date": str(dt)},
+                        "affected_ids": [doc_id],
+                    }
+                )
+
+        # Ancient creation + recent modification (>20yr gap)
+        if creation and modification:
+            gap_years = (modification - creation).days / 365.25
+            if gap_years > 20:
+                anomalies.append(
+                    {
+                        "type": "suspicious_date_gap",
+                        "severity": "medium",
+                        "description": (
+                            f"Document {doc_id}: {gap_years:.0f}-year gap "
+                            f"between creation ({creation.date()}) and "
+                            f"modification ({modification.date()})"
+                        ),
+                        "evidence": {
+                            "gap_years": round(gap_years, 1),
+                            "creation_date": str(creation),
+                            "modification_date": str(modification),
+                        },
+                        "affected_ids": [doc_id],
+                    }
+                )
+
+    return anomalies
+
+
+def detect_metadata_stripping(metadata: list[dict]) -> list[dict]:
+    """Detect documents where metadata fields have been stripped."""
+    anomalies = []
+
+    for m in metadata:
+        doc_id = m.get("document_id") or m.get("id")
+        author = m.get("author")
+        creator = m.get("creator")
+        producer = m.get("producer")
+        title = m.get("title")
+
+        all_null = not any([author, creator, producer, title])
+        author_only = not author and any([creator, producer])
+
+        if all_null:
+            anomalies.append(
+                {
+                    "type": "metadata_stripped",
+                    "severity": "medium",
+                    "description": (
+                        f"Document {doc_id}: all key metadata fields "
+                        f"are empty (author, creator, producer, title)"
+                    ),
+                    "evidence": {"stripped_fields": ["author", "creator", "producer", "title"]},
+                    "affected_ids": [doc_id],
+                }
+            )
+        elif author_only:
+            anomalies.append(
+                {
+                    "type": "author_stripped",
+                    "severity": "low",
+                    "description": (
+                        f"Document {doc_id}: author field stripped but creator/producer present"
+                    ),
+                    "evidence": {
+                        "creator": creator,
+                        "producer": producer,
+                    },
+                    "affected_ids": [doc_id],
+                }
+            )
+
+    return anomalies
+
+
+def detect_producer_inconsistencies(metadata: list[dict]) -> list[dict]:
+    """Find authors using suspiciously many different PDF producers."""
+    author_producers: dict[str, dict[str, list]] = defaultdict(
+        lambda: {"producers": set(), "doc_ids": []}
+    )
+
+    for m in metadata:
+        author = m.get("author")
+        producer = m.get("producer")
+        doc_id = m.get("document_id") or m.get("id")
+        if author and producer:
+            author_producers[author]["producers"].add(producer)
+            author_producers[author]["doc_ids"].append(doc_id)
+
+    anomalies = []
+    for author, info in author_producers.items():
+        if len(info["producers"]) >= 3:
+            anomalies.append(
+                {
+                    "type": "producer_inconsistency",
+                    "severity": "medium",
+                    "description": (
+                        f"Author '{author}' used {len(info['producers'])} different producers"
+                    ),
+                    "evidence": {
+                        "author": author,
+                        "producers": sorted(info["producers"]),
+                    },
+                    "affected_ids": info["doc_ids"],
+                }
+            )
+
+    return anomalies
+
+
+def detect_creation_clusters(metadata: list[dict], window_seconds: int = 60) -> list[dict]:
+    """Find clusters of documents created within a tight time window."""
+    entries = []
+    for m in metadata:
+        dt = _parse_iso(m.get("creation_date"))
+        doc_id = m.get("document_id") or m.get("id")
+        if dt and doc_id is not None:
+            entries.append((dt, doc_id))
+
+    if len(entries) < 3:
+        return []
+
+    entries.sort(key=lambda x: x[0])
+    window = timedelta(seconds=window_seconds)
+    anomalies = []
+    i = 0
+
+    while i < len(entries):
+        j = i + 1
+        while j < len(entries) and (entries[j][0] - entries[i][0]) <= window:
+            j += 1
+        count = j - i
+        if count >= 3:
+            anomalies.append(
+                {
+                    "type": "creation_cluster",
+                    "severity": "medium",
+                    "description": (
+                        f"{count} documents created within "
+                        f"{window_seconds}s of each other at "
+                        f"{entries[i][0]}"
+                    ),
+                    "evidence": {
+                        "timestamp": str(entries[i][0]),
+                        "count": count,
+                    },
+                    "affected_ids": [e[1] for e in entries[i:j]],
+                }
+            )
+            i = j
+        else:
+            i += 1
 
     return anomalies
