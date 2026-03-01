@@ -7,6 +7,11 @@ from fastapi import APIRouter, Query, HTTPException
 from fastapi.responses import JSONResponse
 
 from dossier.db.database import get_db
+from dossier.api.routes_collaboration import (
+    _ensure_annotations_table,
+    _ensure_analyst_notes_table,
+)
+from dossier.api.utils import _ensure_audit_table
 
 logger = logging.getLogger(__name__)
 
@@ -607,7 +612,7 @@ def export_connections(
             """
             SELECT ec.entity_a_id, ea.name as entity_a_name, ea.type as entity_a_type,
                    ec.entity_b_id, eb.name as entity_b_name, eb.type as entity_b_type,
-                   ec.weight, ec.co_document_count
+                   ec.weight
             FROM entity_connections ec
             JOIN entities ea ON ea.id = ec.entity_a_id
             JOIN entities eb ON eb.id = ec.entity_b_id
@@ -946,6 +951,10 @@ def xref_matrix(entity_type: str = Query("person"), limit: int = Query(30)):
 def investigation_timeline():
     """Meta-timeline of the investigation: ingestion, analysis, and annotation events."""
     with get_db() as conn:
+        _ensure_annotations_table(conn)
+        _ensure_analyst_notes_table(conn)
+        _ensure_audit_table(conn)
+
         events = []
 
         # Document ingestion events
@@ -1261,6 +1270,9 @@ def entity_frequency(entity_type: str = Query("person"), limit: int = Query(20))
 def flagged_hub():
     """Centralized view for flagged/bookmarked documents with notes and entities."""
     with get_db() as conn:
+        _ensure_analyst_notes_table(conn)
+        _ensure_annotations_table(conn)
+
         flagged = conn.execute(
             """SELECT d.id, d.title, d.filename, d.category, d.source, d.date,
                       d.pages, d.notes, d.flagged

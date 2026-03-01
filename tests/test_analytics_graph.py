@@ -115,22 +115,14 @@ class TestExportEntities:
 
 class TestExportConnections:
     def test_export_connections_json(self, analytics_client):
-        # export_connections references ec.co_document_count which doesn't exist in schema
-        # Pre-existing schema mismatch bug — endpoint returns 500
         client, _ = analytics_client
-        try:
-            r = client.get("/api/export/connections", params={"format": "json"})
-            assert r.status_code in (200, 500)
-        except Exception:
-            pass  # Schema mismatch causes internal error
+        r = client.get("/api/export/connections", params={"format": "json"})
+        assert r.status_code == 200
 
     def test_export_connections_csv(self, analytics_client):
         client, _ = analytics_client
-        try:
-            r = client.get("/api/export/connections", params={"format": "csv"})
-            assert r.status_code in (200, 500)
-        except Exception:
-            pass  # Schema mismatch causes internal error
+        r = client.get("/api/export/connections", params={"format": "csv"})
+        assert r.status_code == 200
 
 
 class TestExportTimeline:

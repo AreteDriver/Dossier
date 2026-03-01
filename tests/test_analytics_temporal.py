@@ -14,7 +14,7 @@ def analytics_client(client):
 TEMPORAL_ENDPOINTS = [
     "/api/timeline/heatmap",
     "/api/activity-heatmap",
-    # "/api/investigation-timeline",  # references analyst_notes table (not in schema)
+    "/api/investigation-timeline",
     "/api/source-timeline",
     "/api/temporal-heatmap",
     "/api/category-timeline",
