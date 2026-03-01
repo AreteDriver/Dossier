@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1772355923755,
+  "lastUpdate": 1772357280237,
   "repoUrl": "https://github.com/AreteDriver/Dossier",
   "entries": {
     "Benchmark": [
@@ -1572,6 +1572,72 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.0016328780425640815",
             "extra": "mean: 8.172437439025602 msec\nrounds: 82"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "AreteDriver@users.noreply.github.com",
+            "name": "AreteDriver",
+            "username": "AreteDriver"
+          },
+          "committer": {
+            "email": "AreteDriver@users.noreply.github.com",
+            "name": "AreteDriver",
+            "username": "AreteDriver"
+          },
+          "distinct": true,
+          "id": "e23b3b0bde0fd1561e93771c071b71334ef91186",
+          "message": "feat: add PDF metadata provenance module for forensic analysis\n\nExtract embedded PDF metadata (author, creator, producer, dates, encryption)\nduring ingestion and expose via 4 API endpoints for corpus-wide forensic\nanalysis. Follows established forensics module pattern (timeline, anomaly).\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>",
+          "timestamp": "2026-03-01T01:24:43-08:00",
+          "tree_id": "4047252267b9a75e5ac490e801e1ad7f97bd2b12",
+          "url": "https://github.com/AreteDriver/Dossier/commit/e23b3b0bde0fd1561e93771c071b71334ef91186"
+        },
+        "date": 1772357279857,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/test_benchmarks.py::TestNERBenchmark::test_extract_entities_5k",
+            "value": 114.35170209977866,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0002443790645027299",
+            "extra": "mean: 8.744950723404541 msec\nrounds: 94"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestFTS5Benchmark::test_fts5_search_500_docs",
+            "value": 1534.2152434939678,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000042749399407871136",
+            "extra": "mean: 651.799025098092 usec\nrounds: 1275"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestResolverBenchmark::test_resolve_all_200_entities",
+            "value": 13.521163398835236,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0006110522938221506",
+            "extra": "mean: 73.95813292857208 msec\nrounds: 14"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestGraphBenchmark::test_centrality_betweenness_100",
+            "value": 35.618126137605984,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0012169684251245995",
+            "extra": "mean: 28.075592638889272 msec\nrounds: 36"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestGraphBenchmark::test_communities_100",
+            "value": 214.60935600479144,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0011163026704418824",
+            "extra": "mean: 4.659629098265752 msec\nrounds: 173"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestBulkInsertBenchmark::test_bulk_insert_100_docs",
+            "value": 147.54579698584172,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0008966428062439687",
+            "extra": "mean: 6.777556666666407 msec\nrounds: 102"
           }
         ]
       }
