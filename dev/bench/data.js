@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1772357490812,
+  "lastUpdate": 1772357766142,
   "repoUrl": "https://github.com/AreteDriver/Dossier",
   "entries": {
     "Benchmark": [
@@ -1704,6 +1704,72 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.00017256332146783036",
             "extra": "mean: 6.392600486238513 msec\nrounds: 109"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "AreteDriver@users.noreply.github.com",
+            "name": "AreteDriver",
+            "username": "AreteDriver"
+          },
+          "committer": {
+            "email": "AreteDriver@users.noreply.github.com",
+            "name": "AreteDriver",
+            "username": "AreteDriver"
+          },
+          "distinct": true,
+          "id": "e20f7c215608abc9aeb1d85eb7a57b8f712fa8c0",
+          "message": "chore: bump version to v0.6.0, update INTEGRATION.md roadmap\n\nAll three planned forensics modules complete (provenance, anomaly,\ntimeline visualization). Updated roadmap with next items.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>",
+          "timestamp": "2026-03-01T01:33:18-08:00",
+          "tree_id": "2f6f9a2f3479b3689f4856a92996d66f1734f7ab",
+          "url": "https://github.com/AreteDriver/Dossier/commit/e20f7c215608abc9aeb1d85eb7a57b8f712fa8c0"
+        },
+        "date": 1772357765849,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/test_benchmarks.py::TestNERBenchmark::test_extract_entities_5k",
+            "value": 113.40414693399441,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00006840033538750439",
+            "extra": "mean: 8.818019684783119 msec\nrounds: 92"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestFTS5Benchmark::test_fts5_search_500_docs",
+            "value": 1525.6794318004124,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000014965249019877974",
+            "extra": "mean: 655.4456848251061 usec\nrounds: 1285"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestResolverBenchmark::test_resolve_all_200_entities",
+            "value": 13.587890478217671,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0009292875564990135",
+            "extra": "mean: 73.59494114285577 msec\nrounds: 14"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestGraphBenchmark::test_centrality_betweenness_100",
+            "value": 35.25379856888787,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0025144866422521527",
+            "extra": "mean: 28.36573761111004 msec\nrounds: 36"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestGraphBenchmark::test_communities_100",
+            "value": 211.05633445969139,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0012196451434804386",
+            "extra": "mean: 4.738071484847971 msec\nrounds: 165"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestBulkInsertBenchmark::test_bulk_insert_100_docs",
+            "value": 147.93623935798868,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0006670106581892814",
+            "extra": "mean: 6.759668924529811 msec\nrounds: 106"
           }
         ]
       }
