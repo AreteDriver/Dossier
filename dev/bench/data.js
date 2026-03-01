@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1772357280237,
+  "lastUpdate": 1772357490812,
   "repoUrl": "https://github.com/AreteDriver/Dossier",
   "entries": {
     "Benchmark": [
@@ -1638,6 +1638,72 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.0008966428062439687",
             "extra": "mean: 6.777556666666407 msec\nrounds: 102"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "AreteDriver@users.noreply.github.com",
+            "name": "AreteDriver",
+            "username": "AreteDriver"
+          },
+          "committer": {
+            "email": "AreteDriver@users.noreply.github.com",
+            "name": "AreteDriver",
+            "username": "AreteDriver"
+          },
+          "distinct": true,
+          "id": "e088b8d3c3ebb0d125f28bbd66f68df73a45a24f",
+          "message": "docs: update CLAUDE.md with provenance module additions\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>",
+          "timestamp": "2026-03-01T01:28:40-08:00",
+          "tree_id": "072deb3d72604e3128c056c99a67bc586ca08877",
+          "url": "https://github.com/AreteDriver/Dossier/commit/e088b8d3c3ebb0d125f28bbd66f68df73a45a24f"
+        },
+        "date": 1772357490564,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/test_benchmarks.py::TestNERBenchmark::test_extract_entities_5k",
+            "value": 113.05625003735116,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00010038994585922435",
+            "extra": "mean: 8.845154510870678 msec\nrounds: 92"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestFTS5Benchmark::test_fts5_search_500_docs",
+            "value": 1559.5515133796494,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00001411983951118092",
+            "extra": "mean: 641.2099833964029 usec\nrounds: 1325"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestResolverBenchmark::test_resolve_all_200_entities",
+            "value": 13.429364235748322,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0008373602213757943",
+            "extra": "mean: 74.46368885714249 msec\nrounds: 14"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestGraphBenchmark::test_centrality_betweenness_100",
+            "value": 35.75612990908765,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0001622770824915532",
+            "extra": "mean: 27.967232542855363 msec\nrounds: 35"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestGraphBenchmark::test_communities_100",
+            "value": 213.38767812520453,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0011173854243011643",
+            "extra": "mean: 4.686306204678104 msec\nrounds: 171"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestBulkInsertBenchmark::test_bulk_insert_100_docs",
+            "value": 156.43086129857812,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00017256332146783036",
+            "extra": "mean: 6.392600486238513 msec\nrounds: 109"
           }
         ]
       }
