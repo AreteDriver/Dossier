@@ -8,8 +8,8 @@ Local-first document intelligence system
 
 - **Version**: 0.5.0
 - **Language**: Python
-- **Files**: 87 across 1 languages
-- **Lines**: 30,143
+- **Tests**: 1031
+- **Files**: 89 across 1 languages
 
 ## Architecture
 
@@ -27,7 +27,7 @@ Dossier/
 │   │   ├── routes_collaboration.py (27 routes — annotations, audit, watchlist, alerts)
 │   │   ├── routes_investigation.py (23 routes — board, case files, evidence chains)
 │   │   ├── routes_intelligence.py  (21 routes — AI, duplicates, patterns, narrative)
-│   │   └── routes_analytics.py     (189 routes — metrics/analytics endpoints)
+│   │   └── routes_analytics.py     (193 routes — metrics/analytics/provenance endpoints)
 │   ├── core/
 │   ├── data/
 │   ├── db/
@@ -116,6 +116,7 @@ pytest --cov=dossier tests/
 - `NodeMetrics`
 - `PathResult`
 - `ResolutionResult`
+- `PDFMetadata`
 
 ### Domain Terms
 - Court Records
@@ -141,6 +142,10 @@ pytest --cov=dossier tests/
 - `/api/export/entity-graph`
 - `/api/export/entities`
 - `/api/visualization/timeline`
+- `/api/documents/{doc_id}/pdf-metadata`
+- `/api/pdf-metadata/stats`
+- `/api/pdf-metadata/search`
+- `/api/pdf-metadata/timeline`
 
 ### Enums/Constants
 - `APPROXIMATE`
