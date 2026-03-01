@@ -8,8 +8,8 @@ Local-first document intelligence system
 
 - **Version**: 0.5.0
 - **Language**: Python
-- **Files**: 56 across 1 languages
-- **Lines**: 25,144
+- **Files**: 87 across 1 languages
+- **Lines**: 30,143
 
 ## Architecture
 
@@ -59,7 +59,7 @@ All router modules follow the same pattern:
 
 - **Naming**: snake_case
 - **Quote Style**: double quotes
-- **Type Hints**: partial
+- **Type Hints**: present
 - **Docstrings**: google style
 - **Imports**: absolute
 - **Path Handling**: pathlib
@@ -71,11 +71,11 @@ All router modules follow the same pattern:
 # test
 pytest tests/ -v
 # lint
-ruff check src/ tests/
+ruff check . && ruff format --check .
 # format
-ruff format src/ tests/
+ruff format .
 # coverage
-pytest --cov=src/ tests/
+pytest --cov=dossier tests/
 ```
 
 ## Anti-Patterns (Do NOT Do)
@@ -116,39 +116,31 @@ pytest --cov=src/ tests/
 - `NodeMetrics`
 - `PathResult`
 - `ResolutionResult`
-- `TestAliases`
-- `TestBelowThreshold`
-- `TestBuildGraph`
-- `TestBulkInsertBenchmark`
 
 ### Domain Terms
 - Court Records
-- Customizing Categories Edit
 - DOSSIER
 - Document Intelligence System
-- Endpoints Once
 - FOIA
-- GET
-- HTML
-- MIT
 - NER
 
 ### API Endpoints
 - `/`
-- `/aliases/{entity_id}`
 - `/api/activity-heatmap`
 - `/api/ai/ask`
 - `/api/ai/summarize`
 - `/api/alias-network`
 - `/api/aliases/resolve`
-- `/api/aliases/{alias_id}`
 - `/api/annotations/search`
-- `/api/annotations/{annotation_id}`
 - `/api/anomalies`
 - `/api/audit`
 - `/api/board`
-- `/api/board/{item_id}`
 - `/api/bulk-tag`
+- `/api/case-files`
+- `/api/export/documents`
+- `/api/export/entity-graph`
+- `/api/export/entities`
+- `/api/visualization/timeline`
 
 ### Enums/Constants
 - `APPROXIMATE`
