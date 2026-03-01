@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1772354100323,
+  "lastUpdate": 1772355923755,
   "repoUrl": "https://github.com/AreteDriver/Dossier",
   "entries": {
     "Benchmark": [
@@ -1506,6 +1506,72 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.004680151555424276",
             "extra": "mean: 11.036224277778295 msec\nrounds: 54"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "AreteDriver@users.noreply.github.com",
+            "name": "AreteDriver",
+            "username": "AreteDriver"
+          },
+          "committer": {
+            "email": "AreteDriver@users.noreply.github.com",
+            "name": "AreteDriver",
+            "username": "AreteDriver"
+          },
+          "distinct": true,
+          "id": "71eeddc8c4e4ceeb11e443e0c3025bfd16f4e726",
+          "message": "fix(api): fix 2 pre-existing SQL bugs in routes_analytics\n\n- export_connections: remove non-existent co_document_count column,\n  ec.weight already tracks connection strength\n- investigation_timeline + flagged_hub: add ensure table calls before\n  querying lazily-created annotations, analyst_notes, and audit_log\n- Remove try/except workaround from TestExportConnections\n- Uncomment investigation-timeline in temporal endpoint tests\n\n993 tests passing, 97% coverage.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>",
+          "timestamp": "2026-03-01T01:01:59-08:00",
+          "tree_id": "b738abff2adfd4f4925a72d02fa767292fd67837",
+          "url": "https://github.com/AreteDriver/Dossier/commit/71eeddc8c4e4ceeb11e443e0c3025bfd16f4e726"
+        },
+        "date": 1772355922932,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/test_benchmarks.py::TestNERBenchmark::test_extract_entities_5k",
+            "value": 113.38717118542712,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00007208686384265939",
+            "extra": "mean: 8.81933987368514 msec\nrounds: 95"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestFTS5Benchmark::test_fts5_search_500_docs",
+            "value": 1507.8295873659827,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00010558532120299964",
+            "extra": "mean: 663.2049194278601 usec\nrounds: 1328"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestResolverBenchmark::test_resolve_all_200_entities",
+            "value": 13.614409825884854,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0007136696183879195",
+            "extra": "mean: 73.45158642857338 msec\nrounds: 14"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestGraphBenchmark::test_centrality_betweenness_100",
+            "value": 36.23779520242902,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00017549163936218755",
+            "extra": "mean: 27.59549786111077 msec\nrounds: 36"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestGraphBenchmark::test_communities_100",
+            "value": 212.2148999085112,
+            "unit": "iter/sec",
+            "range": "stddev: 0.001059157565571205",
+            "extra": "mean: 4.712204470238018 msec\nrounds: 168"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestBulkInsertBenchmark::test_bulk_insert_100_docs",
+            "value": 122.36251515670578,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0016328780425640815",
+            "extra": "mean: 8.172437439025602 msec\nrounds: 82"
           }
         ]
       }
