@@ -6247,3 +6247,97 @@ def connection_weight_percentile():
                 }
             )
     return {"total": total, "percentiles": result}
+
+
+# ═══════════════════════════════════════════
+# VISUALIZATION
+# ═══════════════════════════════════════════
+
+
+@router.get("/visualization/timeline")
+def visualization_timeline(
+    min_confidence: float = Query(0.5, ge=0.0, le=1.0),
+    limit: int = Query(1000, ge=1, le=10000),
+):
+    """Events grouped by month with entity associations and risk scores."""
+    with get_db() as conn:
+        rows = conn.execute(
+            """
+            SELECT ev.id, ev.event_date, ev.precision, ev.confidence, ev.context,
+                   ev.document_id, d.title as doc_title, d.category,
+                   MAX(df.score) as max_risk
+            FROM events ev
+            JOIN documents d ON d.id = ev.document_id
+            LEFT JOIN document_forensics df ON df.document_id = ev.document_id
+            WHERE ev.event_date IS NOT NULL AND ev.confidence >= ?
+            GROUP BY ev.id
+            ORDER BY ev.event_date
+            LIMIT ?
+        """,
+            (min_confidence, limit),
+        ).fetchall()
+
+        # Group by month
+        months: dict = {}
+        for r in rows:
+            date_str = r["event_date"]
+            month_key = date_str[:7] if date_str and len(date_str) >= 7 else "unknown"
+            if month_key not in months:
+                months[month_key] = {"month": month_key, "events": [], "event_count": 0}
+            months[month_key]["events"].append(
+                {
+                    "id": r["id"],
+                    "date": r["event_date"],
+                    "confidence": r["confidence"],
+                    "context": r["context"],
+                    "document_id": r["document_id"],
+                    "doc_title": r["doc_title"],
+                    "risk_score": r["max_risk"],
+                }
+            )
+            months[month_key]["event_count"] += 1
+
+    timeline = sorted(months.values(), key=lambda m: m["month"])
+    return {"months": timeline, "total_events": len(rows)}
+
+
+@router.get("/visualization/entity-timeline/{entity_id}")
+def visualization_entity_timeline(entity_id: int):
+    """Timeline of events associated with a specific entity."""
+    with get_db() as conn:
+        entity = conn.execute(
+            "SELECT id, name, type FROM entities WHERE id = ?", (entity_id,)
+        ).fetchone()
+        if not entity:
+            raise HTTPException(404, "Entity not found")
+
+        rows = conn.execute(
+            """
+            SELECT ev.id, ev.event_date, ev.precision, ev.confidence, ev.context,
+                   ev.document_id, d.title as doc_title
+            FROM events ev
+            JOIN documents d ON d.id = ev.document_id
+            JOIN document_entities de ON de.document_id = ev.document_id
+            WHERE de.entity_id = ? AND ev.event_date IS NOT NULL
+            ORDER BY ev.event_date
+        """,
+            (entity_id,),
+        ).fetchall()
+
+    events = [
+        {
+            "id": r["id"],
+            "date": r["event_date"],
+            "precision": r["precision"],
+            "confidence": r["confidence"],
+            "context": r["context"],
+            "document_id": r["document_id"],
+            "doc_title": r["doc_title"],
+        }
+        for r in rows
+    ]
+    return {
+        "entity": {"id": entity["id"], "name": entity["name"], "type": entity["type"]},
+        "events": events,
+        "event_count": len(events),
+    }
