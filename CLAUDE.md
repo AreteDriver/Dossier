@@ -8,7 +8,7 @@ Local-first document intelligence system
 
 - **Version**: 0.6.0
 - **Language**: Python
-- **Tests**: 1031
+- **Tests**: 1036
 - **Files**: 89 across 1 languages
 
 ## Architecture
@@ -27,7 +27,7 @@ Dossier/
 │   │   ├── routes_collaboration.py (27 routes — annotations, audit, watchlist, alerts)
 │   │   ├── routes_investigation.py (23 routes — board, case files, evidence chains)
 │   │   ├── routes_intelligence.py  (21 routes — AI, duplicates, patterns, narrative)
-│   │   └── routes_analytics.py     (193 routes — metrics/analytics/provenance endpoints)
+│   │   └── routes_analytics.py     (194 routes — metrics/analytics/provenance endpoints)
 │   ├── core/
 │   ├── data/
 │   ├── db/
@@ -146,6 +146,7 @@ pytest --cov=dossier tests/
 - `/api/pdf-metadata/stats`
 - `/api/pdf-metadata/search`
 - `/api/pdf-metadata/timeline`
+- `/api/pdf-metadata/extract-all`
 
 ### Enums/Constants
 - `APPROXIMATE`
