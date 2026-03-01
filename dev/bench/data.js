@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1772358166911,
+  "lastUpdate": 1772359094639,
   "repoUrl": "https://github.com/AreteDriver/Dossier",
   "entries": {
     "Benchmark": [
@@ -1836,6 +1836,72 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.0010074324049967325",
             "extra": "mean: 6.76820787500108 msec\nrounds: 104"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "AreteDriver@users.noreply.github.com",
+            "name": "AreteDriver",
+            "username": "AreteDriver"
+          },
+          "committer": {
+            "email": "AreteDriver@users.noreply.github.com",
+            "name": "AreteDriver",
+            "username": "AreteDriver"
+          },
+          "distinct": true,
+          "id": "57c77011deba8f7d3076b516aa510935dff13b25",
+          "message": "feat(forensics): add cross-module provenance anomaly detection\n\nBridge anomaly.py and provenance.py by detecting forensic anomalies\nfrom PDF metadata: date inconsistencies (creation > modification,\nfuture dates, >20yr gaps), metadata stripping, producer inconsistencies\n(same author using 3+ producers), and creation clusters (3+ docs within\nconfigurable time window). Wire into /anomalies endpoint as\nprovenance_anomalies key. 19 new tests (1055 total).\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>",
+          "timestamp": "2026-03-01T01:55:15-08:00",
+          "tree_id": "efcd5831e18e67e8a917b8da671d0b64dcf7f07f",
+          "url": "https://github.com/AreteDriver/Dossier/commit/57c77011deba8f7d3076b516aa510935dff13b25"
+        },
+        "date": 1772359094212,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/test_benchmarks.py::TestNERBenchmark::test_extract_entities_5k",
+            "value": 114.8399304777531,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00007162292705716438",
+            "extra": "mean: 8.707772599999275 msec\nrounds: 95"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestFTS5Benchmark::test_fts5_search_500_docs",
+            "value": 1566.8098369500678,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000015732755645015647",
+            "extra": "mean: 638.2395466361044 usec\nrounds: 1308"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestResolverBenchmark::test_resolve_all_200_entities",
+            "value": 13.690979987106376,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0008846144348948696",
+            "extra": "mean: 73.04079042857126 msec\nrounds: 14"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestGraphBenchmark::test_centrality_betweenness_100",
+            "value": 36.27736358960149,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0006215213972716881",
+            "extra": "mean: 27.56539894444367 msec\nrounds: 36"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestGraphBenchmark::test_communities_100",
+            "value": 212.6221389272446,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0009427213585736372",
+            "extra": "mean: 4.703179100000408 msec\nrounds: 170"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestBulkInsertBenchmark::test_bulk_insert_100_docs",
+            "value": 155.6157477267758,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00027860135068976906",
+            "extra": "mean: 6.426084857142877 msec\nrounds: 105"
           }
         ]
       }
