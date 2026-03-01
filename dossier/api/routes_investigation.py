@@ -4,7 +4,7 @@ import datetime
 import json
 
 from fastapi import APIRouter, HTTPException, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 
 from dossier.api import utils
 from dossier.db.database import get_db
@@ -596,6 +596,66 @@ def export_case_file(case_id: int):
             html += "<hr>"
 
     return HTMLResponse(html)
+
+
+@router.get("/case-files/{case_id}/export/csv")
+def export_case_file_csv(case_id: int):
+    """Export case file items as CSV."""
+    import csv
+    import io
+
+    with get_db() as conn:
+        _ensure_case_files_table(conn)
+        cf = conn.execute("SELECT * FROM case_files WHERE id = ?", (case_id,)).fetchone()
+        if not cf:
+            raise HTTPException(404, "Case file not found")
+        items = conn.execute(
+            "SELECT * FROM case_file_items WHERE case_file_id = ? ORDER BY sort_order, added_at",
+            (case_id,),
+        ).fetchall()
+
+        rows = []
+        for item in items:
+            d = dict(item)
+            row = {
+                "item_type": d["item_type"],
+                "item_id": d["item_id"],
+                "note": d["note"],
+                "sort_order": d["sort_order"],
+                "added_at": d["added_at"],
+                "detail": "",
+            }
+            if d["item_type"] == "document":
+                doc = conn.execute(
+                    "SELECT title, filename, category FROM documents WHERE id = ?",
+                    (d["item_id"],),
+                ).fetchone()
+                if doc:
+                    row["detail"] = doc["title"] or doc["filename"]
+            elif d["item_type"] == "entity":
+                ent = conn.execute(
+                    "SELECT name, type FROM entities WHERE id = ?", (d["item_id"],)
+                ).fetchone()
+                if ent:
+                    row["detail"] = f"{ent['name']} ({ent['type']})"
+            elif d["item_type"] == "chain":
+                ch = conn.execute(
+                    "SELECT name FROM evidence_chains WHERE id = ?", (d["item_id"],),
+                ).fetchone()
+                if ch:
+                    row["detail"] = ch["name"]
+            rows.append(row)
+
+    out = io.StringIO()
+    if rows:
+        writer = csv.DictWriter(out, fieldnames=rows[0].keys())
+        writer.writeheader()
+        writer.writerows(rows)
+    return JSONResponse(content={
+        "csv": out.getvalue(),
+        "count": len(rows),
+        "case_file": cf["name"],
+    })
 
 
 # ═══════════════════════════════════════════

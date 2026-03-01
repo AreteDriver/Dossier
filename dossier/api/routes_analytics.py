@@ -670,6 +670,101 @@ def export_timeline(
     return {"events": events, "count": len(events)}
 
 
+@router.get("/export/entity-graph")
+def export_entity_graph(
+    type: Optional[str] = Query(None),
+    min_weight: int = Query(1, ge=1),
+    limit: int = Query(500, ge=1, le=5000),
+):
+    """Export entity graph as D3/Gephi-compatible JSON (nodes + edges)."""
+    with get_db() as conn:
+        # Nodes
+        node_sql = """
+            SELECT e.id, e.name, e.type, e.canonical,
+                   COALESCE(SUM(de.count), 0) as mentions,
+                   COUNT(DISTINCT de.document_id) as doc_count
+            FROM entities e
+            LEFT JOIN document_entities de ON de.entity_id = e.id
+        """
+        params: list = []
+        if type:
+            node_sql += " WHERE e.type = ?"
+            params.append(type)
+        node_sql += " GROUP BY e.id ORDER BY mentions DESC LIMIT ?"
+        params.append(limit)
+        node_rows = conn.execute(node_sql, params).fetchall()
+
+        node_ids = {r["id"] for r in node_rows}
+
+        # Edges (only between included nodes)
+        edge_rows = conn.execute(
+            """
+            SELECT ec.entity_a_id as source, ec.entity_b_id as target, ec.weight
+            FROM entity_connections ec
+            WHERE ec.weight >= ?
+            ORDER BY ec.weight DESC
+        """,
+            (min_weight,),
+        ).fetchall()
+
+    nodes = [
+        {
+            "id": r["id"],
+            "label": r["name"],
+            "type": r["type"],
+            "mentions": r["mentions"],
+            "doc_count": r["doc_count"],
+        }
+        for r in node_rows
+    ]
+    edges = [
+        {"source": r["source"], "target": r["target"], "weight": r["weight"]}
+        for r in edge_rows
+        if r["source"] in node_ids and r["target"] in node_ids
+    ]
+
+    return {"nodes": nodes, "edges": edges, "node_count": len(nodes), "edge_count": len(edges)}
+
+
+@router.get("/export/documents")
+def export_documents(
+    category: Optional[str] = Query(None),
+    format: str = Query("json", description="json or csv"),
+    limit: int = Query(500, ge=1, le=5000),
+):
+    """Export document metadata as JSON or CSV."""
+    with get_db() as conn:
+        sql = """
+            SELECT d.id, d.filename, d.title, d.category, d.source, d.date,
+                   d.pages, d.flagged, d.ingested_at,
+                   COUNT(DISTINCT de.entity_id) as entity_count
+            FROM documents d
+            LEFT JOIN document_entities de ON de.document_id = d.id
+        """
+        params: list = []
+        if category:
+            sql += " WHERE d.category = ?"
+            params.append(category)
+        sql += " GROUP BY d.id ORDER BY d.ingested_at DESC LIMIT ?"
+        params.append(limit)
+        rows = conn.execute(sql, params).fetchall()
+
+    documents = [dict(r) for r in rows]
+
+    if format == "csv":
+        import csv
+        import io
+
+        out = io.StringIO()
+        if documents:
+            writer = csv.DictWriter(out, fieldnames=documents[0].keys())
+            writer.writeheader()
+            writer.writerows(documents)
+        return JSONResponse(content={"csv": out.getvalue(), "count": len(documents)})
+
+    return {"documents": documents, "count": len(documents)}
+
+
 # ═══════════════════════════════════════════
 
 
