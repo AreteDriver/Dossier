@@ -688,3 +688,87 @@ class TestAPIEndpoints:
         data = r.json()
         assert data["count"] == 1
         assert data["results"][0]["author"] == "Jane Forensic"
+
+    def test_extract_all_no_pdfs(self, client):
+        """No PDFs in corpus — nothing to extract."""
+        r = client.post("/api/pdf-metadata/extract-all")
+        assert r.status_code == 200
+        data = r.json()
+        assert data["total_pdfs"] == 0
+        assert data["extracted"] == 0
+
+    def test_extract_all_skips_non_pdf(self, client):
+        """Text files should not appear in extract-all results."""
+        from tests.conftest import upload_sample
+
+        upload_sample(client)
+        r = client.post("/api/pdf-metadata/extract-all")
+        assert r.status_code == 200
+        assert r.json()["total_pdfs"] == 0
+
+    def test_extract_all_with_pdf_doc(self, client):
+        """PDF filepath in DB triggers extraction (even if file doesn't exist)."""
+        from dossier.db.database import get_db
+
+        # Insert a doc with a .pdf filepath (file won't exist, so extraction skips)
+        with get_db() as conn:
+            conn.execute(
+                "INSERT INTO documents (filename, filepath, title, category, source, raw_text) "
+                "VALUES (?, ?, ?, ?, ?, ?)",
+                ("test.pdf", "/nonexistent/test.pdf", "Test PDF", "report", "test", "content"),
+            )
+            conn.commit()
+
+        r = client.post("/api/pdf-metadata/extract-all")
+        assert r.status_code == 200
+        data = r.json()
+        assert data["total_pdfs"] == 1
+        # File doesn't exist so extraction fails gracefully
+        assert data["skipped"] == 1
+        assert data["extracted"] == 0
+
+    def test_extract_all_skips_existing(self, client):
+        """Default mode skips docs that already have metadata."""
+        from dossier.db.database import get_db
+        from dossier.forensics.provenance import _ensure_pdf_metadata_table, store_pdf_metadata
+
+        with get_db() as conn:
+            conn.execute(
+                "INSERT INTO documents (filename, filepath, title, category, source, raw_text) "
+                "VALUES (?, ?, ?, ?, ?, ?)",
+                ("test.pdf", "/nonexistent/test.pdf", "Test PDF", "report", "test", "content"),
+            )
+            _ensure_pdf_metadata_table(conn)
+            store_pdf_metadata(
+                conn,
+                PDFMetadata(1, "Author", None, None, None, None, None, None, None, False, 5, 1000),
+            )
+            conn.commit()
+
+        r = client.post("/api/pdf-metadata/extract-all")
+        assert r.status_code == 200
+        # Already has metadata, so not included in extraction list
+        assert r.json()["total_pdfs"] == 0
+
+    def test_extract_all_force_reextracts(self, client):
+        """Force mode includes docs that already have metadata."""
+        from dossier.db.database import get_db
+        from dossier.forensics.provenance import _ensure_pdf_metadata_table, store_pdf_metadata
+
+        with get_db() as conn:
+            conn.execute(
+                "INSERT INTO documents (filename, filepath, title, category, source, raw_text) "
+                "VALUES (?, ?, ?, ?, ?, ?)",
+                ("test.pdf", "/nonexistent/test.pdf", "Test PDF", "report", "test", "content"),
+            )
+            _ensure_pdf_metadata_table(conn)
+            store_pdf_metadata(
+                conn,
+                PDFMetadata(1, "Author", None, None, None, None, None, None, None, False, 5, 1000),
+            )
+            conn.commit()
+
+        r = client.post("/api/pdf-metadata/extract-all", params={"force": True})
+        assert r.status_code == 200
+        # Force includes existing — file doesn't exist so it skips
+        assert r.json()["total_pdfs"] == 1

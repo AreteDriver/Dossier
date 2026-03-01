@@ -6410,3 +6410,58 @@ def pdf_metadata_timeline():
         entries = get_metadata_timeline(conn)
 
     return {"entries": entries, "count": len(entries)}
+
+
+@router.post("/pdf-metadata/extract-all")
+def pdf_metadata_extract_all(force: bool = Query(False)):
+    """Bulk-extract PDF metadata for all PDF documents in the corpus.
+
+    By default, skips documents that already have metadata.
+    Set force=true to re-extract for all PDFs.
+    """
+    from dossier.forensics.provenance import (
+        _ensure_pdf_metadata_table,
+        extract_pdf_metadata,
+        store_pdf_metadata,
+    )
+
+    with get_db() as conn:
+        _ensure_pdf_metadata_table(conn)
+
+        if force:
+            rows = conn.execute(
+                "SELECT id, filepath FROM documents WHERE LOWER(filepath) LIKE '%.pdf'"
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                """
+                SELECT d.id, d.filepath FROM documents d
+                LEFT JOIN document_pdf_metadata pm ON pm.document_id = d.id
+                WHERE LOWER(d.filepath) LIKE '%.pdf' AND pm.id IS NULL
+                """
+            ).fetchall()
+
+    extracted = 0
+    skipped = 0
+    errors = []
+
+    for row in rows:
+        doc_id = row["id"]
+        filepath = row["filepath"]
+        meta = extract_pdf_metadata(filepath, document_id=doc_id)
+        if meta:
+            with get_db() as conn:
+                _ensure_pdf_metadata_table(conn)
+                store_pdf_metadata(conn, meta)
+                conn.commit()
+            extracted += 1
+        else:
+            skipped += 1
+            errors.append({"document_id": doc_id, "filepath": filepath})
+
+    return {
+        "extracted": extracted,
+        "skipped": skipped,
+        "total_pdfs": len(rows),
+        "errors": errors[:50],
+    }
