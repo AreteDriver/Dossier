@@ -8,7 +8,7 @@ Local-first document intelligence system
 
 - **Version**: 0.6.0
 - **Language**: Python
-- **Tests**: 1036
+- **Tests**: 1055
 - **Files**: 89 across 1 languages
 
 ## Architecture
