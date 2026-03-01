@@ -6353,3 +6353,60 @@ def visualization_entity_timeline(entity_id: int):
         "events": events,
         "event_count": len(events),
     }
+
+
+# ── PDF Metadata / Provenance ───────────────────────────────────
+
+
+@router.get("/documents/{doc_id}/pdf-metadata")
+def get_document_pdf_metadata(doc_id: int):
+    """Get PDF metadata for a single document."""
+    from dossier.forensics.provenance import get_pdf_metadata
+
+    with get_db() as conn:
+        doc = conn.execute("SELECT id FROM documents WHERE id = ?", (doc_id,)).fetchone()
+        if not doc:
+            raise HTTPException(404, "Document not found")
+        meta = get_pdf_metadata(conn, doc_id)
+
+    return {"document_id": doc_id, "pdf_metadata": meta}
+
+
+@router.get("/pdf-metadata/stats")
+def pdf_metadata_stats():
+    """Corpus-wide PDF metadata statistics."""
+    from dossier.forensics.provenance import get_corpus_metadata_stats
+
+    with get_db() as conn:
+        stats = get_corpus_metadata_stats(conn)
+
+    return stats
+
+
+@router.get("/pdf-metadata/search")
+def pdf_metadata_search(
+    author: Optional[str] = Query(None),
+    creator: Optional[str] = Query(None),
+    producer: Optional[str] = Query(None),
+    limit: int = Query(50, ge=1, le=500),
+):
+    """Search PDF metadata by author, creator, or producer."""
+    from dossier.forensics.provenance import search_pdf_metadata
+
+    with get_db() as conn:
+        results = search_pdf_metadata(
+            conn, author=author, creator=creator, producer=producer, limit=limit
+        )
+
+    return {"results": results, "count": len(results)}
+
+
+@router.get("/pdf-metadata/timeline")
+def pdf_metadata_timeline():
+    """Creation/modification date timeline for metadata forensics."""
+    from dossier.forensics.provenance import get_metadata_timeline
+
+    with get_db() as conn:
+        entries = get_metadata_timeline(conn)
+
+    return {"entries": entries, "count": len(entries)}

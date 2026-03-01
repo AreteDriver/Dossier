@@ -197,6 +197,21 @@ def ingest_file(filepath: str, source: str = "", date: str = "") -> dict:
                     (a, b),
                 )
 
+        # ─── Step 6b: PDF metadata extraction ───
+        pdf_metadata_extracted = False
+        if filepath.suffix.lower() == ".pdf":
+            from dossier.forensics.provenance import (
+                extract_pdf_metadata,
+                store_pdf_metadata,
+                _ensure_pdf_metadata_table,
+            )
+
+            _ensure_pdf_metadata_table(conn)
+            pdf_meta = extract_pdf_metadata(str(filepath), document_id=doc_id)
+            if pdf_meta:
+                store_pdf_metadata(conn, pdf_meta)
+                pdf_metadata_extracted = True
+
         # ─── Step 7: Store forensic results ───
         _store_forensics(conn, doc_id, forensics)
 
@@ -234,6 +249,7 @@ def ingest_file(filepath: str, source: str = "", date: str = "") -> dict:
         "aml_flags": len(forensics["aml_flags"]),
         "topics": [t["label"] for t in forensics["topics"][:3]],
         "intents": [i["label"] for i in forensics["intents"][:2]],
+        "pdf_metadata_extracted": pdf_metadata_extracted,
     }
 
     print(
