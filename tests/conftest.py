@@ -266,3 +266,57 @@ def seed_multi_doc_data(client):
         conn.commit()
 
     return doc_ids
+
+
+def seed_analytics_data(client):
+    """Seed comprehensive data for analytics endpoint testing.
+
+    Builds on seed_multi_doc_data with additional entity_connections,
+    financial_indicators, forensics data, and events for full analytics coverage.
+    Returns list of document IDs.
+    """
+    doc_ids = seed_multi_doc_data(client)
+
+    from dossier.db.database import get_db
+
+    with get_db() as conn:
+        entities = conn.execute("SELECT id, name, type FROM entities").fetchall()
+        ent_map = {e["name"]: e["id"] for e in entities}
+
+        # Add more entity connections for graph/matrix endpoints
+        person_ids = [e["id"] for e in entities if e["type"] == "person"]
+        for i in range(len(person_ids)):
+            for j in range(i + 1, min(i + 3, len(person_ids))):
+                conn.execute(
+                    "INSERT OR IGNORE INTO entity_connections (entity_a_id, entity_b_id, weight) VALUES (?, ?, ?)",
+                    (min(person_ids[i], person_ids[j]), max(person_ids[i], person_ids[j]), i + j + 1),
+                )
+
+        # Add more forensics data across document types
+        for doc_id in doc_ids:
+            conn.execute(
+                "INSERT OR IGNORE INTO document_forensics (document_id, analysis_type, label, score, severity, evidence) VALUES (?, ?, ?, ?, ?, ?)",
+                (doc_id, "risk_score", "risk_score", 0.6 + (doc_id * 0.05), "medium", "Analysis"),
+            )
+            conn.execute(
+                "INSERT OR IGNORE INTO document_forensics (document_id, analysis_type, label, score, severity, evidence) VALUES (?, ?, ?, ?, ?, ?)",
+                (doc_id, "topic", "financial", 0.7, None, "Financial topic"),
+            )
+
+        # Add entity aliases for alias-network testing
+        if person_ids:
+            conn.execute(
+                "INSERT OR IGNORE INTO entity_aliases (entity_id, alias_name) VALUES (?, ?)",
+                (person_ids[0], "Jeff E"),
+            )
+
+        # Add entity resolution records
+        if len(person_ids) >= 2:
+            conn.execute(
+                "INSERT OR IGNORE INTO entity_resolutions (source_entity_id, canonical_entity_id) VALUES (?, ?)",
+                (person_ids[0], person_ids[1]),
+            )
+
+        conn.commit()
+
+    return doc_ids
