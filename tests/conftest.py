@@ -166,3 +166,103 @@ def seed_forensics(client):
         conn.commit()
 
     return doc_id
+
+
+def seed_multi_doc_data(client):
+    """Upload multiple docs with shared entities for intelligence endpoint testing.
+
+    Creates 4 docs across categories (deposition, correspondence, flight, report)
+    with overlapping person/org/place entities so inner loops execute.
+    Returns list of document IDs.
+    """
+    from dossier.db.database import get_db
+
+    docs = [
+        (
+            "deposition_witness.txt",
+            "Jeffrey Epstein and Ghislaine Maxwell were named in the deposition. "
+            "The FBI investigated the case in Palm Beach Florida. "
+            "Goldman Sachs provided financial records. Bill Clinton attended events. "
+            "Testimony was given under oath in New York.",
+        ),
+        (
+            "correspondence_memo.txt",
+            "From: John Podesta. To: Bill Clinton. "
+            "Regarding the meeting with Jeffrey Epstein at the office. "
+            "Goldman Sachs prepared advisory materials. Palm Beach visit confirmed. "
+            "Please review the attached flight log manifest.",
+        ),
+        (
+            "flight_manifest_2002.txt",
+            "Flight log manifest passenger list. Jeffrey Epstein and Bill Clinton "
+            "flew from New York to Palm Beach via Teterboro. "
+            "Ghislaine Maxwell was also a passenger. Flight date 2002-03-15.",
+        ),
+        (
+            "financial_report.txt",
+            "Goldman Sachs report on wire transfers. Jeffrey Epstein account "
+            "showed $9,500 structured deposits through the Cayman Islands LLC. "
+            "Split the payment to keep it under the limit. Off the record.",
+        ),
+    ]
+
+    doc_ids = []
+    for filename, content in docs:
+        r = upload_sample(client, filename=filename, content=content)
+        doc_ids.append(r.json()["document_id"])
+
+    # Seed additional metadata for richer endpoint testing
+    with get_db() as conn:
+        # Set categories and dates
+        conn.execute(
+            "UPDATE documents SET category = 'deposition', date = '2015-01-15', source = 'FBI' WHERE id = ?",
+            (doc_ids[0],),
+        )
+        conn.execute(
+            "UPDATE documents SET category = 'correspondence', date = '2016-03-15', source = 'FOIA' WHERE id = ?",
+            (doc_ids[1],),
+        )
+        conn.execute(
+            "UPDATE documents SET category = 'flight', date = '2002-03-15', source = 'FAA' WHERE id = ?",
+            (doc_ids[2],),
+        )
+        conn.execute(
+            "UPDATE documents SET category = 'report', date = '2018-06-01', source = 'SEC' WHERE id = ?",
+            (doc_ids[3],),
+        )
+
+        # Seed financial_indicators for influence scores
+        conn.execute(
+            "INSERT OR IGNORE INTO financial_indicators (document_id, indicator_type, value, context, risk_score) VALUES (?, ?, ?, ?, ?)",
+            (doc_ids[3], "currency_amount", "$9,500", "Structured deposit", 0.9),
+        )
+
+        # Seed events for timeline/narrative
+        conn.execute(
+            "INSERT INTO events (document_id, event_date, date_raw, context, confidence, precision) VALUES (?, ?, ?, ?, ?, ?)",
+            (doc_ids[0], "2015-01-15", "January 15, 2015", "Deposition taken at FBI offices", 0.9, "day"),
+        )
+        conn.execute(
+            "INSERT INTO events (document_id, event_date, date_raw, context, confidence, precision) VALUES (?, ?, ?, ?, ?, ?)",
+            (doc_ids[2], "2002-03-15", "2002-03-15", "Flight from NY to Palm Beach", 0.8, "day"),
+        )
+
+        # Seed entity_connections for link analysis
+        entities = conn.execute("SELECT id, name FROM entities").fetchall()
+        ent_map = {e["name"]: e["id"] for e in entities}
+        epstein_id = None
+        maxwell_id = None
+        for name, eid in ent_map.items():
+            if "epstein" in name.lower():
+                epstein_id = eid
+            if "maxwell" in name.lower():
+                maxwell_id = eid
+        if epstein_id and maxwell_id:
+            conn.execute(
+                "INSERT OR IGNORE INTO entity_connections (entity_a_id, entity_b_id, weight) VALUES (?, ?, ?)",
+                (min(epstein_id, maxwell_id), max(epstein_id, maxwell_id), 4),
+            )
+
+        conn.commit()
+
+    return doc_ids
