@@ -1,6 +1,6 @@
 """Tests for dossier.api.routes_investigation — board, evidence chains, snapshots, case files."""
 
-from tests.conftest import upload_sample, seed_multi_doc_data
+from tests.conftest import upload_sample
 
 
 class TestBoard:
@@ -332,6 +332,7 @@ class TestCaseFilesWithItems:
         case_id = r.json()["id"]
         # Insert an unknown item_type directly into the DB
         from dossier.db.database import get_db
+
         with get_db() as conn:
             conn.execute(
                 "INSERT INTO case_file_items (case_file_id, item_type, item_id, note) VALUES (?, ?, ?, ?)",

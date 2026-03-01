@@ -48,8 +48,7 @@ class TestCaseFileExportCSV:
         assert r.json()["count"] == 1
 
     def test_export_csv_chain_item(self, client):
-        r = upload_sample(client)
-        doc_id = r.json()["document_id"]
+        upload_sample(client)
         r = client.post("/api/evidence-chains", json={"name": "Test Chain"})
         chain_id = r.json()["id"]
         r = client.post("/api/case-files", json={"name": "Chain CSV"})

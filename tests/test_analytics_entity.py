@@ -61,6 +61,7 @@ class TestEntityConnectionsMap:
     def test_connections_map(self, analytics_client):
         client, _ = analytics_client
         from dossier.db.database import get_db
+
         with get_db() as conn:
             ent = conn.execute("SELECT id FROM entities WHERE type = 'person' LIMIT 1").fetchone()
         if ent:
@@ -78,13 +79,19 @@ class TestEntityPairHistory:
     def test_pair_history(self, analytics_client):
         client, _ = analytics_client
         from dossier.db.database import get_db
+
         with get_db() as conn:
-            persons = conn.execute("SELECT id FROM entities WHERE type = 'person' LIMIT 2").fetchall()
+            persons = conn.execute(
+                "SELECT id FROM entities WHERE type = 'person' LIMIT 2"
+            ).fetchall()
         if len(persons) >= 2:
-            r = client.get("/api/entity-pair-history", params={
-                "entity_a": persons[0]["id"],
-                "entity_b": persons[1]["id"],
-            })
+            r = client.get(
+                "/api/entity-pair-history",
+                params={
+                    "entity_a": persons[0]["id"],
+                    "entity_b": persons[1]["id"],
+                },
+            )
             assert r.status_code == 200
 
     def test_pair_history_empty(self, analytics_client):
@@ -98,13 +105,19 @@ class TestEntityPairCodocs:
     def test_pair_codocs(self, analytics_client):
         client, _ = analytics_client
         from dossier.db.database import get_db
+
         with get_db() as conn:
-            persons = conn.execute("SELECT id FROM entities WHERE type = 'person' LIMIT 2").fetchall()
+            persons = conn.execute(
+                "SELECT id FROM entities WHERE type = 'person' LIMIT 2"
+            ).fetchall()
         if len(persons) >= 2:
-            r = client.get("/api/entity-pair-codocs", params={
-                "entity_a_id": persons[0]["id"],
-                "entity_b_id": persons[1]["id"],
-            })
+            r = client.get(
+                "/api/entity-pair-codocs",
+                params={
+                    "entity_a_id": persons[0]["id"],
+                    "entity_b_id": persons[1]["id"],
+                },
+            )
             assert r.status_code == 200
 
 
@@ -112,13 +125,17 @@ class TestEntityPath:
     def test_entity_path(self, analytics_client):
         client, _ = analytics_client
         from dossier.db.database import get_db
+
         with get_db() as conn:
             persons = conn.execute("SELECT id FROM entities LIMIT 2").fetchall()
         if len(persons) >= 2:
-            r = client.get("/api/entity-path", params={
-                "from_id": persons[0]["id"],
-                "to_id": persons[1]["id"],
-            })
+            r = client.get(
+                "/api/entity-path",
+                params={
+                    "from_id": persons[0]["id"],
+                    "to_id": persons[1]["id"],
+                },
+            )
             assert r.status_code == 200
 
     def test_entity_path_suggestions(self, analytics_client):

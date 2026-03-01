@@ -38,18 +38,24 @@ class TestDocumentSideBySide:
     def test_sidebyside(self, analytics_client):
         client, doc_ids = analytics_client
         if len(doc_ids) >= 2:
-            r = client.get("/api/document-sidebyside", params={
-                "doc_a": doc_ids[0],
-                "doc_b": doc_ids[1],
-            })
+            r = client.get(
+                "/api/document-sidebyside",
+                params={
+                    "doc_a": doc_ids[0],
+                    "doc_b": doc_ids[1],
+                },
+            )
             assert r.status_code == 200
 
     def test_sidebyside_not_found(self, analytics_client):
         client, _ = analytics_client
-        r = client.get("/api/document-sidebyside", params={
-            "doc_a": 99999,
-            "doc_b": 99998,
-        })
+        r = client.get(
+            "/api/document-sidebyside",
+            params={
+                "doc_a": 99999,
+                "doc_b": 99998,
+            },
+        )
         assert r.status_code in (200, 404)
 
 

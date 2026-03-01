@@ -136,6 +136,7 @@ class TestAnalyticsWithParams:
     def test_entity_connections_map(self, analytics_client):
         client, _ = analytics_client
         from dossier.db.database import get_db
+
         with get_db() as conn:
             ent = conn.execute("SELECT id FROM entities LIMIT 1").fetchone()
         if ent:
@@ -145,13 +146,19 @@ class TestAnalyticsWithParams:
     def test_entity_pair_strength(self, analytics_client):
         client, _ = analytics_client
         from dossier.db.database import get_db
+
         with get_db() as conn:
-            persons = conn.execute("SELECT id FROM entities WHERE type = 'person' LIMIT 2").fetchall()
+            persons = conn.execute(
+                "SELECT id FROM entities WHERE type = 'person' LIMIT 2"
+            ).fetchall()
         if len(persons) >= 2:
-            r = client.get("/api/entity-pair-strength", params={
-                "entity_a_id": persons[0]["id"],
-                "entity_b_id": persons[1]["id"],
-            })
+            r = client.get(
+                "/api/entity-pair-strength",
+                params={
+                    "entity_a_id": persons[0]["id"],
+                    "entity_b_id": persons[1]["id"],
+                },
+            )
             assert r.status_code == 200
 
     def test_connection_weight_histogram(self, analytics_client):

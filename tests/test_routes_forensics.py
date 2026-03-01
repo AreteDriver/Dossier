@@ -269,6 +269,7 @@ class TestPhraseNoiseFilter:
     def test_phrase_noise_filtered(self, client):
         """Common stop-word phrases should be filtered."""
         from tests.conftest import seed_forensics
+
         seed_forensics(client)
         r = client.get("/api/forensics/phrases")
         assert r.status_code == 200
@@ -277,6 +278,7 @@ class TestPhraseNoiseFilter:
     def test_phrase_limit_filter(self, client):
         """Limit is applied after noise filtering."""
         from tests.conftest import seed_forensics
+
         seed_forensics(client)
         r = client.get("/api/forensics/phrases", params={"limit": 5})
         assert r.status_code == 200
@@ -288,6 +290,7 @@ class TestAnomalyDetection:
 
     def test_anomalies_with_data(self, client):
         from tests.conftest import seed_multi_doc_data
+
         seed_multi_doc_data(client)
         r = client.get("/api/anomalies")
         assert r.status_code == 200

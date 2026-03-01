@@ -240,7 +240,14 @@ def seed_multi_doc_data(client):
         # Seed events for timeline/narrative
         conn.execute(
             "INSERT INTO events (document_id, event_date, date_raw, context, confidence, precision) VALUES (?, ?, ?, ?, ?, ?)",
-            (doc_ids[0], "2015-01-15", "January 15, 2015", "Deposition taken at FBI offices", 0.9, "day"),
+            (
+                doc_ids[0],
+                "2015-01-15",
+                "January 15, 2015",
+                "Deposition taken at FBI offices",
+                0.9,
+                "day",
+            ),
         )
         conn.execute(
             "INSERT INTO events (document_id, event_date, date_raw, context, confidence, precision) VALUES (?, ?, ?, ?, ?, ?)",
@@ -281,7 +288,6 @@ def seed_analytics_data(client):
 
     with get_db() as conn:
         entities = conn.execute("SELECT id, name, type FROM entities").fetchall()
-        ent_map = {e["name"]: e["id"] for e in entities}
 
         # Add more entity connections for graph/matrix endpoints
         person_ids = [e["id"] for e in entities if e["type"] == "person"]
@@ -289,7 +295,11 @@ def seed_analytics_data(client):
             for j in range(i + 1, min(i + 3, len(person_ids))):
                 conn.execute(
                     "INSERT OR IGNORE INTO entity_connections (entity_a_id, entity_b_id, weight) VALUES (?, ?, ?)",
-                    (min(person_ids[i], person_ids[j]), max(person_ids[i], person_ids[j]), i + j + 1),
+                    (
+                        min(person_ids[i], person_ids[j]),
+                        max(person_ids[i], person_ids[j]),
+                        i + j + 1,
+                    ),
                 )
 
         # Add more forensics data across document types

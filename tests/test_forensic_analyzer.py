@@ -1,7 +1,5 @@
 """Tests for dossier.core.forensic_analyzer — pure function unit tests."""
 
-import pytest
-
 from dossier.core.forensic_analyzer import (
     analyze_document,
     _classify_intent,
@@ -39,8 +37,13 @@ class TestAnalyzeDocument:
         text = "This is a longer document about payments and transfers " * 10
         result = analyze_document(text)
         expected_keys = {
-            "intents", "topics", "aml_flags", "codewords",
-            "phrases", "financial_indicators", "risk_score",
+            "intents",
+            "topics",
+            "aml_flags",
+            "codewords",
+            "phrases",
+            "financial_indicators",
+            "risk_score",
         }
         assert set(result.keys()) == expected_keys
 
@@ -99,8 +102,10 @@ class TestClassifyIntent:
 
     def test_evidence_truncated_to_five(self):
         # Many signals → evidence list capped at 5
-        text = ("invoice payment receipt purchase sale transfer amount due "
-                "balance fee commission disbursement remittance payable")
+        text = (
+            "invoice payment receipt purchase sale transfer amount due "
+            "balance fee commission disbursement remittance payable"
+        )
         results = _classify_intent(text)
         transactional = [r for r in results if r["label"] == "transactional"][0]
         assert len(transactional["evidence"]) <= 5
@@ -149,8 +154,7 @@ class TestClassifyTopics:
 
     def test_max_five_topics(self):
         # Text that triggers many topics — result capped at 5
-        text = ("bank attorney flight trafficking surveillance campaign "
-                "property email " * 20)
+        text = "bank attorney flight trafficking surveillance campaign property email " * 20
         results = _classify_topics(text)
         assert len(results) <= 5
 
@@ -312,6 +316,7 @@ class TestDetectCodewords:
     def test_cap_at_thirty(self):
         # Create text with 40+ distinct known substitutes
         from dossier.core.forensic_analyzer import KNOWN_CODE_SUBSTITUTES
+
         words = list(KNOWN_CODE_SUBSTITUTES.keys())[:35]
         text = " ".join(words)
         results = _detect_codewords(text, text.lower())
@@ -378,9 +383,7 @@ class TestExtractRepeatedPhrases:
 
     def test_max_fifty_results(self):
         # Generate text with many repeated phrases
-        phrases_text = " ".join(
-            f"important meeting topic{i} " * 3 for i in range(100)
-        )
+        phrases_text = " ".join(f"important meeting topic{i} " * 3 for i in range(100))
         results = _extract_repeated_phrases(phrases_text, min_count=2)
         assert len(results) <= 50
 

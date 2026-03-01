@@ -640,7 +640,8 @@ def export_case_file_csv(case_id: int):
                     row["detail"] = f"{ent['name']} ({ent['type']})"
             elif d["item_type"] == "chain":
                 ch = conn.execute(
-                    "SELECT name FROM evidence_chains WHERE id = ?", (d["item_id"],),
+                    "SELECT name FROM evidence_chains WHERE id = ?",
+                    (d["item_id"],),
                 ).fetchone()
                 if ch:
                     row["detail"] = ch["name"]
@@ -651,11 +652,13 @@ def export_case_file_csv(case_id: int):
         writer = csv.DictWriter(out, fieldnames=rows[0].keys())
         writer.writeheader()
         writer.writerows(rows)
-    return JSONResponse(content={
-        "csv": out.getvalue(),
-        "count": len(rows),
-        "case_file": cf["name"],
-    })
+    return JSONResponse(
+        content={
+            "csv": out.getvalue(),
+            "count": len(rows),
+            "case_file": cf["name"],
+        }
+    )
 
 
 # ═══════════════════════════════════════════

@@ -39,6 +39,7 @@ class TestTimelineOverlay:
     def test_overlay(self, analytics_client):
         client, _ = analytics_client
         from dossier.db.database import get_db
+
         with get_db() as conn:
             ent = conn.execute("SELECT id FROM entities LIMIT 1").fetchone()
         if ent:

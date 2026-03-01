@@ -280,6 +280,7 @@ class TestCommunicationFlowWithData:
     def test_communication_flow_with_entity_filter(self, multi_client):
         client, _ = multi_client
         from dossier.db.database import get_db
+
         with get_db() as conn:
             ent = conn.execute("SELECT id FROM entities WHERE type = 'person' LIMIT 1").fetchone()
         if ent:
@@ -491,6 +492,7 @@ class TestNarrativeWithData:
     def test_narrative_with_entity_id(self, multi_client):
         client, _ = multi_client
         from dossier.db.database import get_db
+
         with get_db() as conn:
             ent = conn.execute("SELECT id FROM entities LIMIT 1").fetchone()
         _ensure_lazy_tables(client)

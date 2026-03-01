@@ -16,25 +16,32 @@ class TestGraphPathBetween:
     def test_path_between_entities(self, analytics_client):
         client, _ = analytics_client
         from dossier.db.database import get_db
+
         with get_db() as conn:
             persons = conn.execute(
                 "SELECT name FROM entities WHERE type = 'person' LIMIT 2"
             ).fetchall()
         if len(persons) >= 2:
-            r = client.get("/api/graph/path-between", params={
-                "source_name": persons[0]["name"],
-                "target_name": persons[1]["name"],
-            })
+            r = client.get(
+                "/api/graph/path-between",
+                params={
+                    "source_name": persons[0]["name"],
+                    "target_name": persons[1]["name"],
+                },
+            )
             assert r.status_code == 200
             data = r.json()
             assert "path" in data or "error" in data
 
     def test_path_between_unknown(self, analytics_client):
         client, _ = analytics_client
-        r = client.get("/api/graph/path-between", params={
-            "source_name": "NonExistent Person",
-            "target_name": "Another Unknown",
-        })
+        r = client.get(
+            "/api/graph/path-between",
+            params={
+                "source_name": "NonExistent Person",
+                "target_name": "Another Unknown",
+            },
+        )
         assert r.status_code == 200
         assert "error" in r.json() or "path" in r.json()
 
