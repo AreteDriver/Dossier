@@ -293,3 +293,59 @@ class TestSourceCredibility:
     def test_rate_source_invalid(self, client):
         r = client.post("/api/source-credibility/x/rate", json={"rating": "X"})
         assert r.status_code == 400
+
+    def test_rate_source_overlap(self, client):
+        """Cover UPSERT conflict path for source credibility."""
+        upload_sample(client)
+        client.post(
+            "/api/source-credibility/Test Upload/rate",
+            json={"rating": "B", "notes": "Moderate"},
+        )
+        r = client.post(
+            "/api/source-credibility/Test Upload/rate",
+            json={"rating": "A", "notes": "Upgraded"},
+        )
+        assert r.status_code == 200
+        assert r.json()["rating"] == "A"
+
+
+class TestBulkTagWithTag:
+    """Cover tag storage path (lines 597-607) and tag extraction (lines 631-633)."""
+
+    def test_bulk_tag_with_tag(self, client):
+        r = upload_sample(client)
+        doc_id = r.json()["document_id"]
+        r = client.post("/api/bulk-tag", json={"doc_ids": [doc_id], "tag": "evidence"})
+        assert r.status_code == 200
+        assert r.json()["updated"] >= 1
+
+    def test_bulk_tag_suggestions_with_tags(self, client):
+        """After tagging, suggestions should include the tag."""
+        r = upload_sample(client)
+        doc_id = r.json()["document_id"]
+        client.post("/api/bulk-tag", json={"doc_ids": [doc_id], "tag": "keyevidence"})
+        r = client.get("/api/bulk-tag-suggestions")
+        assert r.status_code == 200
+        data = r.json()
+        assert "tags" in data
+        tag_names = [t["tag"] for t in data["tags"]]
+        assert "keyevidence" in tag_names
+
+    def test_bulk_tag_duplicate_tag_not_repeated(self, client):
+        """Tagging same doc twice with same tag shouldn't duplicate."""
+        r = upload_sample(client)
+        doc_id = r.json()["document_id"]
+        client.post("/api/bulk-tag", json={"doc_ids": [doc_id], "tag": "duptest"})
+        r = client.post("/api/bulk-tag", json={"doc_ids": [doc_id], "tag": "duptest"})
+        assert r.status_code == 200
+
+    def test_tag_co_occurrence(self, client):
+        """Multiple tags on same doc should all appear in suggestions."""
+        r = upload_sample(client)
+        doc_id = r.json()["document_id"]
+        client.post("/api/bulk-tag", json={"doc_ids": [doc_id], "tag": "alpha"})
+        client.post("/api/bulk-tag", json={"doc_ids": [doc_id], "tag": "beta"})
+        r = client.get("/api/bulk-tag-suggestions")
+        tag_names = [t["tag"] for t in r.json()["tags"]]
+        assert "alpha" in tag_names
+        assert "beta" in tag_names

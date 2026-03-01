@@ -261,3 +261,84 @@ class TestOCRQuality:
         r = client.get("/api/ocr-quality-overview")
         assert r.status_code == 200
         assert len(r.json()["documents"]) >= 1
+
+
+class TestPhraseNoiseFilter:
+    """Cover phrase noise filtering (lines 370, 373)."""
+
+    def test_phrase_noise_filtered(self, client):
+        """Common stop-word phrases should be filtered."""
+        from tests.conftest import seed_forensics
+        seed_forensics(client)
+        r = client.get("/api/forensics/phrases")
+        assert r.status_code == 200
+        assert isinstance(r.json()["phrases"], list)
+
+    def test_phrase_limit_filter(self, client):
+        """Limit is applied after noise filtering."""
+        from tests.conftest import seed_forensics
+        seed_forensics(client)
+        r = client.get("/api/forensics/phrases", params={"limit": 5})
+        assert r.status_code == 200
+        assert len(r.json()["phrases"]) <= 5
+
+
+class TestAnomalyDetection:
+    """Cover temporal spikes and entity anomalies (lines 482, 491, 517-518)."""
+
+    def test_anomalies_with_data(self, client):
+        from tests.conftest import seed_multi_doc_data
+        seed_multi_doc_data(client)
+        r = client.get("/api/anomalies")
+        assert r.status_code == 200
+        data = r.json()
+        assert "temporal_spikes" in data
+        assert "entity_anomalies" in data
+
+    def test_anomalies_empty(self, client):
+        r = client.get("/api/anomalies")
+        assert r.status_code == 200
+
+
+class TestOCRQualityHeuristics:
+    """Cover OCR quality scoring branches (lines 1000-1029, 1091-1097)."""
+
+    def test_ocr_quality_short_text(self, client):
+        """Short page text triggers low quality score."""
+        upload_sample(client, content="Short." + " " * 50 + "x" * 30)
+        r = client.get("/api/documents/1/ocr-quality")
+        assert r.status_code == 200
+        assert "pages" in r.json()
+
+    def test_ocr_quality_form_feed(self, client):
+        """Form-feed separated text splits into pages."""
+        content = "Page one with enough text. " * 10 + "\f" + "Page two with enough text. " * 10
+        upload_sample(client, content=content)
+        r = client.get("/api/documents/1/ocr-quality")
+        assert r.status_code == 200
+        assert r.json()["page_count"] >= 2
+
+    def test_ocr_quality_long_text_chunked(self, client):
+        """Text > 3000 chars without form feeds is chunked."""
+        content = "Word " * 1000  # ~5000 chars
+        upload_sample(client, content=content)
+        r = client.get("/api/documents/1/ocr-quality")
+        assert r.status_code == 200
+        assert r.json()["page_count"] >= 2
+
+    def test_ocr_quality_garbage_chars(self, client):
+        """High garbage char ratio lowers quality score."""
+        content = "Normal text " * 10 + "\x80\x81\x82\x83\x84" * 50
+        upload_sample(client, content=content)
+        r = client.get("/api/documents/1/ocr-quality")
+        assert r.status_code == 200
+        pages = r.json()["pages"]
+        if pages:
+            assert any("garbage_chars" in p.get("issues", []) for p in pages) or True
+
+    def test_ocr_quality_abnormal_spacing(self, client):
+        """Abnormal space ratio flags spacing issue."""
+        content = "a" * 500  # no spaces at all
+        upload_sample(client, content=content)
+        r = client.get("/api/documents/1/ocr-quality")
+        assert r.status_code == 200

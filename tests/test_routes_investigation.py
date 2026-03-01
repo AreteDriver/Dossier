@@ -1,6 +1,6 @@
 """Tests for dossier.api.routes_investigation — board, evidence chains, snapshots, case files."""
 
-from tests.conftest import upload_sample
+from tests.conftest import upload_sample, seed_multi_doc_data
 
 
 class TestBoard:
@@ -253,6 +253,125 @@ class TestCaseFiles:
     def test_export_case_file_404(self, client):
         r = client.get("/api/case-files/999/export")
         assert r.status_code == 404
+
+
+class TestEvidenceChainsWithLinks:
+    """Cover link_count aggregation in list_evidence_chains (lines 216-219)."""
+
+    def test_list_chains_with_link_count(self, client):
+        r = upload_sample(client)
+        doc_id = r.json()["document_id"]
+        r = client.post("/api/evidence-chains", json={"name": "Count Chain"})
+        chain_id = r.json()["id"]
+        client.post(
+            f"/api/evidence-chains/{chain_id}/links",
+            json={"target_id": doc_id, "link_type": "document", "narrative": "Link 1"},
+        )
+        r = client.get("/api/evidence-chains")
+        chains = r.json()["chains"]
+        chain = [c for c in chains if c["id"] == chain_id][0]
+        assert chain["link_count"] == 1
+
+
+class TestCaseFilesWithItems:
+    """Cover item_counts aggregation + enrichment + HTML export with all item types."""
+
+    def test_list_case_files_with_item_counts(self, client):
+        """Lines 447-454: item_counts + total_items in list_case_files."""
+        r = upload_sample(client)
+        doc_id = r.json()["document_id"]
+        r = client.post("/api/case-files", json={"name": "Counted Case"})
+        case_id = r.json()["id"]
+        client.post(
+            f"/api/case-files/{case_id}/items",
+            json={"item_type": "document", "item_id": doc_id},
+        )
+        r = client.get("/api/case-files")
+        case = [c for c in r.json()["case_files"] if c["id"] == case_id][0]
+        assert case["item_counts"]["document"] == 1
+        assert case["total_items"] >= 1
+
+    def test_get_case_file_entity_detail(self, client):
+        """Lines 493-497: entity detail enrichment."""
+        r = upload_sample(client)
+        entities = client.get("/api/entities").json()["entities"]
+        r = client.post("/api/case-files", json={"name": "Entity Case"})
+        case_id = r.json()["id"]
+        if entities:
+            client.post(
+                f"/api/case-files/{case_id}/items",
+                json={"item_type": "entity", "item_id": entities[0]["id"], "note": "Key person"},
+            )
+            r = client.get(f"/api/case-files/{case_id}")
+            items = r.json()["items"]
+            entity_items = [i for i in items if i["item_type"] == "entity"]
+            assert entity_items[0]["detail"] is not None
+            assert "name" in entity_items[0]["detail"]
+
+    def test_get_case_file_chain_detail(self, client):
+        """Lines 498-503: chain detail enrichment."""
+        r = client.post("/api/evidence-chains", json={"name": "Linked Chain"})
+        chain_id = r.json()["id"]
+        r = client.post("/api/case-files", json={"name": "Chain Case"})
+        case_id = r.json()["id"]
+        client.post(
+            f"/api/case-files/{case_id}/items",
+            json={"item_type": "chain", "item_id": chain_id},
+        )
+        r = client.get(f"/api/case-files/{case_id}")
+        items = r.json()["items"]
+        chain_items = [i for i in items if i["item_type"] == "chain"]
+        assert chain_items[0]["detail"] is not None
+        assert chain_items[0]["detail"]["name"] == "Linked Chain"
+
+    def test_get_case_file_unknown_item_type(self, client):
+        """Lines 504-505: unknown item type gets detail=None (direct DB insert)."""
+        r = upload_sample(client)
+        doc_id = r.json()["document_id"]
+        r = client.post("/api/case-files", json={"name": "Unknown Type Case"})
+        case_id = r.json()["id"]
+        # Insert an unknown item_type directly into the DB
+        from dossier.db.database import get_db
+        with get_db() as conn:
+            conn.execute(
+                "INSERT INTO case_file_items (case_file_id, item_type, item_id, note) VALUES (?, ?, ?, ?)",
+                (case_id, "other", doc_id, "Unknown type"),
+            )
+            conn.commit()
+        r = client.get(f"/api/case-files/{case_id}")
+        items = r.json()["items"]
+        other_items = [i for i in items if i["item_type"] == "other"]
+        assert other_items[0]["detail"] is None
+
+    def test_export_with_entity_and_chain(self, client):
+        """Lines 580-593: HTML export with entity/chain/note items."""
+        r = upload_sample(client)
+        doc_id = r.json()["document_id"]
+        entities = client.get("/api/entities").json()["entities"]
+        r = client.post("/api/evidence-chains", json={"name": "Export Chain"})
+        chain_id = r.json()["id"]
+        r = client.post("/api/case-files", json={"name": "Full Export"})
+        case_id = r.json()["id"]
+
+        # Add document, entity, chain items
+        client.post(
+            f"/api/case-files/{case_id}/items",
+            json={"item_type": "document", "item_id": doc_id, "note": "Key doc"},
+        )
+        if entities:
+            client.post(
+                f"/api/case-files/{case_id}/items",
+                json={"item_type": "entity", "item_id": entities[0]["id"], "note": "Key person"},
+            )
+        client.post(
+            f"/api/case-files/{case_id}/items",
+            json={"item_type": "chain", "item_id": chain_id, "note": "Key chain"},
+        )
+        r = client.get(f"/api/case-files/{case_id}/export")
+        assert r.status_code == 200
+        html = r.text
+        assert "Full Export" in html
+        assert "Evidence Chain:" in html
 
 
 class TestInvestigationStats:
