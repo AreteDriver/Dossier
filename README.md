@@ -1,115 +1,101 @@
-# DOSSIER — Document Intelligence System
+# DOSSIER
 
-A local-first document analysis platform for ingesting, searching, and mapping connections across large document collections. Built for investigative research, FOIA analysis, and document-heavy investigations.
+**Open-source document intelligence for investigative analytics.**
+80% of enterprise document analysis capability. 0% of the infrastructure cost.
 
-## Features
+[![Python](https://img.shields.io/badge/python-3.10+-blue.svg)](https://python.org)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![CI](https://github.com/AreteDriver/DOSSIER/actions/workflows/ci.yml/badge.svg)](https://github.com/AreteDriver/DOSSIER/actions)
 
-- **Multi-format ingestion** — PDF (native + OCR), plain text, HTML, images
-- **Named Entity Recognition** — Extracts people, places, organizations, dates using custom domain-aware NER
-- **Full-text search** — SQLite FTS5 with Porter stemming and Unicode support
-- **Auto-classification** — Categorizes documents as depositions, flight logs, correspondence, reports, legal filings
-- **Keyword frequency tracking** — Tracks word frequency across the entire corpus with per-document counts
-- **Entity co-occurrence network** — Maps which entities appear together across documents
-- **Duplicate detection** — SHA-256 file hashing prevents re-ingestion
-- **REST API** — FastAPI with automatic OpenAPI docs
-- **CLI tools** — Ingest, search, and query from the command line
+---
+
+## What It Does
+
+DOSSIER ingests investigative document corpora — PDFs, emails, scanned images, legal filings — and surfaces the connections that manual review misses.
+
+**Core capabilities:**
+- Ingest PDFs (native text + OCR fallback), emails (.eml/.mbox/JSON/CSV), HTML, images
+- Named entity extraction via custom gazetteers (no GPU, no retraining)
+- Auto-classification by document type: deposition, filing, correspondence, financial record
+- Full-text search via SQLite FTS5 — zero infrastructure, laptop-ready
+- Entity co-occurrence graph: who appears with whom, across how many documents, from which sources
+- SHA-256 deduplication at ingestion — re-runs are safe
+
+---
+
+## Who It's For
+
+- Investigative journalists working FOIA corpora
+- Legal discovery teams without six-figure tooling budgets
+- Compliance analysts processing document dumps
+- Anyone where documents are evidence and connections get missed
+
+---
 
 ## Quick Start
 
 ```bash
-# Install dependencies
 pip install -r requirements.txt
-
-# Initialize database
 python -m dossier init
-
-# Ingest a file
-python -m dossier ingest path/to/document.pdf --source "FOIA Release"
-
-# Ingest an entire directory
-python -m dossier ingest-dir path/to/documents/ --source "Court Records"
-
-# Start the web server
+python -m dossier ingest-dir /path/to/documents --source "Source Name"
 python -m dossier serve
-
-# Search from CLI
-python -m dossier search "palm beach"
-
-# View stats
-python -m dossier stats
-
-# List top entities
-python -m dossier entities person
+# API: http://localhost:8000/docs
+# UI:  http://localhost:8000
 ```
 
-## API Endpoints
+---
 
-Once running (`python -m dossier serve`), visit `http://localhost:8000/docs` for interactive API docs.
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/search?q=...` | Full-text search with FTS5 |
-| GET | `/api/documents` | List all documents |
-| GET | `/api/documents/{id}` | Get document detail + entities + keywords |
-| GET | `/api/entities?type=person` | Top entities by type |
-| GET | `/api/entities/{id}/documents` | Documents containing an entity |
-| GET | `/api/keywords` | Top keywords corpus-wide |
-| GET | `/api/connections` | Entity co-occurrence network |
-| GET | `/api/stats` | Dashboard statistics |
-| POST | `/api/upload` | Upload and ingest a file |
-| POST | `/api/ingest-directory?dirpath=...` | Batch ingest a directory |
-
-## Project Structure
+## Architecture
 
 ```
-dossier/
-├── __main__.py          # CLI entry point
-├── api/
-│   └── server.py        # FastAPI REST API
-├── core/
-│   └── ner.py           # NER engine + classifier + keyword extraction
-├── db/
-│   └── database.py      # SQLite schema + FTS5 + connection manager
-├── ingestion/
-│   ├── extractor.py     # Text extraction (PDF, OCR, HTML, images)
-│   └── pipeline.py      # Ingestion orchestrator
-├── data/
-│   ├── inbox/           # Upload staging area
-│   ├── processed/       # Organized by category
-│   └── dossier.db       # SQLite database
-├── static/
-│   └── index.html       # Web UI (place the frontend here)
-└── requirements.txt
+Raw File → Format Detection → Text Extraction → NER → Classification → FTS5 Index → Entity Graph
+
+├─ PDF ────→ pdfplumber (native) / Tesseract (OCR fallback)
+├─ Email ──→ Header parsing + body + attachment recursion
+├─ HTML ───→ Tag stripping + structure preservation
+└─ Image ──→ OCR with quality flagging
 ```
 
-## Extending the NER
+**Key decisions:**
 
-The NER engine in `core/ner.py` uses gazetteers (known entity lists) that you can extend:
+| Choice | Why |
+|---|---|
+| SQLite + FTS5 over Elasticsearch | Zero infra, single file, Porter stemming, transactional consistency |
+| Custom NER over spaCy/HuggingFace | Domain-specific patterns, no GPU, explainable output |
+| Weighted signal classifier | Investigator-overridable, no black-box confidence scores |
+| SHA-256 dedup at intake | Prevents silent re-processing corruption |
 
-```python
-# Add known people
-KNOWN_PEOPLE.add("john doe")
+---
 
-# Add known places
-KNOWN_PLACES.add("some location")
+## API
 
-# Add known organizations
-KNOWN_ORGS.add("some corp")
+```
+GET /api/search?q=...&type=deposition&date_start=2001&date_end=2005
+GET /api/connections                          # Full entity co-occurrence network
+GET /api/entities/{id}/documents              # All documents containing an entity
+GET /api/documents/{id}                       # Full document with extracted entities
 ```
 
-## Customizing Categories
+---
 
-Edit `CATEGORY_SIGNALS` in `core/ner.py` to adjust auto-classification signals or add new categories.
+## Status
 
-## Tech Stack
+- [x] Ingestion pipeline (PDF, email, HTML, image)
+- [x] FTS5 full-text search
+- [x] Custom NER + entity linking
+- [x] Auto-classification
+- [x] Co-occurrence graph
+- [x] REST API
+- [ ] Timeline reconstruction (in progress)
+- [ ] Document provenance/metadata forensics
+- [ ] Redaction detection
 
-- **Python 3.10+**
-- **FastAPI** — REST API
-- **SQLite + FTS5** — Storage and full-text search
-- **pdfplumber** — PDF text extraction
-- **Tesseract OCR** — Scanned document/image OCR
-- **Custom NER** — Regex + heuristic entity extraction
+---
 
-## License
+## Contributing
 
-MIT — Use for research purposes.
+Issues, PRs, and edge-case corpora welcome. If you work in legal discovery, investigative journalism, or FOIA analysis — try it and tell me what breaks.
+
+---
+
+*Built with SQLite, FastAPI, pdfplumber, Tesseract, and 17 years of operations experience.*
