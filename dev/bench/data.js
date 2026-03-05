@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1772706967980,
+  "lastUpdate": 1772707394820,
   "repoUrl": "https://github.com/AreteDriver/Dossier",
   "entries": {
     "Benchmark": [
@@ -2100,6 +2100,72 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.0009339770625115479",
             "extra": "mean: 7.3754595000004946 msec\nrounds: 78"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "AreteDriver@users.noreply.github.com",
+            "name": "AreteDriver",
+            "username": "AreteDriver"
+          },
+          "committer": {
+            "email": "AreteDriver@users.noreply.github.com",
+            "name": "AreteDriver",
+            "username": "AreteDriver"
+          },
+          "distinct": true,
+          "id": "7045339c44305c6000f7d16b44f520093de81a18",
+          "message": "docs: add case study section and SECURITY.md\n\nReal-world example: 482 documents, 5,902 entities, fax number in 11 filings.\nAdded SECURITY.md with responsible disclosure process.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>",
+          "timestamp": "2026-03-05T02:38:01-08:00",
+          "tree_id": "5f934f85caf39ed8467f093a05129ce3dd2de7e5",
+          "url": "https://github.com/AreteDriver/Dossier/commit/7045339c44305c6000f7d16b44f520093de81a18"
+        },
+        "date": 1772707394470,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/test_benchmarks.py::TestNERBenchmark::test_extract_entities_5k",
+            "value": 113.68154462917227,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00006383242396859558",
+            "extra": "mean: 8.796502574467889 msec\nrounds: 94"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestFTS5Benchmark::test_fts5_search_500_docs",
+            "value": 1559.9251350535242,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000013657254179811311",
+            "extra": "mean: 641.0564055471085 usec\nrounds: 1334"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestResolverBenchmark::test_resolve_all_200_entities",
+            "value": 13.3324666341191,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0005555873695767005",
+            "extra": "mean: 75.00487549999946 msec\nrounds: 14"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestGraphBenchmark::test_centrality_betweenness_100",
+            "value": 36.23153085680069,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00014987429857623745",
+            "extra": "mean: 27.60026905714637 msec\nrounds: 35"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestGraphBenchmark::test_communities_100",
+            "value": 207.76139046423725,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0010074919665257237",
+            "extra": "mean: 4.813213839999467 msec\nrounds: 175"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestBulkInsertBenchmark::test_bulk_insert_100_docs",
+            "value": 108.68306095589963,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0015388961735273694",
+            "extra": "mean: 9.201065844159196 msec\nrounds: 77"
           }
         ]
       }
