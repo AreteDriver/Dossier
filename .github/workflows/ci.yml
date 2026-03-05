@@ -45,7 +45,7 @@ jobs:
         run: pytest --cov=dossier --cov-report=term-missing --tb=short -q
 
       - name: Coverage threshold
-        run: pytest --cov=dossier --cov-fail-under=50 -q --no-header
+        run: pytest --cov=dossier --cov-fail-under=90 -q --no-header
 
   benchmark:
     name: Benchmark
