@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1772705186980,
+  "lastUpdate": 1772706967980,
   "repoUrl": "https://github.com/AreteDriver/Dossier",
   "entries": {
     "Benchmark": [
@@ -2034,6 +2034,72 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.0024238875413372376",
             "extra": "mean: 6.14247839285742 msec\nrounds: 112"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "AreteDriver@users.noreply.github.com",
+            "name": "AreteDriver",
+            "username": "AreteDriver"
+          },
+          "committer": {
+            "email": "AreteDriver@users.noreply.github.com",
+            "name": "AreteDriver",
+            "username": "AreteDriver"
+          },
+          "distinct": true,
+          "id": "de9005760606d6383ca192213194fbcf82c1fa82",
+          "message": "fix: add missing LICENSE file and raise coverage gate 50→90%\n\nREADME badge linked to nonexistent LICENSE. Coverage gate was 50% vs 97% actual.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>",
+          "timestamp": "2026-03-05T02:32:44-08:00",
+          "tree_id": "fefed327f16b27590da18d428400834773e1b420",
+          "url": "https://github.com/AreteDriver/Dossier/commit/de9005760606d6383ca192213194fbcf82c1fa82"
+        },
+        "date": 1772706967065,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/test_benchmarks.py::TestNERBenchmark::test_extract_entities_5k",
+            "value": 112.05771941668118,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0007102643936461085",
+            "extra": "mean: 8.923972442108594 msec\nrounds: 95"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestFTS5Benchmark::test_fts5_search_500_docs",
+            "value": 1536.346048272822,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00007918043069228008",
+            "extra": "mean: 650.895025325975 usec\nrounds: 1303"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestResolverBenchmark::test_resolve_all_200_entities",
+            "value": 13.699824019008783,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00018574255711698676",
+            "extra": "mean: 72.99363835714091 msec\nrounds: 14"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestGraphBenchmark::test_centrality_betweenness_100",
+            "value": 36.285252667609726,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00020529883363409098",
+            "extra": "mean: 27.559405722222152 msec\nrounds: 36"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestGraphBenchmark::test_communities_100",
+            "value": 211.9783100430966,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0012535760606526213",
+            "extra": "mean: 4.717463781066532 msec\nrounds: 169"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestBulkInsertBenchmark::test_bulk_insert_100_docs",
+            "value": 135.5847727182195,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0009339770625115479",
+            "extra": "mean: 7.3754595000004946 msec\nrounds: 78"
           }
         ]
       }
