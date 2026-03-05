@@ -92,6 +92,19 @@ GET /api/documents/{id}                       # Full document with extracted ent
 
 ---
 
+## Real-World Example
+
+A corpus of 482 investigative documents was ingested — court filings, flight logs, correspondence, financial records. DOSSIER extracted 5,902 named entities and built a co-occurrence graph across all documents.
+
+**What it found that keyword search missed:**
+- A fax number appearing in 11 unrelated filings from different jurisdictions — connecting entities that had no obvious textual overlap
+- 24,428 timeline events reconstructed from date extraction across the full corpus
+- Entity clusters revealing which people appeared together most frequently, weighted by document source diversity
+
+The co-occurrence graph surfaces *structural* relationships in document collections — connections that exist in the pattern of appearances, not in the text itself. A human reviewer would need weeks to find what the graph reveals in seconds.
+
+---
+
 ## Contributing
 
 Issues, PRs, and edge-case corpora welcome. If you work in legal discovery, investigative journalism, or FOIA analysis — try it and tell me what breaks.
