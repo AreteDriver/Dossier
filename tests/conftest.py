@@ -119,9 +119,7 @@ def seed_forensics(client):
     r = upload_sample(client)
     doc_id = r.json()["document_id"]
 
-    from dossier.db.database import get_db
-
-    with get_db() as conn:
+    with db_mod.get_db() as conn:
         # Seed document_forensics
         conn.execute(
             "INSERT INTO document_forensics (document_id, analysis_type, label, score, severity, evidence) VALUES (?, ?, ?, ?, ?, ?)",
@@ -175,8 +173,6 @@ def seed_multi_doc_data(client):
     with overlapping person/org/place entities so inner loops execute.
     Returns list of document IDs.
     """
-    from dossier.db.database import get_db
-
     docs = [
         (
             "deposition_witness.txt",
@@ -212,7 +208,7 @@ def seed_multi_doc_data(client):
         doc_ids.append(r.json()["document_id"])
 
     # Seed additional metadata for richer endpoint testing
-    with get_db() as conn:
+    with db_mod.get_db() as conn:
         # Set categories and dates
         conn.execute(
             "UPDATE documents SET category = 'deposition', date = '2015-01-15', source = 'FBI' WHERE id = ?",
@@ -284,9 +280,7 @@ def seed_analytics_data(client):
     """
     doc_ids = seed_multi_doc_data(client)
 
-    from dossier.db.database import get_db
-
-    with get_db() as conn:
+    with db_mod.get_db() as conn:
         entities = conn.execute("SELECT id, name, type FROM entities").fetchall()
 
         # Add more entity connections for graph/matrix endpoints

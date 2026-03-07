@@ -1,10 +1,14 @@
 """DOSSIER — Ingestion API routes (upload, directory ingest, email, lobbying)."""
 
+import logging
+
 from fastapi import APIRouter, File, Query, HTTPException, UploadFile
 from fastapi.responses import JSONResponse
 
 from dossier.api import utils
 from dossier.ingestion.pipeline import ingest_file, ingest_directory
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -21,7 +25,7 @@ async def upload_file(
     # Sanitize filename and enforce upload size limit
     safe_name = utils._sanitize_filename(file.filename or "")
     content = await utils._read_upload(file)
-    dest = utils.UPLOAD_DIR / safe_name
+    dest = utils._safe_upload_dest(safe_name)
     with open(dest, "wb") as f:
         f.write(content)
 
@@ -39,7 +43,7 @@ def ingest_dir(dirpath: str = Query(...)):
     """Ingest all supported files from a directory path on disk."""
     path = utils._validate_path(dirpath)
     if not path.exists() or not path.is_dir():
-        raise HTTPException(400, f"Directory not found: {dirpath}")
+        raise HTTPException(400, "Directory not found")
 
     results = ingest_directory(str(path))
     success = sum(1 for r in results if r["success"])
@@ -60,11 +64,16 @@ async def upload_email(
     utils.UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
     safe_name = utils._sanitize_filename(file.filename or "")
     content = await utils._read_upload(file)
-    dest = utils.UPLOAD_DIR / safe_name
+    dest = utils._safe_upload_dest(safe_name)
     with open(dest, "wb") as f:
         f.write(content)
 
-    results = ingest_email_file(str(dest), source=source, corpus=corpus)
+    try:
+        results = ingest_email_file(str(dest), source=source, corpus=corpus)
+    except Exception:
+        logger.exception("Email ingestion failed for uploaded file")
+        raise HTTPException(422, "Email ingestion failed")
+
     success = sum(1 for r in results if r.get("success"))
     failed = len(results) - success
 
@@ -85,7 +94,7 @@ def ingest_emails_dir(
 
     path = utils._validate_path(dirpath)
     if not path.exists() or not path.is_dir():
-        raise HTTPException(400, f"Directory not found: {dirpath}")
+        raise HTTPException(400, "Directory not found")
 
     result = ingest_email_directory(str(path), source=source, corpus=corpus)
     return result

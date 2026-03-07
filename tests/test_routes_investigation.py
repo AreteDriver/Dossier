@@ -293,7 +293,7 @@ class TestCaseFilesWithItems:
 
     def test_get_case_file_entity_detail(self, client):
         """Lines 493-497: entity detail enrichment."""
-        r = upload_sample(client)
+        upload_sample(client)
         entities = client.get("/api/entities").json()["entities"]
         r = client.post("/api/case-files", json={"name": "Entity Case"})
         case_id = r.json()["id"]

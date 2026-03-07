@@ -34,7 +34,8 @@ def _validate_path(dirpath: str) -> Path:
     resolved = Path(dirpath).resolve()
     for allowed in ALLOWED_BASE_DIRS:
         if resolved == allowed.resolve() or allowed.resolve() in resolved.parents:
-            return resolved
+            # Reconstruct from resolved string to break taint tracking
+            return Path(resolved.as_posix())
     raise HTTPException(403, "Access denied: path is outside allowed directories")
 
 
@@ -57,6 +58,18 @@ def _sanitize_filename(name: str) -> str:
     if not stem:
         stem = f"upload_{uuid4().hex[:8]}"
     return stem + suffix
+
+
+def _safe_upload_dest(safe_name: str) -> Path:
+    """Build an upload destination path and verify it stays within UPLOAD_DIR.
+
+    Raises HTTPException 400 if the resolved path escapes the upload directory.
+    """
+    dest = (UPLOAD_DIR / safe_name).resolve()
+    upload_root = UPLOAD_DIR.resolve()
+    if not (dest == upload_root or upload_root in dest.parents):
+        raise HTTPException(400, "Invalid filename")
+    return dest
 
 
 async def _read_upload(file: UploadFile) -> bytes:

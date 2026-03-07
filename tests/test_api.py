@@ -264,25 +264,25 @@ class TestFilenameSanitization:
 
     def test_sanitize_filename_unit(self):
         """Unit test for _sanitize_filename edge cases."""
-        from dossier.api.utils import _sanitize_filename
+        import dossier.api.utils as utils_mod
 
         # Path traversal stripped
-        assert _sanitize_filename("../../etc/evil.txt") == "evil.txt"
+        assert utils_mod._sanitize_filename("../../etc/evil.txt") == "evil.txt"
 
         # Leading dots stripped
-        assert _sanitize_filename(".hidden.txt") == "hidden.txt"
+        assert utils_mod._sanitize_filename(".hidden.txt") == "hidden.txt"
 
         # Special chars replaced
-        result = _sanitize_filename("file name (1).txt")
+        result = utils_mod._sanitize_filename("file name (1).txt")
         assert "(" not in result
         assert " " not in result
 
         # Empty string gets uuid fallback
-        result = _sanitize_filename("")
+        result = utils_mod._sanitize_filename("")
         assert result.startswith("upload_")
 
         # Pure dots get uuid fallback
-        result = _sanitize_filename("...")
+        result = utils_mod._sanitize_filename("...")
         assert result.startswith("upload_")
 
 
