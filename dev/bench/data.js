@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1772707394820,
+  "lastUpdate": 1772872113083,
   "repoUrl": "https://github.com/AreteDriver/Dossier",
   "entries": {
     "Benchmark": [
@@ -2166,6 +2166,72 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.0015388961735273694",
             "extra": "mean: 9.201065844159196 msec\nrounds: 77"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "AreteDriver@users.noreply.github.com",
+            "name": "AreteDriver",
+            "username": "AreteDriver"
+          },
+          "committer": {
+            "email": "AreteDriver@users.noreply.github.com",
+            "name": "AreteDriver",
+            "username": "AreteDriver"
+          },
+          "distinct": true,
+          "id": "699d075f7d08be0df39f509ad85ee7065fe5c1a3",
+          "message": "fix: resolve 11 CodeQL alerts (path injection, stack trace, import hygiene)\n\nSecurity fixes:\n- Add _safe_upload_dest() to validate upload paths stay within UPLOAD_DIR\n- Reconstruct validated path from resolved string in _validate_path() to\n  break CodeQL taint tracking (py/path-injection)\n- Remove user input from error messages to prevent info leakage\n- Wrap email ingestion in try/except with generic error response\n  (py/stack-trace-exposure)\n\nCode quality fixes:\n- Unify dossier.db.database imports in conftest.py to module-style only,\n  eliminating mixed import/from-import (py/import-and-import-from)\n- Unify dossier.api.utils imports in test_api.py to module-style only\n  (py/import-and-import-from)\n- Remove unused variable assignment in test_routes_investigation.py\n  (py/multiple-definition)\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>",
+          "timestamp": "2026-03-07T00:24:44-08:00",
+          "tree_id": "5eee94fecc1132076a505569a815ea80d41f79b7",
+          "url": "https://github.com/AreteDriver/Dossier/commit/699d075f7d08be0df39f509ad85ee7065fe5c1a3"
+        },
+        "date": 1772872112260,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/test_benchmarks.py::TestNERBenchmark::test_extract_entities_5k",
+            "value": 113.91978256490596,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00009869162209900548",
+            "extra": "mean: 8.77810664210361 msec\nrounds: 95"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestFTS5Benchmark::test_fts5_search_500_docs",
+            "value": 1527.1515788632478,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00001603680485468459",
+            "extra": "mean: 654.8138467986008 usec\nrounds: 1312"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestResolverBenchmark::test_resolve_all_200_entities",
+            "value": 13.620108730864654,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0007109997112385981",
+            "extra": "mean: 73.42085292857396 msec\nrounds: 14"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestGraphBenchmark::test_centrality_betweenness_100",
+            "value": 36.158043154667,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0002893823433103067",
+            "extra": "mean: 27.656363916666432 msec\nrounds: 36"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestGraphBenchmark::test_communities_100",
+            "value": 214.00224765930602,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0010489592523328125",
+            "extra": "mean: 4.6728481169600204 msec\nrounds: 171"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestBulkInsertBenchmark::test_bulk_insert_100_docs",
+            "value": 127.56023961910506,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0010406938603162923",
+            "extra": "mean: 7.839433376622687 msec\nrounds: 77"
           }
         ]
       }
