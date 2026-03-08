@@ -32,10 +32,12 @@ def _validate_path(dirpath: str) -> Path:
     Raises HTTPException 403 if the path resolves outside ALLOWED_BASE_DIRS.
     """
     resolved = Path(dirpath).resolve()
+    resolved_str = str(resolved)
     for allowed in ALLOWED_BASE_DIRS:
-        if resolved == allowed.resolve() or allowed.resolve() in resolved.parents:
-            # Reconstruct from resolved string to break taint tracking
-            return Path(resolved.as_posix())
+        allowed_str = str(allowed.resolve())
+        if resolved_str == allowed_str or resolved_str.startswith(allowed_str + os.sep):
+            # Reconstruct from validated string to break taint tracking
+            return Path(resolved_str)
     raise HTTPException(403, "Access denied: path is outside allowed directories")
 
 

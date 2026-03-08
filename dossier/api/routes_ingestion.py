@@ -72,14 +72,19 @@ async def upload_email(
         results = ingest_email_file(str(dest), source=source, corpus=corpus)
     except Exception:
         logger.exception("Email ingestion failed for uploaded file")
-        raise HTTPException(422, "Email ingestion failed")
+        raise HTTPException(422, "Email ingestion failed") from None
 
     success = sum(1 for r in results if r.get("success"))
     failed = len(results) - success
 
+    # Sanitize results to prevent leaking internal details
+    safe_details = [
+        {"success": r.get("success", False), "message": str(r.get("message", ""))} for r in results
+    ]
+
     status = 201 if success > 0 else 422
     return JSONResponse(
-        {"ingested": success, "failed": failed, "details": results}, status_code=status
+        {"ingested": success, "failed": failed, "details": safe_details}, status_code=status
     )
 
 
