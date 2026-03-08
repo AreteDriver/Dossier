@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1772872113083,
+  "lastUpdate": 1772959487197,
   "repoUrl": "https://github.com/AreteDriver/Dossier",
   "entries": {
     "Benchmark": [
@@ -2232,6 +2232,72 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.0010406938603162923",
             "extra": "mean: 7.839433376622687 msec\nrounds: 77"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "AreteDriver@users.noreply.github.com",
+            "name": "AreteDriver",
+            "username": "AreteDriver"
+          },
+          "committer": {
+            "email": "AreteDriver@users.noreply.github.com",
+            "name": "AreteDriver",
+            "username": "AreteDriver"
+          },
+          "distinct": true,
+          "id": "b0bc44ae7213593ea2a0ebc6b1cbc23d9c60653e",
+          "message": "fix: resolve CodeQL path-injection and stack-trace-exposure alerts\n\n- Refactor _validate_path to use str.startswith boundary check that\n  CodeQL recognizes as taint-breaking sanitization\n- Sanitize email ingestion result details before returning to client\n- Add from None to re-raised HTTPException in email upload handler\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>",
+          "timestamp": "2026-03-08T00:41:54-08:00",
+          "tree_id": "8dea592e29084f9cff6be43e67b61c7cae0704fe",
+          "url": "https://github.com/AreteDriver/Dossier/commit/b0bc44ae7213593ea2a0ebc6b1cbc23d9c60653e"
+        },
+        "date": 1772959486366,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/test_benchmarks.py::TestNERBenchmark::test_extract_entities_5k",
+            "value": 114.17848220487326,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00007257892818264681",
+            "extra": "mean: 8.758217666667484 msec\nrounds: 93"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestFTS5Benchmark::test_fts5_search_500_docs",
+            "value": 1494.4052219188577,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000019946976878449946",
+            "extra": "mean: 669.1625439557635 usec\nrounds: 1274"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestResolverBenchmark::test_resolve_all_200_entities",
+            "value": 13.396852365327865,
+            "unit": "iter/sec",
+            "range": "stddev: 0.006821419162638888",
+            "extra": "mean: 74.64439949999603 msec\nrounds: 14"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestGraphBenchmark::test_centrality_betweenness_100",
+            "value": 35.808129550087635,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00019918690588977662",
+            "extra": "mean: 27.9266192500008 msec\nrounds: 36"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestGraphBenchmark::test_communities_100",
+            "value": 209.53271673663923,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0012433435220579833",
+            "extra": "mean: 4.772524384613862 msec\nrounds: 169"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestBulkInsertBenchmark::test_bulk_insert_100_docs",
+            "value": 126.54040660904087,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0015183305081983324",
+            "extra": "mean: 7.902614088238226 msec\nrounds: 102"
           }
         ]
       }
