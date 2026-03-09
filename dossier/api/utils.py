@@ -138,7 +138,8 @@ def _ollama_generate(prompt: str, model: str = "qwen2.5:14b", max_tokens: int = 
             result = json.loads(resp.read())
             return result.get("response", "")
     except (urllib.error.URLError, TimeoutError, OSError) as e:
-        raise HTTPException(503, f"Ollama unavailable: {e}")
+        logger.error("Ollama unavailable: %s", e)
+        raise HTTPException(503, "Ollama service unavailable")
 
 
 def _ensure_audit_table(conn):
