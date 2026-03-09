@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1772959487197,
+  "lastUpdate": 1773045562524,
   "repoUrl": "https://github.com/AreteDriver/Dossier",
   "entries": {
     "Benchmark": [
@@ -2298,6 +2298,72 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.0015183305081983324",
             "extra": "mean: 7.902614088238226 msec\nrounds: 102"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "AreteDriver@users.noreply.github.com",
+            "name": "AreteDriver",
+            "username": "AreteDriver"
+          },
+          "committer": {
+            "email": "AreteDriver@users.noreply.github.com",
+            "name": "AreteDriver",
+            "username": "AreteDriver"
+          },
+          "distinct": true,
+          "id": "de88876b87a57170072e02807c54254816dac16e",
+          "message": "fix: prevent stack trace exposure in Ollama error responses\n\nLog the full exception server-side and return a generic error message\nto clients instead of leaking exception details via HTTP 503 response.\n\nResolves CodeQL py/stack-trace-exposure alert.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>",
+          "timestamp": "2026-03-09T01:35:27-07:00",
+          "tree_id": "5c827bee633e5e3a848f49cff098b4b0177cb359",
+          "url": "https://github.com/AreteDriver/Dossier/commit/de88876b87a57170072e02807c54254816dac16e"
+        },
+        "date": 1773045561357,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/test_benchmarks.py::TestNERBenchmark::test_extract_entities_5k",
+            "value": 113.9980317633494,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00017922123589532294",
+            "extra": "mean: 8.772081276595356 msec\nrounds: 94"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestFTS5Benchmark::test_fts5_search_500_docs",
+            "value": 1565.3901210778777,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00001492088757230251",
+            "extra": "mean: 638.8183920002203 usec\nrounds: 1375"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestResolverBenchmark::test_resolve_all_200_entities",
+            "value": 13.507945058740907,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0009245704965312239",
+            "extra": "mean: 74.03050542857414 msec\nrounds: 14"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestGraphBenchmark::test_centrality_betweenness_100",
+            "value": 35.82614574601582,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0008005063494109751",
+            "extra": "mean: 27.912575555555225 msec\nrounds: 36"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestGraphBenchmark::test_communities_100",
+            "value": 211.96529874192262,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0011781207189146838",
+            "extra": "mean: 4.717753358381295 msec\nrounds: 173"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestBulkInsertBenchmark::test_bulk_insert_100_docs",
+            "value": 149.37297106297106,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0007642101458275761",
+            "extra": "mean: 6.694651601851252 msec\nrounds: 108"
           }
         ]
       }
